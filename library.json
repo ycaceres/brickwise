@@ -1,0 +1,303 @@
+{
+  "version": 1,
+  "about": "Workout library. See the format in README.md, Library section.",
+  "durations": [30, 45, 60],
+  "defaults": {
+    "warmup": { "dur": "10m", "pace": [70, 80], "ramp": true },
+    "warmup30": { "dur": "8m", "pace": [70, 80], "ramp": true },
+    "cooldown": { "dur": "5m", "pace": [78, 68], "ramp": true }
+  },
+  "types": [
+    {
+      "id": "recovery",
+      "name": "Recovery",
+      "description": "Very easy, to loosen the legs the day after a hard effort.",
+      "warmup": { "dur": "5m", "pace": "11:00", "incline": 1 },
+      "cooldown": { "dur": "5m", "pace": "11:00", "incline": 1 },
+      "levels": {
+        "1": { "kind": "continuous", "main": {"pace": "10:00", "incline": 1}, "summary": "brisk walk" },
+        "2": {
+          "kind": "intervals",
+          "work": { "dur": "2m", "pace": [65, 70] },
+          "recovery": { "dur": "2m", "pace": "10:00" },
+          "summary": "very easy jog alternated with walking"
+        },
+        "3": { "kind": "continuous", "main": {"pace": [65, 72]}, "summary": "steady Z1 jog" },
+        "4": { "kind": "continuous", "main": {"pace": [68, 75]}, "summary": "steady Z1 jog" },
+        "5": {
+          "kind": "continuous",
+          "main": { "pace": [68, 75] },
+          "finish": { "reps": 4, "work": {"dur": "1m", "pace": 95}, "recovery": {"dur": "1m", "pace": 68} },
+          "summary": "Z1 jog and 4 × 1′ strides"
+        }
+      }
+    },
+    {
+      "id": "run-walk",
+      "name": "Run-walk",
+      "description": "Z2 jog alternated with walking. For starting to run or coming back after a break.",
+      "warmup": { "dur": "5m", "pace": "11:00", "incline": 1 },
+      "cooldown": { "dur": "5m", "pace": "11:00", "incline": 1 },
+      "levels": {
+        "1": { "kind": "intervals", "work": {"dur": "1m", "pace": "Z2"}, "recovery": {"dur": "2m", "pace": "10:30"} },
+        "2": { "kind": "intervals", "work": {"dur": "2m", "pace": "Z2"}, "recovery": {"dur": "2m", "pace": "10:30"} },
+        "3": { "kind": "intervals", "work": {"dur": "4m", "pace": "Z2"}, "recovery": {"dur": "1m", "pace": "10:30"} },
+        "4": { "kind": "intervals", "work": {"dur": "6m", "pace": "Z2"}, "recovery": {"dur": "1m", "pace": "10:30"} },
+        "5": { "kind": "intervals", "work": {"dur": "8m", "pace": "Z2"}, "recovery": {"dur": "1m", "pace": "10:30"} }
+      }
+    },
+    {
+      "id": "walk-incline",
+      "name": "Incline walk",
+      "description": "Fixed speed; incline rises 0.5 % every minute and holds at the top. Z2 HR is the goal, speed never changes.",
+      "warmup": { "dur": "5m", "pace": "12:00", "incline": 2, "lock": true },
+      "cooldown": null,
+      "levels": {
+        "1": { "kind": "incline-ramp", "pace": "12:00", "from": 2.5, "to": 6, "step": 0.5, "every": "1m", "hr": "Z2" },
+        "2": { "kind": "incline-ramp", "pace": "12:00", "from": 2.5, "to": 8, "step": 0.5, "every": "1m", "hr": "Z2" },
+        "3": { "kind": "incline-ramp", "pace": "12:00", "from": 2.5, "to": 10, "step": 0.5, "every": "1m", "hr": "Z2" },
+        "4": { "kind": "incline-ramp", "pace": "11:00", "from": 2.5, "to": 10, "step": 0.5, "every": "1m", "hr": "Z2" },
+        "5": { "kind": "incline-ramp", "pace": "10:00", "from": 2.5, "to": 10, "step": 0.5, "every": "1m", "hr": "Z2" }
+      }
+    },
+    {
+      "id": "aerobic",
+      "name": "Aerobic Z2",
+      "description": "Steady run in pace zone 2: the foundation of endurance.",
+      "levels": {
+        "1": { "kind": "continuous", "main": {"pace": [78, 82]}, "summary": "low Z2" },
+        "2": { "kind": "continuous", "main": {"pace": [80, 84]}, "summary": "mid Z2" },
+        "3": { "kind": "continuous", "main": {"pace": [82, 86]}, "summary": "mid-high Z2" },
+        "4": { "kind": "continuous", "main": {"pace": [84, 87.5]}, "summary": "high Z2" },
+        "5": {
+          "kind": "continuous",
+          "main": { "pace": [84, 87.5] },
+          "finish": { "reps": 6, "work": {"dur": "1m", "pace": 100}, "recovery": {"dur": "1m", "pace": 75} },
+          "summary": "high Z2 and 6 × 1′ strides"
+        }
+      }
+    },
+    {
+      "id": "tempo",
+      "name": "Tempo intervals",
+      "description": "Zone 3 blocks (88–94 % of threshold) with short recoveries.",
+      "levels": {
+        "1": {
+          "kind": "intervals",
+          "work": { "dur": "6m", "pace": [90, 93] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 2, "work": {"dur": "5m"}, "recovery": {"dur": "2m"} },
+            "45": { "reps": 3, "work": {"dur": "6m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 4, "work": {"dur": "7m"}, "recovery": {"dur": "2m"} }
+          }
+        },
+        "2": {
+          "kind": "intervals",
+          "work": { "dur": "7m", "pace": [90, 93] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 2, "work": {"dur": "6m"}, "recovery": {"dur": "2m"} },
+            "45": { "reps": 3, "work": {"dur": "7m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 4, "work": {"dur": "8m"}, "recovery": {"dur": "2m"} }
+          }
+        },
+        "3": {
+          "kind": "intervals",
+          "work": { "dur": "8m", "pace": [90, 94] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 2, "work": {"dur": "7m"}, "recovery": {"dur": "2m"} },
+            "45": { "reps": 3, "work": {"dur": "8m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 3, "work": {"dur": "11m"}, "recovery": {"dur": "2m"} }
+          }
+        },
+        "4": {
+          "kind": "intervals",
+          "work": { "dur": "12m", "pace": [90, 94] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 2, "work": {"dur": "7m30s"}, "recovery": {"dur": "1m30s"} },
+            "45": { "reps": 2, "work": {"dur": "13m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 3, "work": {"dur": "12m"}, "recovery": {"dur": "2m"} }
+          }
+        },
+        "5": {
+          "kind": "intervals",
+          "work": { "dur": "15m", "pace": [91, 94] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 1, "work": {"dur": "16m"}, "recovery": {"dur": "2m"} },
+            "45": { "reps": 2, "work": {"dur": "14m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 2, "work": {"dur": "20m"}, "recovery": {"dur": "3m"} }
+          }
+        }
+      }
+    },
+    {
+      "id": "threshold",
+      "name": "Threshold intervals",
+      "description": "Repeats at threshold pace (zone 4) with 2′ easy.",
+      "levels": {
+        "1": {
+          "kind": "intervals",
+          "work": { "dur": "4m", "pace": [96, 100] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 3, "work": {"dur": "3m"}, "recovery": {"dur": "2m"} },
+            "45": { "reps": 4, "work": {"dur": "4m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 5, "work": {"dur": "5m"}, "recovery": {"dur": "2m"} }
+          }
+        },
+        "2": {
+          "kind": "intervals",
+          "work": { "dur": "4m", "pace": [96, 100] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 3, "work": {"dur": "4m"}, "recovery": {"dur": "2m"} },
+            "45": { "reps": 5, "work": {"dur": "4m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 5, "work": {"dur": "6m"}, "recovery": {"dur": "2m"} }
+          }
+        },
+        "3": {
+          "kind": "intervals",
+          "work": { "dur": "6m", "pace": [97, 100] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 2, "work": {"dur": "6m"}, "recovery": {"dur": "2m"} },
+            "45": { "reps": 4, "work": {"dur": "6m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 5, "work": {"dur": "7m"}, "recovery": {"dur": "2m"} }
+          }
+        },
+        "4": {
+          "kind": "intervals",
+          "work": { "dur": "8m", "pace": [97, 100] },
+          "recovery": { "dur": "2m", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 2, "work": {"dur": "7m"}, "recovery": {"dur": "2m"} },
+            "45": { "reps": 3, "work": {"dur": "8m"}, "recovery": {"dur": "2m"} },
+            "60": { "reps": 4, "work": {"dur": "9m"}, "recovery": {"dur": "2m"} }
+          }
+        },
+        "5": {
+          "kind": "intervals",
+          "work": { "dur": "9m", "pace": [98, 100] },
+          "recovery": { "dur": "1m30s", "pace": 75 },
+          "byDuration": {
+            "30": { "reps": 2, "work": {"dur": "7m30s"}, "recovery": {"dur": "1m30s"} },
+            "45": { "reps": 3, "work": {"dur": "9m"}, "recovery": {"dur": "1m30s"} },
+            "60": { "reps": 4, "work": {"dur": "10m"}, "recovery": {"dur": "1m30s"} }
+          }
+        }
+      }
+    },
+    {
+      "id": "vo2",
+      "name": "VO2max intervals",
+      "description": "Zone 5 repeats (104–108 % of threshold) with easy jogging in between.",
+      "levels": {
+        "1": {
+          "kind": "intervals",
+          "work": { "dur": "1m", "pace": [104, 108] },
+          "recovery": { "dur": "2m", "pace": 72 },
+          "maxReps": 8
+        },
+        "2": {
+          "kind": "intervals",
+          "work": { "dur": "1m30s", "pace": [104, 108] },
+          "recovery": { "dur": "2m", "pace": 72 },
+          "maxReps": 8
+        },
+        "3": {
+          "kind": "intervals",
+          "work": { "dur": "2m", "pace": [104, 108] },
+          "recovery": { "dur": "2m", "pace": 72 },
+          "maxReps": 7
+        },
+        "4": {
+          "kind": "intervals",
+          "work": { "dur": "3m", "pace": [104, 108] },
+          "recovery": { "dur": "2m", "pace": 72 },
+          "maxReps": 6
+        },
+        "5": {
+          "kind": "intervals",
+          "work": { "dur": "3m", "pace": [104, 108] },
+          "recovery": { "dur": "1m30s", "pace": 72 },
+          "maxReps": 7
+        }
+      }
+    },
+    {
+      "id": "hills",
+      "name": "Hill repeats",
+      "description": "Inclined climbs with an easy recovery at 1 %. The steeper the climb, the slower the pace, so the effort stays similar.",
+      "warmup": { "dur": "10m", "pace": [70, 80], "ramp": true, "incline": 1 },
+      "warmup30": { "dur": "8m", "pace": [70, 80], "ramp": true, "incline": 1 },
+      "cooldown": { "dur": "5m", "pace": [78, 68], "ramp": true, "incline": 0 },
+      "levels": {
+        "1": {
+          "kind": "intervals",
+          "work": { "dur": "1m", "pace": [85, 88], "incline": 4 },
+          "recovery": { "dur": "2m", "pace": 72, "incline": 1 },
+          "maxReps": 8
+        },
+        "2": {
+          "kind": "intervals",
+          "work": { "dur": "1m30s", "pace": [84, 87], "incline": 5 },
+          "recovery": { "dur": "2m", "pace": 72, "incline": 1 },
+          "maxReps": 8
+        },
+        "3": {
+          "kind": "intervals",
+          "work": { "dur": "2m", "pace": [82, 86], "incline": 6 },
+          "recovery": { "dur": "2m", "pace": 72, "incline": 1 },
+          "maxReps": 8
+        },
+        "4": {
+          "kind": "intervals",
+          "work": { "dur": "2m", "pace": [80, 84], "incline": 8 },
+          "recovery": { "dur": "2m", "pace": 72, "incline": 1 },
+          "maxReps": 8
+        },
+        "5": {
+          "kind": "intervals",
+          "work": { "dur": "3m", "pace": [78, 82], "incline": 10 },
+          "recovery": { "dur": "2m", "pace": 72, "incline": 1 },
+          "maxReps": 7
+        }
+      }
+    }
+  ],
+  "featured": [
+    {
+      "id": "hr-z2",
+      "name": "Z2 heart rate run",
+      "description": "Speed adjusts itself to keep HR in zone 2 (turn on \"Adjust speed by HR\").",
+      "type": "aerobic",
+      "minutes": 45,
+      "level": 3,
+      "steps": [
+        { "dur": "8m", "pace": [70, 80], "ramp": true, "warmup": true },
+        { "dur": "32m", "hr": "Z2" },
+        { "dur": "5m", "pace": [78, 68], "ramp": true, "cooldown": true }
+      ]
+    },
+    {
+      "id": "progressive",
+      "name": "Progression from Z2 to threshold",
+      "description": "Four 6′ blocks climbing from zone 2 to threshold pace.",
+      "type": "tempo",
+      "minutes": 36,
+      "level": 3,
+      "steps": [
+        { "dur": "8m", "pace": [70, 80], "ramp": true, "warmup": true },
+        { "dur": "6m", "pace": 82 },
+        { "dur": "6m", "pace": 88 },
+        { "dur": "6m", "pace": 93 },
+        { "dur": "6m", "pace": 99 },
+        { "dur": "4m", "pace": [78, 68], "ramp": true, "cooldown": true }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Treadwise</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --surface-2: #eef0f3;
+      --border: #d9dde3;
+      --text: #15181d;
+      --muted: #5d6673;
+      --accent: #1f6feb;
+      --accent-text: #ffffff;
+      --ok: #1a7f37;
+      --warn: #9a6700;
+      --danger: #cf222e;
+      --log-bg: #0f1216;
+      --log-text: #c9d1d9;
+      --series-speed: #2a78d6;
+      --series-incline: #1baf7a;
+      --series-hr: #eb6834;
+      --zone-free: #c4c9d0; --zone-1: #8c939d; --zone-2: #3d84e0; --zone-3: #22a06b;
+      --zone-4: #e0b030; --zone-5: #ef7a2d; --zone-6: #e0442b; --zone-7: #7c5cd6;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0d1014;
+        --surface: #161a20;
+        --surface-2: #1e232b;
+        --border: #2c333d;
+        --text: #e8ecf1;
+        --muted: #8b95a3;
+        --accent: #4c8dff;
+        --accent-text: #0d1014;
+        --ok: #3fb950;
+        --warn: #d29922;
+        --danger: #f85149;
+        --log-bg: #080a0d;
+        --log-text: #b1bac4;
+        --series-speed: #3987e5;
+        --series-incline: #199e70;
+        --series-hr: #d95926;
+        --zone-free: #3a414c; --zone-1: #6b727c; --zone-2: #4c8dff; --zone-3: #2fb37a;
+        --zone-4: #e8c34a; --zone-5: #f08a3c; --zone-6: #e5492d; --zone-7: #9b82f0;
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #0d1014;
+      --surface: #161a20;
+      --surface-2: #1e232b;
+      --border: #2c333d;
+      --text: #e8ecf1;
+      --muted: #8b95a3;
+      --accent: #4c8dff;
+      --accent-text: #0d1014;
+      --ok: #3fb950;
+      --warn: #d29922;
+      --danger: #f85149;
+      --log-bg: #080a0d;
+      --log-text: #b1bac4;
+      --series-speed: #3987e5;
+      --series-incline: #199e70;
+      --series-hr: #d95926;
+      --zone-free: #3a414c; --zone-1: #6b727c; --zone-2: #4c8dff; --zone-3: #2fb37a;
+      --zone-4: #e8c34a; --zone-5: #f08a3c; --zone-6: #e5492d; --zone-7: #9b82f0;
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 16px;
+    }
+    main { max-width: 1120px; margin: 0 auto; display: grid; gap: 16px; }
+    .footer { text-align: center; padding: 8px 0 16px; }
+    h1 { font-size: 20px; font-weight: 650; }
+    h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 12px; }
+    .num { font-variant-numeric: tabular-nums; }
+
+    header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 0; font-weight: 500; cursor: pointer;
+      padding: 4px 10px; border-radius: 999px; font-size: 13px;
+      background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    }
+    .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+    .pill[data-state="ready"]::before { background: var(--ok); }
+    .pill[data-state="busy"]::before { background: var(--warn); }
+    .pill[data-state="error"]::before { background: var(--danger); }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+
+    button, select, input {
+      font: inherit; color: var(--text);
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 14px; min-height: 40px;
+    }
+    button { cursor: pointer; font-weight: 600; }
+    button:hover:not(:disabled) { border-color: var(--accent); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+    button.danger { color: var(--danger); }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    label.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+
+    /* Session bar: values with icons and controls */
+    .dash { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); padding: 0; }
+    .dash-half { display: grid; gap: 12px; padding: 14px 18px; align-content: space-between; min-width: 0; }
+    .dash-half + .dash-half { border-left: 1px solid var(--border); }
+    .dash-split { grid-template-columns: 1fr 1fr; }
+    .dash-vals { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; }
+    .dv { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+    .dv b { font-size: clamp(26px, 4vw, 38px); font-weight: 700; line-height: 1.1; }
+    .dv small { font-size: 13px; color: var(--muted); }
+    .dash-sub { font-size: 13px; color: var(--muted); }
+    .dash-vals { column-gap: 18px; }
+    .dv.alpha b { font-size: clamp(20px, 2.6vw, 28px); }
+    .dv.alpha small { max-width: 7.5em; white-space: normal; line-height: 1.15; }
+    .alpha-dot { width: 10px; height: 10px; border-radius: 50%; align-self: center; background: var(--alpha-none); flex: none; }
+    .alpha[data-state="aerobic"] .alpha-dot { background: var(--alpha-aerobic); }
+    .alpha[data-state="transition"] .alpha-dot { background: var(--alpha-transition); }
+    .alpha[data-state="anaerobic"] .alpha-dot { background: var(--alpha-anaerobic); }
+    .ico { width: 22px; height: 22px; align-self: center; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .ico .fill { fill: currentColor; stroke: none; }
+    button .ico { stroke: currentColor; }
+    .dash-ctl { display: grid; gap: 4px; grid-template-rows: auto auto 1fr; min-width: 0; }
+    .dash-ctl .pm { align-self: end; margin-top: 8px; }
+    .dash-btns, .pm { display: flex; gap: 8px; }
+    .dash-note { grid-column: 1 / -1; padding: 10px 18px; border-top: 1px solid var(--border); }
+    button.icon, .pm button { min-width: 52px; min-height: 48px; padding: 0 12px; display: inline-grid; place-items: center; font-size: 22px; line-height: 1; }
+    button.icon.danger { color: var(--danger); }
+    .off-target { color: var(--warn); }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+
+    /* Step list */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; }
+    td.r, th.r { text-align: right; }
+    tr.current td { background: var(--surface-2); font-weight: 650; }
+    tr.done td { color: var(--muted); }
+    .steps-wrap { max-height: 420px; overflow: auto; }
+    .workout-desc { white-space: pre-wrap; font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+    .log {
+      background: var(--log-bg); color: var(--log-text); border-radius: 8px; padding: 10px;
+      height: 220px; overflow: auto; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .log .tx { color: #d2a8ff; }
+    .log .rx { color: #e3b341; }
+    .log .warn { color: #f0883e; }
+    .log .error { color: #ff7b72; }
+    .log .data { color: #7ee787; }
+    .note { font-size: 13px; color: var(--muted); }
+    .banner { border-left: 4px solid var(--warn); padding: 10px 12px; background: var(--surface); border-radius: 8px; font-size: 14px; }
+    .hidden { display: none !important; }
+
+    /* Treadmill state */
+    .console-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; }
+    .console-grid div { display: grid; gap: 2px; min-width: 0; }
+    .console-grid span { font-size: 12px; color: var(--muted); }
+    .console-grid strong { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mode[data-mode="2"] { color: var(--ok); }
+    .mode[data-mode="3"], .mode[data-mode="1"], .mode[data-mode="10"] { color: var(--warn); }
+    .mode[data-mode="8"] { color: var(--danger); }
+    @media (max-width: 860px) { .console-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    /* Chart */
+    .viz-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .viz-head h2 { margin: 0; }
+    :root { --alpha-aerobic: var(--zone-3); --alpha-transition: var(--zone-5); --alpha-anaerobic: var(--zone-6); --alpha-none: var(--zone-free); }
+    .viz-alpha { opacity: .85; }
+    .viz-band { opacity: .4; }
+    .viz-axis.on-band { fill: var(--text); }
+    .viz-chip { opacity: .85; }
+    .viz-chip-text { font-size: 11px; font-weight: 700; fill: var(--text); }
+    .help { width: 32px; min-width: 32px; min-height: 32px; padding: 0; border-radius: 50%; font-size: 15px; }
+    .help-pop { max-width: min(460px, calc(100vw - 32px)); margin: auto; padding: 16px 18px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.3); }
+    .help-pop::backdrop { background: rgba(0,0,0,.35); }
+    .help-pop .zones { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+    .help-pop ul { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; font-size: 14px; }
+    .help-pop li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: baseline; }
+    .help-pop i { display: block; width: 18px; align-self: center; }
+    .help-pop i.line { height: 2px; border-radius: 1px; }
+    .help-pop i.dash { border-top: 2px dashed var(--muted); }
+    .help-pop i.block { height: 12px; border-radius: 2px 2px 0 0; background: var(--zone-2); opacity: .45; }
+    .help-pop i.block.alpha-key { height: 8px; border-radius: 2px; opacity: .85; background: linear-gradient(90deg, var(--alpha-aerobic) 0 50%, var(--alpha-transition) 50% 80%, var(--alpha-anaerobic) 80%); }
+    .help-pop i.block.cols { width: 8px; border-radius: 1px; background: linear-gradient(var(--zone-4), var(--zone-3) 50%, var(--zone-2)); opacity: .6; }
+    .menu { margin: 0; inset: auto; padding: 8px; display: none; gap: 6px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+    .menu:popover-open { display: grid; }
+    .menu button { text-align: left; }
+    .viz-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); align-items: center; margin-bottom: 6px; }
+    .viz-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+    .viz-legend strong { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 650; }
+    .viz-legend .line { width: 16px; height: 2px; border-radius: 1px; }
+    .viz-legend .dash { width: 16px; height: 0; border-top: 2px dashed var(--muted); }
+    .viz-root { position: relative; width: 100%; }
+    .viz-svg { display: block; width: 100%; touch-action: pan-y; }
+    .viz-title { font-size: 13px; font-weight: 600; fill: var(--muted); }
+    .viz-value { font-weight: 650; fill: var(--text); font-variant-numeric: tabular-nums; }
+    .viz-axis { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+    .viz-grid { stroke: var(--border); stroke-width: 1; opacity: .7; }
+    .viz-block { opacity: .45; }
+    .viz-target { stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .55; fill: none; }
+    .viz-elapsed { fill: var(--surface); opacity: .45; }
+    .viz-now-dot { fill: var(--text); stroke: var(--surface); stroke-width: 2; }
+    .viz-empty { font-size: 13px; fill: var(--muted); }
+    .viz-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .viz-now { stroke: var(--text); stroke-width: 2; }
+    .viz-cross { stroke: var(--text); stroke-width: 1; opacity: .5; }
+    .viz-dot { stroke: var(--surface); stroke-width: 2; }
+    .viz-tip {
+      position: absolute; pointer-events: none; z-index: 2; min-width: 170px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    }
+    .viz-tip-head { color: var(--muted); font-variant-numeric: tabular-nums; margin-bottom: 4px; }
+    .viz-tip-row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .viz-tip-row strong { font-variant-numeric: tabular-nums; }
+    .viz-tip-row span:last-child { color: var(--muted); }
+    .viz-key { width: 12px; height: 2px; border-radius: 1px; flex: none; }
+    .viz-key.plan { height: 8px; opacity: .35; border-radius: 2px 2px 0 0; }
+    .zones { display: grid; gap: 4px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .zones div { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+    .zones b { color: var(--text); font-weight: 600; min-width: 42px; }
+    .zones span { display: inline-flex; align-items: center; gap: 4px; }
+    .zones i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+    .tab { display: grid; gap: 16px; }
+    .user-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+    .user-id { flex: 1; min-width: 160px; }
+    .user-name { font-size: 20px; font-weight: 650; }
+    .avatar { position: relative; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; flex: none; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--border); font-weight: 650; color: var(--muted); }
+    .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin: 16px 0 8px; }
+    .stats div { display: grid; gap: 2px; }
+    .stats span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .stats strong { font-size: 22px; font-weight: 650; }
+    .stats small { font-size: 13px; color: var(--muted); font-weight: 400; }
+    .ztable td:first-child { white-space: nowrap; }
+    .ztable i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; }
+    .tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+    .tabs button { border: 0; background: transparent; min-height: 36px; padding: 6px 14px; color: var(--muted); display: inline-grid; place-items: center; }
+    .tabs .ico { stroke: currentColor; }
+    .tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); }
+    .stack { display: grid; gap: 16px; }
+    .wlist { display: grid; gap: 6px; margin-top: 10px; max-height: 70vh; overflow-y: auto; }
+    .filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
+    .filters select { width: 100%; }
+    .witem { display: grid; gap: 2px; text-align: left; font-weight: 400; padding: 10px 12px; background: var(--surface); }
+    .witem strong { font-weight: 650; }
+    .witem span { font-size: 13px; color: var(--muted); }
+    .witem[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); background: var(--surface-2); }
+    .viz-baseline { stroke: var(--muted); stroke-width: 1; opacity: .6; }
+    details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 860px) {
+      .dash { grid-template-columns: 1fr; }
+      .dash-half + .dash-half { border-left: 0; border-top: 1px solid var(--border); }
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Treadwise</h1>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="nav-profile" aria-selected="false" aria-label="Profile" title="Profile"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button>
+      <button role="tab" id="nav-workouts" aria-selected="false" aria-label="Workouts" title="Workouts"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4.5" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg></button>
+      <button role="tab" id="nav-train" aria-selected="true" aria-label="Train" title="Train"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="15.5" cy="4.5" r="2"/><path d="M14 8.5l-3 5.5M7.5 10.5l3-2.5h3.5l2.5 3.5M11 14l3.5 2.5-1 4.5M11 14l-2.5 4H5"/></svg></button>
+      <button role="tab" id="nav-debug" aria-selected="false" aria-label="Debug" title="Debug" class="hidden"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7.5a3 3 0 0 1 6 0"/><rect x="7" y="8.5" width="10" height="12" rx="5"/><path d="M12 10v10M3.5 13H7M17 13h3.5M4.5 8.5L7 10M19.5 8.5L17 10M4.5 19l2.7-1.8M19.5 19l-2.7-1.8"/></svg></button>
+    </nav>
+    <div class="pills">
+      <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect the treadmill">Treadmill</button>
+      <button class="pill" id="pillHr" title="Connect a heart rate monitor (HRM)">HRM</button>
+      <button class="pill" id="pillIntervals" title="API key in Profile">Intervals.icu</button>
+    </div>
+    <div popover id="menuTreadmill" class="menu">
+      <button class="primary" id="btnConnect">Connect treadmill</button>
+      <button id="btnSim">Simulation mode</button>
+      <button id="btnSimBelt" class="hidden">Console Start/Stop (sim)</button>
+      <button id="btnDisconnect" class="danger" disabled>Disconnect</button>
+    </div>
+  </header>
+
+  <!-- ===================== Profile ===================== -->
+  <div id="tab-profile" class="tab hidden">
+    <!-- With an API key: the Intervals.icu account -->
+    <section class="card hidden" id="pUser">
+      <div class="user-head">
+        <span class="avatar" aria-hidden="true"><span id="pInitials"></span><img id="pAvatar" alt="" class="hidden"></span>
+        <div class="user-id">
+          <div class="user-name" id="pName">Intervals.icu</div>
+          <div class="note" id="pMeta"></div>
+        </div>
+        <div class="row">
+          <button id="pRefresh">Refresh</button>
+          <button id="pLogout" class="danger">Sign out</button>
+        </div>
+      </div>
+      <div class="stats num" id="pStats"></div>
+      <div class="note" id="pUserNote"></div>
+    </section>
+
+    <!-- Without an API key: sign in with Intervals.icu or enter the data by hand -->
+    <div class="layout" id="pLogin">
+      <section class="card">
+        <h2>Sign in with Intervals.icu</h2>
+        <p class="note" style="margin-bottom: 12px">Paste your API key (Intervals.icu → Settings → Developer Settings). It is stored only in this browser; it is used to read your workouts and zones and to upload activities.</p>
+        <div class="row">
+          <input type="password" id="pKey" autocomplete="off" spellcheck="false" placeholder="API key" aria-label="API key" style="flex: 1; min-width: 180px">
+          <button class="primary" id="pKeySave">Sign in</button>
+        </div>
+        <div class="note" id="pKeyNote" style="margin-top: 10px"></div>
+      </section>
+      <section class="card">
+        <h2>Or enter your data</h2>
+        <p class="note" style="margin-bottom: 12px">Without an account, zones are computed from these three numbers. The library and TCX download still work.</p>
+        <div class="row">
+          <label class="field">Threshold pace (min/km)
+            <input type="text" id="pPace" inputmode="numeric" placeholder="6:10" style="width: 110px">
+          </label>
+          <label class="field">LTHR (bpm)
+            <input type="number" id="pLthr" min="100" max="220" placeholder="168" style="width: 90px">
+          </label>
+          <label class="field">Max HR (bpm)
+            <input type="number" id="pMaxHr" min="100" max="230" placeholder="185" style="width: 90px">
+          </label>
+        </div>
+        <div class="row" style="margin-top: 12px">
+          <button class="primary" id="pSave">Save</button>
+        </div>
+        <div class="note" id="pNote" style="margin-top: 10px"></div>
+      </section>
+    </div>
+
+    <section class="card hidden" id="pZonesCard">
+      <h2>Zones</h2>
+      <table class="ztable num">
+        <thead><tr><th>Zone</th><th>HR (bpm)</th><th>Pace (min/km)</th></tr></thead>
+        <tbody id="pZones"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <!-- ===================== Workouts ===================== -->
+  <div id="tab-workouts" class="tab hidden">
+    <div class="layout">
+      <div class="stack">
+        <section class="card">
+          <div class="row" style="justify-content: space-between">
+            <h2 style="margin: 0">Planned in Intervals.icu</h2>
+            <div class="row">
+              <input type="date" id="wDate" aria-label="Day">
+              <button id="btnReload">Refresh</button>
+            </div>
+          </div>
+          <div class="wlist" id="wPlanned"></div>
+        </section>
+        <section class="card">
+          <div class="row" style="justify-content: space-between">
+            <h2 style="margin: 0">Library</h2>
+            <span class="note num" id="wLibCount"></span>
+          </div>
+          <p class="note" style="margin: 4px 0 8px">Adapted to your profile (threshold pace and HR zones). ★ featured.</p>
+          <div class="filters" id="wFilters"></div>
+          <div class="wlist" id="wLibrary"></div>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2>Selected workout</h2>
+        <div class="step-title" id="wName">No workout: manual control</div>
+        <div class="workout-desc" id="wDesc"></div>
+        <div id="wPreview" style="margin-top: 12px"></div>
+        <div class="row" style="margin-top: 12px">
+          <label class="field">Pace within the zone
+            <select id="wPosition">
+              <option value="low">Low (slower)</option>
+              <option value="mid" selected>Mid</option>
+              <option value="high">High (faster)</option>
+            </select>
+          </label>
+          <label class="field">Base incline (%)
+            <input type="number" id="wIncline" min="0" max="10" step="0.5" value="1" style="width: 90px">
+          </label>
+          <label class="row note" style="align-self: end; min-height: 40px">
+            <input type="checkbox" id="wHrAdjust" checked style="min-height: auto"> Adjust speed by HR
+          </label>
+        </div>
+        <div class="zones num" id="wZones"></div>
+        <div class="steps-wrap" style="margin-top: 10px">
+          <table>
+            <thead><tr><th>#</th><th>Step</th><th class="r">Dur.</th><th class="r">km/h</th><th class="r">Pace</th><th class="r">%</th></tr></thead>
+            <tbody id="wSteps"></tbody>
+          </table>
+        </div>
+        <div class="note" id="wTotal" style="margin-top: 8px"></div>
+        <div class="row" style="margin-top: 12px">
+          <button class="primary" id="btnGoTrain">Go train</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===================== Train ===================== -->
+  <div id="tab-train" class="tab">
+    <div class="banner">
+      Start the belt from the console, with the safety key attached. The ■ (finish) button and the end of the workout pause the belt, but if anything goes wrong use STOP on the console or pull the key.
+    </div>
+
+    <section class="dash card" aria-label="Session controls">
+      <div class="dash-half">
+        <div class="dash-vals num">
+          <span class="dv" title="Distance"><b id="mDist">0.00</b><small>km</small></span>
+          <span class="dv" title="Time"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg><b id="mTime">0:00</b></span>
+          <span class="dv" title="Heart rate"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><b id="mHr">--</b><small id="mHrSub">bpm</small></span>
+          <span class="dv alpha hidden" id="mAlphaBox"><i class="alpha-dot" aria-hidden="true"></i><b id="mAlpha">--</b><small id="mAlphaSub">α1</small></span>
+        </div>
+        <div class="dash-btns">
+          <button class="icon primary" id="btnStart" aria-label="Start" title="Start" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M8 5.5v13l10.5-6.5z"/></svg></button>
+          <button class="icon" id="btnSkip" aria-label="Skip step" title="Skip step" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M5.5 5.5v13L15 12z"/><path d="M18 5.5v13"/></svg></button>
+          <button class="icon danger" id="btnFinish" aria-label="Finish (pauses the belt)" title="Finish (pauses the belt)" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect class="fill" x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg></button>
+          <button class="icon" id="btnExport" popovertarget="menuExport" aria-label="Download the session" title="Download (when finished)" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg></button>
+          <button class="icon" id="btnUpload" aria-label="Upload to Intervals.icu" title="Upload to Intervals.icu (when finished)" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 18H7a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17.2 9 4.5 4.5 0 0 1 17 18h-.5"/><path d="M12 12.5V20M9 15.5l3-3 3 3"/></svg></button>
+          <div popover id="menuExport" class="menu">
+            <button id="btnCsv">CSV (second by second)</button>
+            <button id="btnTcx">TCX (for Strava, Garmin…)</button>
+          </div>
+        </div>
+      </div>
+      <div class="dash-half dash-split">
+        <div class="dash-ctl">
+          <span class="dv" title="Incline"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19h18L21 7z"/><path d="M15 19a4.5 4.5 0 0 0-1.2-3.4"/></svg><b id="mIncline">0.0</b><small>%</small></span>
+          <span class="dash-sub num" id="mInclineSub">&nbsp;</span>
+          <div class="pm">
+            <button data-incline="0.5" aria-label="Raise incline 0.5 %" title="+0.5 %">+</button>
+            <button data-incline="-0.5" aria-label="Lower incline 0.5 %" title="−0.5 %">−</button>
+          </div>
+        </div>
+        <div class="dash-ctl">
+          <span class="dv" title="Pace"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 14l4-5"/><circle cx="12" cy="14" r="1.2"/></svg><b id="mPace">--:--</b><small>min/km</small></span>
+          <span class="dash-sub num" id="mSpeedSub">0.0 km/h</span>
+          <div class="pm">
+            <button data-speed="0.5" aria-label="Faster 0.5 km/h" title="+0.5 km/h">+</button>
+            <button data-speed="-0.5" aria-label="Slower 0.5 km/h" title="−0.5 km/h">−</button>
+          </div>
+        </div>
+      </div>
+      <div class="dash-note note" id="sessionNote">Connect the treadmill to begin.</div>
+    </section>
+
+    <section class="card">
+      <div class="viz-head">
+        <h2 id="chartTitle">Session chart</h2>
+        <button class="help" popovertarget="helpChart" aria-label="What each color means" title="What each color means">?</button>
+      </div>
+      <div id="chart"></div>
+      <div popover id="helpChart" class="help-pop">
+        <h2>How to read the chart</h2>
+        <ul>
+          <li><i class="line" style="background: var(--series-speed)"></i><span>Actual <b>pace</b>, on the left scale (min/km).</span></li>
+          <li><i class="line" style="background: var(--series-hr)"></i><span>Actual <b>HR</b>, on the right scale (bpm).</span></li>
+          <li><i class="line" style="background: var(--series-incline)"></i><span>Actual <b>incline</b>, in the lower part (no scale; the value is in the tooltip).</span></li>
+          <li><i class="dash"></i><span><b>Dashed lines:</b> the plan. Red is the step's HR cap or goal; green is the planned incline.</span></li>
+          <li><i class="block"></i><span><b>Background blocks:</b> the whole workout. Width = duration, height = speed, color = zone. What is done gets dimmed and the white bar marks where you are.</span></li>
+          <li><i class="block alpha-key"></i><span><b>Bottom ribbon (α1):</b> with a chest strap, heart rate variability (DFA α1 over the last 2 min). Green: aerobic (&gt; 0.75); orange: transition (0.5–0.75); red: above the anaerobic threshold (&lt; 0.5); gray: computing or noisy signal.</span></li>
+          <li><i class="block cols"></i><span><b>Side columns:</b> pace zones (left) and HR zones (right), aligned at the same height. On top, the zone you are in right now.</span></li>
+        </ul>
+        <div class="zones"><span><i style="background: var(--zone-1)"></i>Z1 gray</span><span><i style="background: var(--zone-2)"></i>Z2 blue</span><span><i style="background: var(--zone-3)"></i>Z3 green</span><span><i style="background: var(--zone-4)"></i>Z4 yellow</span><span><i style="background: var(--zone-5)"></i>Z5 orange</span><span><i style="background: var(--zone-6)"></i>Z6 red</span><span><i style="background: var(--zone-7)"></i>Z7 violet</span></div>
+        <p class="note">Hover (or drag a finger) over the chart to see the values at each moment.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ===================== Debug (only with ?debug=true) ===================== -->
+  <div id="tab-debug" class="tab hidden">
+    <section class="card">
+      <h2>Treadmill state</h2>
+      <div class="console-grid num">
+        <div><span>Mode</span><strong id="cMode" class="mode">—</strong></div>
+        <div><span>Actual speed</span><strong id="cSpeed">—</strong></div>
+        <div><span>Requested speed</span><strong id="cTarget">—</strong></div>
+        <div><span>Incline</span><strong id="cIncline">—</strong></div>
+        <div><span>Distance (console)</span><strong id="cDist">—</strong></div>
+        <div><span>Time (console)</span><strong id="cTime">—</strong></div>
+        <div><span>Calories</span><strong id="cCal">—</strong></div>
+        <div><span>Console HR</span><strong id="cPulse">—</strong></div>
+      </div>
+      <div class="note" id="cInfo" style="margin-top: 10px">No equipment info yet.</div>
+    </section>
+    <section class="card">
+      <details open>
+        <summary>Communication log</summary>
+        <div class="row" style="margin: 10px 0">
+          <label class="row note"><input type="checkbox" id="logTraffic" style="min-height: auto"> Show TX/RX packets</label>
+          <button id="btnLogDownload">Download log</button>
+        </div>
+        <div class="log" id="log"></div>
+      </details>
+    </section>
+  </div>
+  <footer class="note footer">Treadwise is an independent project, not affiliated with iFIT Inc. NordicTrack and iFit are trademarks of their respective owners.</footer>
+</main>
+
+<script>
+  // If any module fails to download (dropped connection), the whole app does
+  // not start. It retries twice and, if it keeps failing, shows a notice.
+  function appLoadFailed() {
+    let tries = 0;
+    try { tries = Number(sessionStorage.getItem('treadwise.loadRetry') || 0); } catch { tries = 2; }
+    if (tries < 2) {
+      try { sessionStorage.setItem('treadwise.loadRetry', String(tries + 1)); } catch { /* no retry */ }
+      location.reload();
+      return;
+    }
+    const div = document.createElement('div');
+    div.className = 'banner';
+    div.style.margin = '16px';
+    div.textContent = 'Could not load the app files (the connection to the server dropped). Reload the page; if it keeps happening, restart the server with npm start.';
+    document.body.prepend(div);
+  }
+</script>
+<script type="module" src="app.js" onerror="appLoadFailed()"></script>
+</body>
+</html>

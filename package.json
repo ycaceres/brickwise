@@ -1,0 +1,9 @@
+{
+  "name": "treadwise",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test.mjs",
+    "start": "python3 serve.py 8000"
+  }
+}

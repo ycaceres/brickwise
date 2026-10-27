@@ -21,9 +21,9 @@
  * samples: [{ elapsed, speed, incline, hr, target }]
  */
 
-import { formatDuration, formatPace } from './src/workouts/steps.js';
-import { DEFAULT_PACE_PCT, paceZoneOf, hrZoneOf } from './src/physiology/zones.js';
-import { alphaState, ALPHA_LABELS } from './src/physiology/hrv.js';
+import { formatDuration, formatPace } from '../workouts/steps.js';
+import { DEFAULT_PACE_PCT, paceZoneOf, hrZoneOf } from '../physiology/zones.js';
+import { alphaState, ALPHA_LABELS } from '../physiology/hrv.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const MARGIN = { left: 48, right: 46, top: 38 };

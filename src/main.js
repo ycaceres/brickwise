@@ -2,14 +2,14 @@ import { Exp5iTreadmill, SimulatedTreadmill, HeartRateStrap } from '../treadmill
 import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from './workouts/steps.js';
 import { buildTcx } from './export/tcx.js';
 import { LIMITS } from '../exp5i-protocol.js';
-import { SessionChart } from '../chart.js';
+import { SessionChart } from './ui/chart.js';
 import { samplesToCsv } from './export/csv.js';
 import { MODES, MODE, PULSE_SOURCES } from '../ifit-messages.js';
 import { every } from './lib/timer.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from './physiology/zones.js';
 import { loadLibrary } from './workouts/library.js';
 import { alpha1Window, alphaState, ALPHA_LABELS, VT1, VT2 } from './physiology/hrv.js';
-import { hrDecision, hrSlope, inclineStep, SLOPE_WINDOW_S } from '../hrcontrol.js';
+import { hrDecision, hrSlope, inclineStep, SLOPE_WINDOW_S } from './session/hr-control.js';
 import { analyzeRamp } from './physiology/thresholds.js';
 import * as intervals from './services/intervals.js';
 
@@ -979,7 +979,7 @@ function alphaLow() {
 
 /**
  * Speed adjustment by HR, once per tick while a step runs (the decision is
- * in hrcontrol.js).
+ * in session/hr-control.js).
  * - Step with a pace target ('cap'): speed drops when HR is heading above
  *   the top of the matching zone; once HR is back below, it returns.
  * - Step with an HR target ('target'): speed moves to keep HR in the middle

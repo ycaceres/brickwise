@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from '../src/workouts/steps.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc } from '../src/physiology/zones.js';
 import { parseDur } from '../src/workouts/library.js';
-import { inclineStep } from '../hrcontrol.js';
+import { inclineStep } from '../src/session/hr-control.js';
 import { easyRun, runSettings, LIBRARY } from './fixtures.mjs';
 
 test('flattenWorkout expands repeats', () => {

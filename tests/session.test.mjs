@@ -1,7 +1,7 @@
 // Speed and incline adjustment by HR
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hrDecision, hrSlope } from '../hrcontrol.js';
+import { hrDecision, hrSlope } from '../src/session/hr-control.js';
 
 test('HR control: aims at the middle, looks ahead, scales the correction', () => {
   const z2 = { mode: 'target', lo: 135, hi: 160, hrAdjust: 0, alphaLow: false };

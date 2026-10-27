@@ -98,7 +98,7 @@ A single area, Auuki style. The **?** button explains the colors.
 
 ## Heart rate variability (DFA α1)
 
-With a chest strap that sends RR intervals (time between beats; nearly all do: Polar H9/H10, Garmin HRM, Wahoo TICKR), the page computes the **DFA α1** of the last 2 minutes every 5 s (`hrv.js`):
+With a chest strap that sends RR intervals (time between beats; nearly all do: Polar H9/H10, Garmin HRM, Wahoo TICKR), the page computes the **DFA α1** of the last 2 minutes every 5 s (`src/physiology/hrv.js`):
 
 - **> 0.75:** below the aerobic threshold (aerobic). **0.5–0.75:** transition. **< 0.5:** above the anaerobic threshold.
 - It shows to the right of HR in the bar and as a **color ribbon under the chart**. Gray: computing (~90 beats needed) or a signal with more than 5 % artifacts (missed or double beats; common with a dry strap).
@@ -120,7 +120,7 @@ On load, the running HR and pace zones are read from Intervals.icu (running spor
 
 How speed follows HR:
 
-HR is projected 30 s ahead with its slope over the last 20 s, so speed changes while HR is still heading somewhere instead of after it got there. Corrections are proportional: 0.1 km/h per bpm off target, between 0.1 and 0.5 km/h (`hrcontrol.js`).
+HR is projected 30 s ahead with its slope over the last 20 s, so speed changes while HR is still heading somewhere instead of after it got there. Corrections are proportional: 0.1 km/h per bpm off target, between 0.1 and 0.5 km/h (`src/session/hr-control.js`).
 
 - **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR is heading above that cap, speed drops, up to 2 km/h in total. Once HR is 5 bpm below the cap and no longer rising, the removed speed returns.
 - **Steps with an HR target:** the starting speed comes from the matching pace zone. Then speed moves to keep HR in the **middle** of the range (±3 bpm), not at its top (at most +1.5 km/h and −2 km/h).
@@ -137,7 +137,7 @@ The featured **Threshold test (α1)** finds your aerobic (VT1) and anaerobic (VT
 3. The ramp **ends by itself** once α1 stays below 0.45 for 20 s (just past VT2), or when HR gets within 2 bpm of max HR. You can also end it with ■. The log notes when α1 crosses 0.75 and 0.5.
 4. 5′ cooldown.
 
-**Analysis** (`thresholds.js`, after Rogers et al., 2021): every α1 is paired with the mean HR and the mean flat-equivalent speed of its own 2-minute window, and a straight line α1 = f(HR) is fitted over α1 values between 0.3 and 1.1. **VT1** is where the line crosses 0.75 and **VT2** where it crosses 0.5 (VT2 HR is close to LTHR). Speed with incline is turned into flat-equivalent speed with the ACSM running equation, v · (1 + 4.5 · grade). If α1 did not quite reach 0.5, VT2 is extrapolated (up to 0.1) and marked with *.
+**Analysis** (`src/physiology/thresholds.js`, after Rogers et al., 2021): every α1 is paired with the mean HR and the mean flat-equivalent speed of its own 2-minute window, and a straight line α1 = f(HR) is fitted over α1 values between 0.3 and 1.1. **VT1** is where the line crosses 0.75 and **VT2** where it crosses 0.5 (VT2 HR is close to LTHR). Speed with incline is turned into flat-equivalent speed with the ACSM running equation, v · (1 + 4.5 · grade). If α1 did not quite reach 0.5, VT2 is extrapolated (up to 0.1) and marked with *.
 
 Results are kept in **Profile › Threshold tests** (last 20, in this browser). A button there uses the latest VT2 as LTHR and threshold pace for the profile. With Intervals.icu connected, also update its running settings, or **Refresh** brings its values back. Repeat the test every 4–6 weeks, rested and at the same time of day, to compare.
 
@@ -160,9 +160,9 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/export/tcx.js`, `src/export/csv.js` | Build the session TCX and CSV |
 | `src/main.js`, `index.html` | UI and workout execution |
 | `src/lib/timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
-| `chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
+| `src/ui/chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
 | `src/physiology/thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
-| `hrcontrol.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
+| `src/session/hr-control.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
 | `src/physiology/zones.js` | Profile, HR and pace zones, HR ranges of each step and resolution of relative paces |
 | `data/library.json` | The workout library (data; edited by hand) |
 | `src/workouts/library.js` | Turns `data/library.json` into workouts for every duration and level |

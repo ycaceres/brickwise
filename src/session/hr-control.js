@@ -14,7 +14,7 @@
  *   so speed drops and never rises.
  */
 
-import { VT1 } from './src/physiology/hrv.js';
+import { VT1 } from '../physiology/hrv.js';
 
 export const LEAD_S = 30;        // how far ahead HR is projected
 export const SLOPE_WINDOW_S = 20; // samples used for the HR slope

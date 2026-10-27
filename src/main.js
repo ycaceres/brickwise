@@ -14,8 +14,10 @@ import { alpha1Window, alphaState, ALPHA_LABELS, VT1, VT2 } from './physiology/h
 import { hrDecision, hrSlope, inclineStep, SLOPE_WINDOW_S } from './session/hr-control.js';
 import { analyzeRamp } from './physiology/thresholds.js';
 import * as intervals from './services/intervals.js';
+import { $, setPill, escapeHtml, download } from './lib/dom.js';
+import { beep } from './lib/sound.js';
+import { loadJson, saveJson, loadText, saveText, remove } from './lib/storage.js';
 
-const $ = (id) => document.getElementById(id);
 const TICK_MS = 250;
 const MOVING_KMH = 0.5;      // above this the belt is moving
 const AUTO_PAUSE_MS = 2000;  // belt stopped this long → pause
@@ -52,12 +54,6 @@ function log(kind, text) {
   box.appendChild(el);
   while (box.childElementCount > 400) box.firstChild.remove();
   box.scrollTop = box.scrollHeight;
-}
-
-function setPill(id, state, text) {
-  const el = $(id);
-  el.dataset.state = state;
-  if (text) el.textContent = text;
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +194,7 @@ function showTab(name) {
     $(`tab-${t}`).classList.toggle('hidden', t !== name);
     $(`nav-${t}`).setAttribute('aria-selected', String(t === name));
   }
-  try { localStorage.setItem('brickwise.tab', name); } catch { /* optional */ }
+  saveText('tab', name);
   // The chart measures its width when shown
   if (name === 'train') updateChart();
   if (name === 'workouts') preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones });
@@ -214,9 +210,7 @@ let zones = null;    // zones computed from the profile
 function setProfile(p, { save = true } = {}) {
   profile = p;
   zones = zonesFromProfile(p);
-  if (save) {
-    try { localStorage.setItem('brickwise.profile', JSON.stringify(p)); } catch { /* optional */ }
-  }
+  if (save) saveJson('profile', p);
   renderProfile();
   selectWorkout(selectedKey); // recomputes speeds and HR caps
 }
@@ -234,15 +228,12 @@ async function loadProfileFromIntervals() {
 }
 
 // Intervals.icu account (name, photo…), stored so it is not fetched on every visit
-let athlete = null;
-try { athlete = JSON.parse(localStorage.getItem('brickwise.athlete') || 'null'); } catch { /* optional */ }
+let athlete = loadJson('athlete');
 
 function setAthlete(a) {
   athlete = a;
-  try {
-    if (a) localStorage.setItem('brickwise.athlete', JSON.stringify(a));
-    else localStorage.removeItem('brickwise.athlete');
-  } catch { /* optional */ }
+  if (a) saveJson('athlete', a);
+  else remove('athlete');
   renderProfile();
 }
 
@@ -504,8 +495,7 @@ let LIBRARY = [];
 let libTypes = [];
 let libDurations = [30, 45, 60];
 let libError = null;
-let libFilter = { minutes: 45, type: 'all', level: 'all' };
-try { libFilter = { ...libFilter, ...JSON.parse(localStorage.getItem('brickwise.libFilter') || '{}') }; } catch { /* optional */ }
+const libFilter = { minutes: 45, type: 'all', level: 'all', ...loadJson('libFilter', {}) };
 
 /** Nearest list duration (featured workouts may last 36 min, for example). */
 const durationBucket = (min) => libDurations.reduce((a, b) => (Math.abs(b - min) < Math.abs(a - min) ? b : a), libDurations[0]);
@@ -535,7 +525,7 @@ function renderFilters() {
     sel.onchange = () => {
       const [value] = options.find(([v]) => String(v) === sel.value);
       libFilter[key] = value;
-      try { localStorage.setItem('brickwise.libFilter', JSON.stringify(libFilter)); } catch { /* optional */ }
+      saveJson('libFilter', libFilter);
       renderLists();
     };
     wrap.appendChild(sel);
@@ -576,10 +566,6 @@ function markSelected() {
   document.querySelectorAll('.witem').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.key === selectedKey)));
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-}
-
 function selectWorkout(key = selectedKey) {
   if (['armed', 'running', 'paused'].includes(session.state)) return;
   // The library is not loaded yet: keep the choice and apply it on load
@@ -605,7 +591,7 @@ function selectWorkout(key = selectedKey) {
   } else {
     selected = null;
   }
-  try { localStorage.setItem('brickwise.workout', selectedKey.startsWith('l:') ? selectedKey : ''); } catch { /* optional */ }
+  saveText('workout', selectedKey.startsWith('l:') ? selectedKey : '');
   markSelected();
   renderWorkout();
   render();
@@ -920,7 +906,7 @@ function testOver(step) {
 }
 
 function loadTests() {
-  try { return JSON.parse(localStorage.getItem('brickwise.tests') || '[]'); } catch { return []; }
+  return loadJson('tests', []);
 }
 
 /** Analyzes the threshold test that just ended and keeps it in the history (Profile). */
@@ -933,7 +919,7 @@ function saveTestResult() {
     return;
   }
   const tests = [{ date: new Date().toISOString(), ...result, peakHr }, ...loadTests()].slice(0, TESTS_KEPT);
-  try { localStorage.setItem('brickwise.tests', JSON.stringify(tests)); } catch { /* optional */ }
+  saveJson('tests', tests);
   const text = testText(result);
   log('info', `Threshold test: ${text} (r² ${result.r2}, ${result.points} points)`);
   $('sessionNote').textContent += ` Threshold test: ${text}. See Profile.`;
@@ -1245,30 +1231,9 @@ $('btnUpload').onclick = async () => {
 
 $('btnLogDownload').onclick = () => download(`brickwise-log-${Date.now()}.txt`, logLines.join('\n'), 'text/plain');
 
-function download(name, text, type) {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: name });
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 // ---------------------------------------------------------------------------
 // Browser utilities
 // ---------------------------------------------------------------------------
-let audioCtx = null;
-function beep(freq, seconds) {
-  try {
-    audioCtx ??= new AudioContext();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + seconds);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + seconds);
-  } catch { /* no audio */ }
-}
 
 // Keeps the screen on from Start until the session ends. The browser drops
 // the lock whenever the page is hidden (another app, notification shade,
@@ -1368,14 +1333,10 @@ function renderInfo() {
 // Startup
 // ---------------------------------------------------------------------------
 {
-  let saved = null;
-  let tab = null;
-  try {
-    saved = JSON.parse(localStorage.getItem('brickwise.profile') || 'null');
-    tab = localStorage.getItem('brickwise.tab');
-    const w = localStorage.getItem('brickwise.workout');
-    if (w?.startsWith('l:')) selectedKey = w; // confirmed once the library loads
-  } catch { /* optional */ }
+  const saved = loadJson('profile');
+  const tab = loadText('tab');
+  const w = loadText('workout');
+  if (w?.startsWith('l:')) selectedKey = w; // confirmed once the library loads
   renderLists();
   loadLibrary().then((lib) => {
     LIBRARY = lib.entries;

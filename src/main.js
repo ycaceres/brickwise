@@ -10,18 +10,18 @@ import { MODES, MODE, PULSE_SOURCES } from './devices/treadmill/ifit-messages.js
 import { every } from './lib/timer.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from './physiology/zones.js';
 import { loadLibrary } from './workouts/library.js';
-import { alpha1Window, alphaState, ALPHA_LABELS, VT1, VT2 } from './physiology/hrv.js';
+import { alphaState, ALPHA_LABELS, VT1, VT2 } from './physiology/hrv.js';
 import { hrDecision, hrSlope, inclineStep, SLOPE_WINDOW_S } from './session/hr-control.js';
 import { analyzeRamp } from './physiology/thresholds.js';
 import * as intervals from './services/intervals.js';
 import { $, setPill, escapeHtml, download } from './lib/dom.js';
 import { beep } from './lib/sound.js';
 import { loadJson, saveJson, loadText, saveText, remove } from './lib/storage.js';
+import { live, rrState, addRr, rrActive, updateAlpha, STALE_MS } from './session/live.js';
 
 const TICK_MS = 250;
 const MOVING_KMH = 0.5;      // above this the belt is moving
 const AUTO_PAUSE_MS = 2000;  // belt stopped this long → pause
-const STALE_MS = 3000;       // no notifications this long → speed unknown
 
 // Speed adjustment by HR (steps carry the HR range of their zones)
 const HR_GRACE_S = 45;       // at the start of a step HR takes a while to respond
@@ -60,37 +60,6 @@ function log(kind, text) {
 // Devices
 // ---------------------------------------------------------------------------
 let treadmill = null;
-const live = { speed: 0, incline: 0, hr: null, hrSource: null, console: {}, info: {} };
-
-// RR intervals (chest strap) and DFA α1 of the last 2 minutes
-const ALPHA_EVERY_MS = 5000;
-const rrState = { beats: [], lastAt: 0, alpha: null, computedAt: 0, pending: [] };
-
-function addRr(list, contact) {
-  const now = Date.now();
-  // Each beat is timestamped backwards from now, in arrival order
-  let t = now - list.slice(1).reduce((a, b) => a + b, 0);
-  for (const rr of list) {
-    rrState.beats.push({ t, rr });
-    rrState.pending.push(rr);
-    t += rr;
-  }
-  rrState.lastAt = now;
-  rrState.contact = contact;
-  const keep = now - 150_000;
-  while (rrState.beats.length && rrState.beats[0].t < keep) rrState.beats.shift();
-}
-
-/** Recent RR: without them α1 is not shown (optical sensor, no strap…). */
-const rrActive = () => Date.now() - rrState.lastAt < 10_000;
-
-function updateAlpha() {
-  const now = Date.now();
-  if (!rrActive()) { rrState.alpha = null; return; }
-  if (now - rrState.computedAt < ALPHA_EVERY_MS) return;
-  rrState.computedAt = now;
-  rrState.alpha = alpha1Window(rrState.beats, now);
-}
 
 function treadmillCallbacks() {
   return {

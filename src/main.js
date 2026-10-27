@@ -6,7 +6,7 @@ import { buildTcx } from './export/tcx.js';
 import { LIMITS } from './devices/treadmill/exp5i-protocol.js';
 import { SessionChart } from './ui/chart.js';
 import { samplesToCsv } from './export/csv.js';
-import { MODES, MODE, PULSE_SOURCES } from './devices/treadmill/ifit-messages.js';
+import { MODE } from './devices/treadmill/ifit-messages.js';
 import { every } from './lib/timer.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from './physiology/zones.js';
 import { loadLibrary } from './workouts/library.js';
@@ -18,6 +18,7 @@ import { $, setPill, escapeHtml, download } from './lib/dom.js';
 import { beep } from './lib/sound.js';
 import { loadJson, saveJson, loadText, saveText, remove } from './lib/storage.js';
 import { live, rrState, addRr, rrActive, updateAlpha, STALE_MS } from './session/live.js';
+import { log, renderConsole, renderInfo } from './ui/debug.js';
 
 const TICK_MS = 250;
 const MOVING_KMH = 0.5;      // above this the belt is moving
@@ -39,27 +40,9 @@ const TEST_MIN_S = 180;       // and never before this much ramp
 const TESTS_KEPT = 20;        // threshold tests kept in the history
 
 // ---------------------------------------------------------------------------
-// Log
-// ---------------------------------------------------------------------------
-const logLines = [];
-function log(kind, text) {
-  const line = `${new Date().toISOString().slice(11, 23)} ${kind.toUpperCase().padEnd(5)} ${text}`;
-  logLines.push(line);
-  if (logLines.length > 20000) logLines.splice(0, 5000);
-  if ((kind === 'tx' || kind === 'rx') && !$('logTraffic').checked) return;
-  const el = document.createElement('div');
-  el.className = kind;
-  el.textContent = line;
-  const box = $('log');
-  box.appendChild(el);
-  while (box.childElementCount > 400) box.firstChild.remove();
-  box.scrollTop = box.scrollHeight;
-}
-
-// ---------------------------------------------------------------------------
 // Devices
 // ---------------------------------------------------------------------------
-let treadmill = null;
+export let treadmill = null;
 
 function treadmillCallbacks() {
   return {
@@ -1072,7 +1055,7 @@ $('btnFinish').onclick = () => {
   treadmill?.pause();
 };
 
-function updateControls() {
+export function updateControls() {
   const connected = !!treadmill?.connected;
   const active = ['armed', 'running', 'paused'].includes(session.state);
   $('btnStart').disabled = !connected || active;
@@ -1198,8 +1181,6 @@ $('btnUpload').onclick = async () => {
   }
 };
 
-$('btnLogDownload').onclick = () => download(`brickwise-log-${Date.now()}.txt`, logLines.join('\n'), 'text/plain');
-
 // ---------------------------------------------------------------------------
 // Browser utilities
 // ---------------------------------------------------------------------------
@@ -1258,45 +1239,6 @@ window.addEventListener('beforeunload', (e) => {
 });
 window.addEventListener('pagehide', pauseOnClose);
 
-
-// ---------------------------------------------------------------------------
-// Treadmill state (what the console reports)
-// ---------------------------------------------------------------------------
-let lastMode;
-function renderConsole() {
-  const c = live.console;
-  const fresh = treadmill && Date.now() - (treadmill.state.updatedAt || 0) < STALE_MS;
-  const modeEl = $('cMode');
-  const mode = fresh ? c.mode : undefined;
-  modeEl.textContent = mode != null ? MODES[mode] || `mode ${mode}` : '—';
-  modeEl.dataset.mode = mode ?? '';
-  if (mode !== lastMode) {
-    lastMode = mode;
-    updateControls(); // the safety key notice depends on the mode
-  }
-  const set = (id, text) => { $(id).textContent = fresh && text != null ? text : '—'; };
-  set('cSpeed', c.speed != null ? `${c.speed.toFixed(1)} km/h${c.speedSource === 'requested' ? ' (no actual reading)' : ''}` : null);
-  set('cTarget', c.targetSpeed != null ? `${c.targetSpeed.toFixed(1)} km/h` : null);
-  set('cIncline', c.incline != null ? `${c.incline.toFixed(1)} %` : null);
-  set('cDist', c.distance != null ? `${(c.distance / 1000).toFixed(2)} km` : null);
-  set('cTime', c.time != null ? formatDuration(c.time) : null);
-  set('cCal', c.calories != null ? `${Math.round(c.calories)} kcal` : null);
-  set('cPulse', c.pulse
-    ? (c.pulse.bpm > 0 ? `${c.pulse.bpm} bpm · ${PULSE_SOURCES[c.pulse.source] || `source ${c.pulse.source}`}` : 'no pulse')
-    : null);
-}
-
-function renderInfo() {
-  const i = live.info;
-  const parts = [];
-  if (i.firmware) parts.push(`Firmware ${i.firmware}`);
-  if (i.serial) parts.push(`Serial ${i.serial}`);
-  if (i.reference) parts.push(`Model ${i.reference}`);
-  if (i.supported) parts.push(`${i.supported.length} supported fields`);
-  if (i.limits?.minKph != null) parts.push(`Speed ${i.limits.minKph}–${i.limits.maxKph} km/h`);
-  if (i.limits?.maxIncline != null) parts.push(`Incline ${i.limits.minIncline}–${i.limits.maxIncline} %`);
-  $('cInfo').textContent = parts.join(' · ') || 'No equipment info yet.';
-}
 
 // ---------------------------------------------------------------------------
 // Startup

@@ -195,7 +195,7 @@ function showTab(name) {
     $(`tab-${t}`).classList.toggle('hidden', t !== name);
     $(`nav-${t}`).setAttribute('aria-selected', String(t === name));
   }
-  try { localStorage.setItem('treadwise.tab', name); } catch { /* optional */ }
+  try { localStorage.setItem('brickwise.tab', name); } catch { /* optional */ }
   // The chart measures its width when shown
   if (name === 'train') updateChart();
   if (name === 'workouts') preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones });
@@ -212,7 +212,7 @@ function setProfile(p, { save = true } = {}) {
   profile = p;
   zones = zonesFromProfile(p);
   if (save) {
-    try { localStorage.setItem('treadwise.profile', JSON.stringify(p)); } catch { /* optional */ }
+    try { localStorage.setItem('brickwise.profile', JSON.stringify(p)); } catch { /* optional */ }
   }
   renderProfile();
   selectWorkout(selectedKey); // recomputes speeds and HR caps
@@ -232,13 +232,13 @@ async function loadProfileFromIntervals() {
 
 // Intervals.icu account (name, photo…), stored so it is not fetched on every visit
 let athlete = null;
-try { athlete = JSON.parse(localStorage.getItem('treadwise.athlete') || 'null'); } catch { /* optional */ }
+try { athlete = JSON.parse(localStorage.getItem('brickwise.athlete') || 'null'); } catch { /* optional */ }
 
 function setAthlete(a) {
   athlete = a;
   try {
-    if (a) localStorage.setItem('treadwise.athlete', JSON.stringify(a));
-    else localStorage.removeItem('treadwise.athlete');
+    if (a) localStorage.setItem('brickwise.athlete', JSON.stringify(a));
+    else localStorage.removeItem('brickwise.athlete');
   } catch { /* optional */ }
   renderProfile();
 }
@@ -502,7 +502,7 @@ let libTypes = [];
 let libDurations = [30, 45, 60];
 let libError = null;
 let libFilter = { minutes: 45, type: 'all', level: 'all' };
-try { libFilter = { ...libFilter, ...JSON.parse(localStorage.getItem('treadwise.libFilter') || '{}') }; } catch { /* optional */ }
+try { libFilter = { ...libFilter, ...JSON.parse(localStorage.getItem('brickwise.libFilter') || '{}') }; } catch { /* optional */ }
 
 /** Nearest list duration (featured workouts may last 36 min, for example). */
 const durationBucket = (min) => libDurations.reduce((a, b) => (Math.abs(b - min) < Math.abs(a - min) ? b : a), libDurations[0]);
@@ -532,7 +532,7 @@ function renderFilters() {
     sel.onchange = () => {
       const [value] = options.find(([v]) => String(v) === sel.value);
       libFilter[key] = value;
-      try { localStorage.setItem('treadwise.libFilter', JSON.stringify(libFilter)); } catch { /* optional */ }
+      try { localStorage.setItem('brickwise.libFilter', JSON.stringify(libFilter)); } catch { /* optional */ }
       renderLists();
     };
     wrap.appendChild(sel);
@@ -602,7 +602,7 @@ function selectWorkout(key = selectedKey) {
   } else {
     selected = null;
   }
-  try { localStorage.setItem('treadwise.workout', selectedKey.startsWith('l:') ? selectedKey : ''); } catch { /* optional */ }
+  try { localStorage.setItem('brickwise.workout', selectedKey.startsWith('l:') ? selectedKey : ''); } catch { /* optional */ }
   markSelected();
   renderWorkout();
   render();
@@ -917,7 +917,7 @@ function testOver(step) {
 }
 
 function loadTests() {
-  try { return JSON.parse(localStorage.getItem('treadwise.tests') || '[]'); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem('brickwise.tests') || '[]'); } catch { return []; }
 }
 
 /** Analyzes the threshold test that just ended and keeps it in the history (Profile). */
@@ -930,7 +930,7 @@ function saveTestResult() {
     return;
   }
   const tests = [{ date: new Date().toISOString(), ...result, peakHr }, ...loadTests()].slice(0, TESTS_KEPT);
-  try { localStorage.setItem('treadwise.tests', JSON.stringify(tests)); } catch { /* optional */ }
+  try { localStorage.setItem('brickwise.tests', JSON.stringify(tests)); } catch { /* optional */ }
   const text = testText(result);
   log('info', `Threshold test: ${text} (r² ${result.r2}, ${result.points} points)`);
   $('sessionNote').textContent += ` Threshold test: ${text}. See Profile.`;
@@ -1078,7 +1078,7 @@ function updateChart() {
 $('btnCsv').onclick = () => {
   $('menuExport').hidePopover();
   if (!session.samples.length) return;
-  download(`treadwise-${new Date(session.startedAt).toISOString().slice(0, 16).replace(':', '')}.csv`, samplesToCsv(session.samples), 'text/csv');
+  download(`brickwise-${new Date(session.startedAt).toISOString().slice(0, 16).replace(':', '')}.csv`, samplesToCsv(session.samples), 'text/csv');
 };
 
 // ---------------------------------------------------------------------------
@@ -1206,7 +1206,7 @@ $('menuExport').addEventListener('toggle', (e) => {
 
 $('btnTcx').onclick = fromExport(() => {
   const tcx = buildTcx(session.samples, { name: activityName() });
-  download(`treadwise-${new Date(session.startedAt).toISOString().slice(0, 16).replace(':', '')}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
+  download(`brickwise-${new Date(session.startedAt).toISOString().slice(0, 16).replace(':', '')}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
 });
 
 $('btnUpload').onclick = async () => {
@@ -1218,8 +1218,8 @@ $('btnUpload').onclick = async () => {
     const tcx = buildTcx(session.samples, { name: activityName() });
     const meta = {
       name: activityName(),
-      description: `NordicTrack EXP 5i controlled by Treadwise. Base incline ${$('wIncline').value}%. Pace ${$('wPosition').selectedOptions[0].text.toLowerCase()} within the zone.`,
-      external_id: `treadwise-${session.startedAt}`,
+      description: `NordicTrack EXP 5i controlled by Brickwise. Base incline ${$('wIncline').value}%. Pace ${$('wPosition').selectedOptions[0].text.toLowerCase()} within the zone.`,
+      external_id: `brickwise-${session.startedAt}`,
       paired_event_id: session.event?.id,
     };
     const data = await intervals.uploadTcx(tcx, meta);
@@ -1240,7 +1240,7 @@ $('btnUpload').onclick = async () => {
   }
 };
 
-$('btnLogDownload').onclick = () => download(`treadwise-log-${Date.now()}.txt`, logLines.join('\n'), 'text/plain');
+$('btnLogDownload').onclick = () => download(`brickwise-log-${Date.now()}.txt`, logLines.join('\n'), 'text/plain');
 
 function download(name, text, type) {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -1368,9 +1368,9 @@ function renderInfo() {
   let saved = null;
   let tab = null;
   try {
-    saved = JSON.parse(localStorage.getItem('treadwise.profile') || 'null');
-    tab = localStorage.getItem('treadwise.tab');
-    const w = localStorage.getItem('treadwise.workout');
+    saved = JSON.parse(localStorage.getItem('brickwise.profile') || 'null');
+    tab = localStorage.getItem('brickwise.tab');
+    const w = localStorage.getItem('brickwise.workout');
     if (w?.startsWith('l:')) selectedKey = w; // confirmed once the library loads
   } catch { /* optional */ }
   renderLists();
@@ -1394,5 +1394,5 @@ function renderInfo() {
   every(TICK_MS, tick);
   updateControls();
   loadWorkouts();
-  try { sessionStorage.removeItem('treadwise.loadRetry'); } catch { /* optional */ }
+  try { sessionStorage.removeItem('brickwise.loadRetry'); } catch { /* optional */ }
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Treadwise</title>
+  <title>Brickwise</title>
   <style>
     :root {
       --bg: #f4f5f7;
@@ -268,7 +268,7 @@
 <body>
 <main>
   <header>
-    <h1>Treadwise</h1>
+    <h1>Brickwise</h1>
     <nav class="tabs" role="tablist">
       <button role="tab" id="nav-profile" aria-selected="false" aria-label="Profile" title="Profile"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button>
       <button role="tab" id="nav-workouts" aria-selected="false" aria-label="Workouts" title="Workouts"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4.5" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg></button>
@@ -516,17 +516,29 @@
       </details>
     </section>
   </div>
-  <footer class="note footer">Treadwise is an independent project, not affiliated with iFIT Inc. NordicTrack and iFit are trademarks of their respective owners.</footer>
+  <footer class="note footer">Brickwise is an independent project, not affiliated with iFIT Inc. NordicTrack and iFit are trademarks of their respective owners.</footer>
 </main>
 
 <script>
+  // The app used to be called Treadwise: its saved settings move to the new
+  // keys once, before the modules read them.
+  try {
+    for (const store of [localStorage, sessionStorage]) {
+      for (const old of Object.keys(store).filter((k) => k.startsWith('treadwise.'))) {
+        const key = 'brickwise.' + old.slice('treadwise.'.length);
+        if (store.getItem(key) === null) store.setItem(key, store.getItem(old));
+        store.removeItem(old);
+      }
+    }
+  } catch { /* storage blocked: nothing to move */ }
+
   // If any module fails to download (dropped connection), the whole app does
   // not start. It retries twice and, if it keeps failing, shows a notice.
   function appLoadFailed() {
     let tries = 0;
-    try { tries = Number(sessionStorage.getItem('treadwise.loadRetry') || 0); } catch { tries = 2; }
+    try { tries = Number(sessionStorage.getItem('brickwise.loadRetry') || 0); } catch { tries = 2; }
     if (tries < 2) {
-      try { sessionStorage.setItem('treadwise.loadRetry', String(tries + 1)); } catch { /* no retry */ }
+      try { sessionStorage.setItem('brickwise.loadRetry', String(tries + 1)); } catch { /* no retry */ }
       location.reload();
       return;
     }

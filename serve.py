@@ -41,7 +41,7 @@ def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
     handler = partial(Handler, directory=str(Path(__file__).resolve().parent))
     with Server(("::", port), handler) as server:
-        print(f"Treadwise: http://localhost:{port}  (Ctrl+C to quit)")
+        print(f"Brickwise: http://localhost:{port}  (Ctrl+C to quit)")
         try:
             server.serve_forever()
         except KeyboardInterrupt:

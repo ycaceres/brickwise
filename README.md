@@ -1,10 +1,10 @@
-# Treadwise
+# Brickwise
 
 Controls the speed and incline of a NordicTrack EXP 5i treadmill over Bluetooth and automatically runs the running workouts planned in Intervals.icu. When you finish, it uploads the activity paired with the workout.
 
-**Live app:** https://ycaceres.github.io/treadwise/
+**Live app:** https://ycaceres.github.io/brickwise/
 
-> Treadwise is an independent project, not affiliated with iFIT Inc. NordicTrack and iFit are trademarks of their respective owners.
+> Brickwise is an independent project, not affiliated with iFIT Inc. NordicTrack and iFit are trademarks of their respective owners.
 
 ## Usage
 
@@ -13,8 +13,8 @@ It is a static page: it needs no backend of its own. Web Bluetooth only works ov
 To run it locally:
 
 ```bash
-git clone https://github.com/ycaceres/treadwise.git
-cd treadwise
+git clone https://github.com/ycaceres/brickwise.git
+cd brickwise
 npm start            # python3 serve.py 8000; open http://localhost:8000
 ```
 
@@ -189,7 +189,7 @@ Everything comes from qdomyos-zwift's `nordictrack_treadmill_exp_5i` profile ([s
 
 ## Troubleshooting
 
-Open the page with `?debug=true` (for example https://ycaceres.github.io/treadwise/?debug=true) and go to the **Debug** tab. Look at **Treadmill state** first. The **mode** tells you whether the console is running, paused or missing the key, and the equipment info confirms that activation got a response.
+Open the page with `?debug=true` (for example https://ycaceres.github.io/brickwise/?debug=true) and go to the **Debug** tab. Look at **Treadmill state** first. The **mode** tells you whether the console is running, paused or missing the key, and the equipment info confirms that activation got a response.
 
 Then open **Communication log**, tick **Show TX/RX packets** and use **Download log**. The log includes:
 - every decoded response (`= {…}` lines);
@@ -201,7 +201,7 @@ If the treadmill does not respond, the most likely culprit is the activation cod
 
 ## References
 
-Open-source projects consulted while building Treadwise:
+Open-source projects consulted while building Brickwise:
 
 | Repository | What it contributed |
 |---|---|

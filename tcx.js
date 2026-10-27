@@ -2,7 +2,7 @@
  * Builds an indoor running TCX from the session samples.
  * samples: [{ t: epoch ms, distance: m, speed: km/h, hr: bpm|null }]
  */
-export function buildTcx(samples, { name = 'Treadwise run' } = {}) {
+export function buildTcx(samples, { name = 'Brickwise run' } = {}) {
   if (!samples.length) throw new Error('No samples to export');
 
   const iso = (ms) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z');

@@ -8,7 +8,7 @@
  */
 
 const API = 'https://intervals.icu/api/v1/athlete/0';
-const KEY_STORAGE = 'treadwise.intervalsKey';
+const KEY_STORAGE = 'brickwise.intervalsKey';
 const RUN_TYPES = new Set(['Run', 'VirtualRun', 'TrailRun']);
 
 export function getApiKey() {
@@ -77,7 +77,7 @@ export async function getRunSettings() {
 /** Uploads a TCX as an activity. `meta`: name, description, external_id, paired_event_id. */
 export async function uploadTcx(tcx, meta) {
   const form = new FormData();
-  form.append('file', new Blob([tcx], { type: 'application/vnd.garmin.tcx+xml' }), 'treadwise.tcx');
+  form.append('file', new Blob([tcx], { type: 'application/vnd.garmin.tcx+xml' }), 'brickwise.tcx');
   return request('/activities', {
     method: 'POST',
     query: { ...meta, device_name: 'NordicTrack EXP 5i' },

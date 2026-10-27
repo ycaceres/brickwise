@@ -17,12 +17,12 @@ function treadmillCallbacks() {
   return {
     onStatus: (state, detail) => {
       const map = {
-        connecting: ['busy', 'Treadmill: connecting…'],
-        initializing: ['busy', 'Treadmill: activating…'],
-        ready: ['ready', `Treadmill: ${detail || 'ready'}`],
-        disconnected: ['error', 'Treadmill: disconnected'],
+        connecting: ['busy', 'Controllable: connecting…'],
+        initializing: ['busy', 'Controllable: activating…'],
+        ready: ['ready', `Controllable: ${detail || 'ready'}`],
+        disconnected: ['error', 'Controllable: disconnected'],
       };
-      const [s, t] = map[state] || ['error', `Treadmill: ${state}`];
+      const [s, t] = map[state] || ['error', `Controllable: ${state}`];
       setPill('pillTreadmill', s, t);
       log(state === 'disconnected' ? 'warn' : 'info', t);
       if (state === 'disconnected') {
@@ -63,7 +63,7 @@ async function connectTreadmill(simulated) {
     await treadmill.connect();
   } catch (err) {
     log('error', err.message);
-    setPill('pillTreadmill', 'error', 'Treadmill: error');
+    setPill('pillTreadmill', 'error', 'Controllable: error');
     $('btnConnect').disabled = $('btnSim').disabled = false;
   }
 }

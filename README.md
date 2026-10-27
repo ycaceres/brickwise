@@ -31,13 +31,13 @@ The page has three tabs, shown as icons:
 - **Train (runner):** a bar with distance, time and HR, the buttons ▶ start, ⏭ skip step, ■ finish, download (CSV or TCX) and upload to Intervals.icu, and incline and pace with their + and − buttons (0.5 % and 0.5 km/h); below, a line with the session status and the chart.
 - **Debug (bug):** only shows when the page is opened with `?debug=true`. It has the treadmill state and the communication log.
 
-1. Turn on the treadmill, attach the safety key and, on the **Treadmill** pill at the top, choose **Connect treadmill** (it shows up as `I_TL…`). Activation takes ~10 s.
+1. Turn on the treadmill, attach the safety key and, on the **Controllable** pill at the top, choose **Connect treadmill** (it shows up as `I_TL…`). Activation takes ~10 s.
 2. Optional: press the **HRM** pill (any standard Bluetooth heart rate monitor).
 3. Pick the workout in **Workouts** and press **Go train**.
 4. Press **▶ (start)** and then **START on the console**. The workout begins when the belt moves.
 5. When done: the **upload to Intervals.icu** icon (needs the API key) or the **download** icon (CSV or TCX). Library workouts are uploaded unpaired.
 
-**Simulation mode** (in the Treadmill pill menu) tests everything without the treadmill (including a simulated HR if no strap is connected).
+**Simulation mode** (in the Controllable pill menu) tests everything without the treadmill (including a simulated HR if no strap is connected).
 
 ## Library (`data/library.json`)
 
@@ -201,7 +201,7 @@ Everything comes from qdomyos-zwift's `nordictrack_treadmill_exp_5i` profile ([s
 
 ## Troubleshooting
 
-Open the page with `?debug=true` (for example https://ycaceres.github.io/brickwise/?debug=true) and go to the **Debug** tab. Look at **Treadmill state** first. The **mode** tells you whether the console is running, paused or missing the key, and the equipment info confirms that activation got a response.
+Open the page with `?debug=true` (for example https://ycaceres.github.io/brickwise/?debug=true) and go to the **Debug** tab. Look at **Controllable state** first. The **mode** tells you whether the console is running, paused or missing the key, and the equipment info confirms that activation got a response.
 
 Then open **Communication log**, tick **Show TX/RX packets** and use **Download log**. The log includes:
 - every decoded response (`= {…}` lines);

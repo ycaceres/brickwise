@@ -17,7 +17,7 @@
       <button role="tab" id="nav-debug" aria-selected="false" aria-label="Debug" title="Debug" class="hidden"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7.5a3 3 0 0 1 6 0"/><rect x="7" y="8.5" width="10" height="12" rx="5"/><path d="M12 10v10M3.5 13H7M17 13h3.5M4.5 8.5L7 10M19.5 8.5L17 10M4.5 19l2.7-1.8M19.5 19l-2.7-1.8"/></svg></button>
     </nav>
     <div class="pills">
-      <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect the treadmill">Treadmill</button>
+      <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect the controllable (treadmill or bike trainer)">Controllable</button>
       <button class="pill" id="pillHr" title="Connect a heart rate monitor (HRM)">HRM</button>
       <button class="pill" id="pillIntervals" title="API key in Profile">Intervals.icu</button>
     </div>
@@ -203,7 +203,7 @@
           </div>
         </div>
       </div>
-      <div class="dash-note note" id="sessionNote">Connect the treadmill to begin.</div>
+      <div class="dash-note note" id="sessionNote">Connect a controllable to begin.</div>
     </section>
 
     <section class="card">
@@ -233,7 +233,7 @@
   <!-- ===================== Debug (only with ?debug=true) ===================== -->
   <div id="tab-debug" class="tab hidden">
     <section class="card">
-      <h2>Treadmill state</h2>
+      <h2>Controllable state</h2>
       <div class="console-grid num">
         <div><span>Mode</span><strong id="cMode" class="mode">—</strong></div>
         <div><span>Actual speed</span><strong id="cSpeed">—</strong></div>

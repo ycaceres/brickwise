@@ -126,7 +126,7 @@ export function updateControls() {
   document.querySelectorAll('[data-speed],[data-incline]').forEach((b) => { b.disabled = !connected; });
 
   const notes = {
-    idle: connected ? 'Pick a workout (or none) and press Start.' : 'Connect the treadmill to begin.',
+    idle: connected ? 'Pick a workout (or none) and press Start.' : 'Connect a controllable to begin.',
     armed: 'Press START on the console. The workout begins as soon as the belt moves.',
     running: session.steps.length ? 'Workout in progress.' : 'Free session in progress.',
     paused: 'Paused: the belt is stopped. Press START on the console to continue.',

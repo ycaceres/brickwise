@@ -7,7 +7,8 @@ import { $, download } from '../lib/dom.js';
 import { formatDuration } from '../workouts/steps.js';
 import { MODES, PULSE_SOURCES } from '../devices/treadmill/ifit-messages.js';
 import { live, STALE_MS } from '../session/live.js';
-import { treadmill, updateControls } from '../main.js';
+import { treadmill } from './devices.js';
+import { updateControls } from '../main.js';
 
 export const logLines = [];
 export function log(kind, text) {

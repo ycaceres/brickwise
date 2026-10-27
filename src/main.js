@@ -1,6 +1,3 @@
-import { Exp5iTreadmill } from './devices/treadmill/exp5i.js';
-import { SimulatedTreadmill } from './devices/treadmill/simulated.js';
-import { HeartRateStrap } from './devices/hr-strap.js';
 import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from './workouts/steps.js';
 import { buildTcx } from './export/tcx.js';
 import { LIMITS } from './devices/treadmill/exp5i-protocol.js';
@@ -17,8 +14,9 @@ import * as intervals from './services/intervals.js';
 import { $, setPill, escapeHtml, download } from './lib/dom.js';
 import { beep } from './lib/sound.js';
 import { loadJson, saveJson, loadText, saveText, remove } from './lib/storage.js';
-import { live, rrState, addRr, rrActive, updateAlpha, STALE_MS } from './session/live.js';
-import { log, renderConsole, renderInfo } from './ui/debug.js';
+import { live, rrState, rrActive, updateAlpha, STALE_MS } from './session/live.js';
+import { log, renderConsole } from './ui/debug.js';
+import { treadmill } from './ui/devices.js';
 
 const TICK_MS = 250;
 const MOVING_KMH = 0.5;      // above this the belt is moving
@@ -40,100 +38,6 @@ const TEST_MIN_S = 180;       // and never before this much ramp
 const TESTS_KEPT = 20;        // threshold tests kept in the history
 
 // ---------------------------------------------------------------------------
-// Devices
-// ---------------------------------------------------------------------------
-export let treadmill = null;
-
-function treadmillCallbacks() {
-  return {
-    onStatus: (state, detail) => {
-      const map = {
-        connecting: ['busy', 'Treadmill: connecting…'],
-        initializing: ['busy', 'Treadmill: activating…'],
-        ready: ['ready', `Treadmill: ${detail || 'ready'}`],
-        disconnected: ['error', 'Treadmill: disconnected'],
-      };
-      const [s, t] = map[state] || ['error', `Treadmill: ${state}`];
-      setPill('pillTreadmill', s, t);
-      log(state === 'disconnected' ? 'warn' : 'info', t);
-      if (state === 'disconnected') {
-        live.speed = 0;
-        live.console = {};
-        if (live.hrSource === 'console') { live.hr = null; live.hrSource = null; }
-      }
-      const ready = state === 'ready';
-      $('btnConnect').disabled = $('btnSim').disabled = ready || state === 'connecting' || state === 'initializing';
-      $('btnDisconnect').disabled = !ready;
-      $('btnSimBelt').classList.toggle('hidden', !(ready && treadmill?.simulated));
-      updateControls();
-    },
-    onData: (state) => {
-      live.speed = state.speed ?? 0;
-      live.incline = state.incline ?? 0;
-      live.console = state;
-      // HR from the console (hand grips or a strap paired with the treadmill),
-      // only if no strap is connected to the page
-      if (hrStrap.bpm == null) {
-        if (state.rr?.length) addRr(state.rr, null); // only the simulator sends RR this way
-        const bpm = state.pulse?.bpm;
-        live.hr = bpm > 0 ? bpm : null;
-        live.hrSource = bpm > 0 ? 'console' : null;
-      }
-    },
-    onInfo: (info) => {
-      live.info = info;
-      renderInfo();
-    },
-    onLog: log,
-  };
-}
-
-async function connectTreadmill(simulated) {
-  treadmill = simulated ? new SimulatedTreadmill(treadmillCallbacks()) : new Exp5iTreadmill(treadmillCallbacks());
-  try {
-    await treadmill.connect();
-  } catch (err) {
-    log('error', err.message);
-    setPill('pillTreadmill', 'error', 'Treadmill: error');
-    $('btnConnect').disabled = $('btnSim').disabled = false;
-  }
-}
-
-// Treadmill menu: opens under its pill and closes on choice
-const menu = $('menuTreadmill');
-menu.addEventListener('toggle', (e) => {
-  if (e.newState !== 'open') return;
-  const r = $('pillTreadmill').getBoundingClientRect();
-  menu.style.top = `${r.bottom + 6}px`;
-  menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8))}px`;
-});
-const fromMenu = (fn) => () => { menu.hidePopover(); fn(); };
-$('btnConnect').onclick = fromMenu(() => connectTreadmill(false));
-$('btnSim').onclick = fromMenu(() => connectTreadmill(true));
-$('btnDisconnect').onclick = fromMenu(() => treadmill?.disconnect());
-$('btnSimBelt').onclick = fromMenu(() => treadmill?.toggleBelt?.());
-
-const hrStrap = new HeartRateStrap({
-  onHr: (bpm) => { live.hr = bpm; live.hrSource = 'strap'; },
-  onRr: addRr,
-  onStatus: (state, name) => {
-    if (state === 'ready') setPill('pillHr', 'ready', `HRM: ${name || 'connected'}`);
-    else { live.hr = null; live.hrSource = null; setPill('pillHr', 'error', 'HRM: disconnected'); }
-  },
-});
-$('pillIntervals').onclick = () => showTab('profile');
-$('pillHr').onclick = async () => {
-  if ($('pillHr').dataset.state === 'ready' || $('pillHr').dataset.state === 'busy') return;
-  try {
-    setPill('pillHr', 'busy', 'HRM: connecting…');
-    await hrStrap.connect();
-  } catch (err) {
-    log('error', `HRM: ${err.message}`);
-    setPill('pillHr', 'error', 'HRM: error');
-  }
-};
-
-// ---------------------------------------------------------------------------
 // Tabs
 // ---------------------------------------------------------------------------
 // The Debug tab (console state and log) only shows with ?debug=true
@@ -152,6 +56,7 @@ function showTab(name) {
   if (name === 'workouts') preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones });
 }
 for (const t of TABS) $(`nav-${t}`).onclick = () => showTab(t);
+$('pillIntervals').onclick = () => showTab('profile');
 
 // ---------------------------------------------------------------------------
 // Profile: threshold, LTHR and max HR (from Intervals.icu or by hand)

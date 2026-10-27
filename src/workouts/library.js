@@ -1,8 +1,8 @@
 /**
- * Workout library: turns the recipes in library.json into Intervals.icu
+ * Workout library: turns the recipes in data/library.json into Intervals.icu
  * workout_docs, for every duration (30, 45, 60 min) and level (1–5).
  *
- * To add or tweak workouts only library.json is edited; the format is in
+ * To add or tweak workouts only data/library.json is edited; the format is in
  * README.md, Library section. Paces are in % of threshold or zones (adapted
  * to the profile by zones.resolveDoc) or fixed min/km.
  */

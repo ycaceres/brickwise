@@ -79,7 +79,7 @@ function describePace(pace) {
  * @param {object} doc       resolved workout_doc
  * @param {object} opts      { position: 'low'|'mid'|'high', defaultIncline: number, zones, hrTargets }
  *
- * With zones (zones.js) every step also carries `hr` = { lo, hi, mode }:
+ * With zones (physiology/zones.js) every step also carries `hr` = { lo, hi, mode }:
  * - mode 'cap':    step with a pace target; hi is the top of the matching HR
  *                  zone (same position as the pace zone).
  * - mode 'target': step with an HR target; the starting speed comes from the

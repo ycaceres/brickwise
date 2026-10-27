@@ -208,7 +208,7 @@ for (const t of TABS) $(`nav-${t}`).onclick = () => showTab(t);
 // ---------------------------------------------------------------------------
 // Profile: threshold, LTHR and max HR (from Intervals.icu or by hand)
 // ---------------------------------------------------------------------------
-let profile = null;  // see zones.js
+let profile = null;  // see physiology/zones.js
 let zones = null;    // zones computed from the profile
 
 function setProfile(p, { save = true } = {}) {

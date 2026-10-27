@@ -4,7 +4,7 @@ Static server for local development only (the deployed app does not use it).
 
 `python3 -m http.server` only queues 5 connections; Chrome requests every
 module at once and macOS drops the ones that do not fit (ERR_CONNECTION_RESET),
-so app.js never runs. This server enlarges the queue, listens on IPv4 and
+so src/main.js never runs. This server enlarges the queue, listens on IPv4 and
 IPv6 and disables caching so the latest version is always served.
 
 Usage:

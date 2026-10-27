@@ -407,7 +407,7 @@ test('flattenWorkout with zones: HR cap on pace steps and speed on HR steps', ()
 
 import fs from 'node:fs';
 import { buildLibrary, parseDur } from './library.js';
-const LIBRARY = buildLibrary(JSON.parse(fs.readFileSync(new URL('./library.json', import.meta.url), 'utf8')));
+const LIBRARY = buildLibrary(JSON.parse(fs.readFileSync(new URL('./data/library.json', import.meta.url), 'utf8')));
 
 test('profile: Intervals percentages reproduce its zones and follow LTHR', () => {
   const p = profileFromIntervals(runSettings);

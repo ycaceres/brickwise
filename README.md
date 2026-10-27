@@ -27,7 +27,7 @@ npm start            # python3 tools/serve.py 8000; open http://localhost:8000
 The page has three tabs, shown as icons:
 
 - **Profile (person):** works like a sign-in. Signed out, you paste your Intervals.icu API key and press **Sign in**, or enter threshold pace, LTHR and max HR by hand (without LTHR it is estimated as 91 % of max HR). Signed in, you see your Intervals.icu name, photo and city, your key data (threshold pace, LTHR, max HR, resting HR and weight), the zone table, **Refresh** and **Sign out**. Signing out deletes the key and keeps the data as a manual profile.
-- **Workouts (clipboard):** the runs planned in Intervals.icu for the chosen day and the library (`library.json`), with three dropdowns to filter by duration (30, 45 or 60 min), type and level (1–5). Workouts are in % of threshold pace and zones, so they adapt to the profile; Intervals workouts also use the profile's threshold when their steps are in % or zones. Here you choose the pace within the zone, the base incline and whether speed is adjusted by HR.
+- **Workouts (clipboard):** the runs planned in Intervals.icu for the chosen day and the library (`data/library.json`), with three dropdowns to filter by duration (30, 45 or 60 min), type and level (1–5). Workouts are in % of threshold pace and zones, so they adapt to the profile; Intervals workouts also use the profile's threshold when their steps are in % or zones. Here you choose the pace within the zone, the base incline and whether speed is adjusted by HR.
 - **Train (runner):** a bar with distance, time and HR, the buttons ▶ start, ⏭ skip step, ■ finish, download (CSV or TCX) and upload to Intervals.icu, and incline and pace with their + and − buttons (0.5 % and 0.5 km/h); below, a line with the session status and the chart.
 - **Debug (bug):** only shows when the page is opened with `?debug=true`. It has the treadmill state and the communication log.
 
@@ -39,9 +39,9 @@ The page has three tabs, shown as icons:
 
 **Simulation mode** (in the Treadmill pill menu) tests everything without the treadmill (including a simulated HR if no strap is connected).
 
-## Library (`library.json`)
+## Library (`data/library.json`)
 
-To add or tweak workouts only `library.json` is edited; the page reads it on load. Each **type** generates one workout per duration in `durations` and per level in `levels`, and the **featured** ones (`featured`) are fixed workouts, written step by step.
+To add or tweak workouts only `data/library.json` is edited; the page reads it on load. Each **type** generates one workout per duration in `durations` and per level in `levels`, and the **featured** ones (`featured`) are fixed workouts, written step by step.
 
 **Segment** (one step), used everywhere:
 
@@ -111,7 +111,7 @@ On load, the running HR and pace zones are read from Intervals.icu (running spor
 
 **Which workouts HR can steer.** HR responds 1–2 minutes late, so it only helps on long, steady steps. Those workouts get a **♥ HR** tag in the lists, and only they show the **Adjust speed by HR** checkbox:
 
-- **Library:** the ones with `"hrControl": true` in `library.json` (today: Aerobic Z2, Tempo intervals, Z2 walk by incline and Z2 heart rate run). VO2max, threshold, hills, strides and run-walk keep their pace.
+- **Library:** the ones with `"hrControl": true` in `data/library.json` (today: Aerobic Z2, Tempo intervals, Z2 walk by incline and Z2 heart rate run). VO2max, threshold, hills, strides and run-walk keep their pace.
 - **Intervals.icu:** judged by their steps. They qualify with an HR target, or with steps of 5 min or more in Z1–Z3 and only easy steps (Z1–Z2) in between.
 
 **With the checkbox on**, steps of 5 min or more in pace Z1–Z4 change their target from pace to the **HR zone in the same position** (pace Z3 → HR Z3). Speed starts at the planned pace and then follows HR; from Z3 up it is left alone for the first 2.5 min while HR climbs. Shorter steps (recoveries, strides) keep their pace with no HR control, and the warm-up and cooldown keep the HR cap. The steps table and chart show the HR range of the converted steps.
@@ -164,8 +164,8 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
 | `hrcontrol.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
 | `zones.js` | Profile, HR and pace zones, HR ranges of each step and resolution of relative paces |
-| `library.json` | The workout library (data; edited by hand) |
-| `library.js` | Turns `library.json` into workouts for every duration and level |
+| `data/library.json` | The workout library (data; edited by hand) |
+| `library.js` | Turns `data/library.json` into workouts for every duration and level |
 | `hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `tools/serve.py` | Static server for local development (not deployed) |

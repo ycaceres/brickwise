@@ -72,11 +72,6 @@ export function zonesFromProfile(p) {
   return { hr, pace, lthr, maxHr, thresholdKmh: t };
 }
 
-/** Compatibility: zones straight from Intervals sport-settings. */
-export function normalizeZones(s) {
-  return s ? zonesFromProfile(profileFromIntervals(s)) : null;
-}
-
 /** Pace zone (1..n) a speed belongs to. */
 export function paceZoneOf(zones, kmh) {
   if (!zones?.pace.length || kmh == null) return null;

@@ -199,15 +199,8 @@
     .menu { margin: 0; inset: auto; padding: 8px; display: none; gap: 6px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
     .menu:popover-open { display: grid; }
     .menu button { text-align: left; }
-    .viz-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--muted); align-items: center; margin-bottom: 6px; }
-    .viz-legend > span { display: inline-flex; align-items: center; gap: 6px; }
-    .viz-legend strong { color: var(--text); font-variant-numeric: tabular-nums; font-weight: 650; }
-    .viz-legend .line { width: 16px; height: 2px; border-radius: 1px; }
-    .viz-legend .dash { width: 16px; height: 0; border-top: 2px dashed var(--muted); }
     .viz-root { position: relative; width: 100%; }
     .viz-svg { display: block; width: 100%; touch-action: pan-y; }
-    .viz-title { font-size: 13px; font-weight: 600; fill: var(--muted); }
-    .viz-value { font-weight: 650; fill: var(--text); font-variant-numeric: tabular-nums; }
     .viz-axis { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
     .viz-grid { stroke: var(--border); stroke-width: 1; opacity: .7; }
     .viz-block { opacity: .45; }
@@ -528,7 +521,7 @@
     const div = document.createElement('div');
     div.className = 'banner';
     div.style.margin = '16px';
-    div.textContent = 'Could not load the app files (the connection to the server dropped). Reload the page; if it keeps happening, restart the server with npm start.';
+    div.textContent = 'Could not load the app files (the connection dropped). Reload the page.';
     document.body.prepend(div);
   }
 </script>

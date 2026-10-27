@@ -1,4 +1,3 @@
-import './migrate.js';
 import { Exp5iTreadmill, SimulatedTreadmill, HeartRateStrap } from './treadmill.js';
 import { flattenWorkout, targetSpeedAt, formatPace, formatDuration } from './workout.js';
 import { buildTcx } from './tcx.js';
@@ -190,7 +189,7 @@ function showTab(name) {
   try { localStorage.setItem('treadwise.tab', name); } catch { /* optional */ }
   // The chart measures its width when shown
   if (name === 'train') updateChart();
-  if (name === 'workouts') preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, title: selected?.event.name, zones });
+  if (name === 'workouts') preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones });
 }
 for (const t of TABS) $(`nav-${t}`).onclick = () => showTab(t);
 
@@ -580,7 +579,7 @@ function selectWorkout(key = selectedKey) {
   render();
   updateChart();
   updateControls();
-  preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, title: selected?.event.name, zones });
+  preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones });
 }
 
 function renderWorkout() {
@@ -895,7 +894,7 @@ function planTimeline(planOnly = false) {
 
 function updateChart() {
   const event = session.state !== 'idle' ? session.event : selected?.event;
-  chart.update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, title: event?.name, zones });
+  chart.update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones });
   $('chartTitle').textContent = event?.name || 'Free session';
 }
 

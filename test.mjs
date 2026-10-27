@@ -364,7 +364,7 @@ test('flattenWorkout: absolute pace without a zone is labeled with the pace', ()
   assert.equal(s.speedStart, 5);
 });
 
-import { normalizeZones, paceZoneOf, hrTargetRange, hrZoneOf } from './zones.js';
+import { paceZoneOf, hrTargetRange, hrZoneOf, zonesFromProfile, profileFromIntervals, resolveDoc } from './zones.js';
 
 // The athlete's real running sport-settings (Oct 25 2026)
 const runSettings = {
@@ -375,7 +375,7 @@ const runSettings = {
 };
 
 test('zones: HR and pace ranges', () => {
-  const z = normalizeZones(runSettings);
+  const z = zonesFromProfile(profileFromIntervals(runSettings));
   assert.deepEqual(z.hr[1], { z: 2, name: 'Z2', lo: 135, hi: 150 });
   assert.equal(z.pace.length, 7);
   assert.equal(z.pace[6].hi, Infinity);
@@ -389,7 +389,7 @@ test('zones: HR and pace ranges', () => {
 });
 
 test('flattenWorkout with zones: HR cap on pace steps and speed on HR steps', () => {
-  const zones = normalizeZones(runSettings);
+  const zones = zonesFromProfile(profileFromIntervals(runSettings));
   const doc = { steps: [
     { duration: 600, pace: { units: 'pace_zone', value: 2 }, _pace: { start: 7.6 / 3.6, end: 8.4 / 3.6 } },
     { duration: 600, hr: { units: 'hr_zone', value: 2 } },
@@ -405,7 +405,6 @@ test('flattenWorkout with zones: HR cap on pace steps and speed on HR steps', ()
   assert.equal(free.hasTarget, false);
 });
 
-import { zonesFromProfile, profileFromIntervals, resolveDoc } from './zones.js';
 import fs from 'node:fs';
 import { buildLibrary, parseDur } from './library.js';
 const LIBRARY = buildLibrary(JSON.parse(fs.readFileSync(new URL('./library.json', import.meta.url), 'utf8')));

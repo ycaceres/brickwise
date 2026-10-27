@@ -42,7 +42,7 @@ export class Exp5iTreadmill {
     this.device = null;
     this.writeChar = null;
     this.notifyChar = null;
-    this.state = { speed: 0, incline: 0, watts: 0, updatedAt: 0 };
+    this.state = { speed: 0, incline: 0, updatedAt: 0 };
     this.req = new Requests();
     this.running = false;
     this._responseWaiter = null;

@@ -32,9 +32,9 @@ const AXIS_H = 20;      // time ticks under the chart
 const RIBBON_H = 12;    // α1 ribbon, under the time axis (only with RR intervals)
 const RIBBON_GAP = 6;
 const SERIES = [
-  { key: 'speed', label: 'Pace', color: 'var(--series-speed)' },
-  { key: 'hr', label: 'HR', color: 'var(--series-hr)' },
-  { key: 'incline', label: 'Incline', color: 'var(--series-incline)' },
+  { key: 'speed', color: 'var(--series-speed)' },
+  { key: 'hr', color: 'var(--series-hr)' },
+  { key: 'incline', color: 'var(--series-incline)' },
 ];
 // Candidate paces for the left axis (s/km)
 const PACE_TICKS = [180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 540, 600, 660, 720, 840, 900, 1200, 1500, 1800, 2400, 3600];
@@ -98,7 +98,6 @@ export class SessionChart {
     this.plan = [];
     this.samples = [];
     this.elapsed = 0;
-    this.title = '';
     this.zones = null;
     this.hoverT = null;
 
@@ -113,12 +112,11 @@ export class SessionChart {
     new ResizeObserver(() => this.render()).observe(root);
   }
 
-  update({ plan, samples, elapsed, title, zones }) {
+  update({ plan, samples, elapsed, zones }) {
     this.zones = zones || null;
     this.plan = plan || [];
     this.samples = samples || [];
     this.elapsed = elapsed || 0;
-    this.title = title || '';
     this.render();
   }
 

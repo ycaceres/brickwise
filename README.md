@@ -2,19 +2,25 @@
 
 Controls the speed and incline of a NordicTrack EXP 5i treadmill over Bluetooth and automatically runs the running workouts planned in Intervals.icu. When you finish, it uploads the activity paired with the workout.
 
+**Live app:** https://ycaceres.github.io/treadwise/
+
 > Treadwise is an independent project, not affiliated with iFIT Inc. NordicTrack and iFit are trademarks of their respective owners.
 
 ## Usage
 
-It is a static page: it needs no backend of its own. Web Bluetooth only works over HTTPS or on `localhost`, in Chrome or Edge.
+It is a static page: it needs no backend of its own. Web Bluetooth only works over HTTPS or on `localhost`, in Chrome or Edge (desktop or Android; not Safari on iPhone/iPad).
+
+To run it locally:
 
 ```bash
-cd nordictrack && npm start            # python3 serve.py 8000; open http://localhost:8000
+git clone https://github.com/ycaceres/treadwise.git
+cd treadwise
+npm start            # python3 serve.py 8000; open http://localhost:8000
 ```
 
 `serve.py` is for development only: it enlarges the connection queue (with `python3 -m http.server` macOS drops some module downloads and the app does not start), listens on IPv4 and IPv6 and disables caching. If a module download still fails, the page reloads itself up to twice and then shows a notice.
 
-**Deploy:** upload the `nordictrack/` folder as is to any static host with HTTPS (GitHub Pages, Netlify, Cloudflare Pages). There is no build step.
+**Deploy:** the repository root is the site, with no build step. It is published with GitHub Pages from the `main` branch, so every push to `main` updates the live app in a minute or two. Any other static host with HTTPS (Netlify, Cloudflare Pages) works the same way.
 
 **Intervals.icu:** in **Profile**, paste your API key (Intervals.icu → Settings → Developer Settings) and press **Sign in**. The page calls the Intervals.icu API directly, which accepts cross-origin requests. The key is stored only in that browser's `localStorage`: it is not in the code or on the host. If someone might have seen it, regenerate it in Intervals.icu and press **Sign out**. Without a key, the library, the manual profile and the TCX download still work.
 
@@ -32,8 +38,6 @@ The page has three tabs, shown as icons:
 5. When done: the **upload to Intervals.icu** icon (needs the API key) or the **download** icon (CSV or TCX). Library workouts are uploaded unpaired.
 
 **Simulation mode** (in the Treadmill pill menu) tests everything without the treadmill (including a simulated HR if no strap is connected).
-
-Data saved by earlier versions under `exp5i.*` in `localStorage` is moved to `treadwise.*` on first load (`migrate.js`), so the API key, profile and filters carry over.
 
 ## Library (`library.json`)
 
@@ -121,7 +125,6 @@ On load, the running HR and pace zones are read from Intervals.icu (running spor
 | `workout.js` | Turns the Intervals.icu `workout_doc` into speed steps |
 | `tcx.js` | Builds the session TCX |
 | `app.js`, `index.html` | UI and workout execution |
-| `migrate.js` | Moves `exp5i.*` storage keys from earlier versions to `treadwise.*` |
 | `timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
 | `chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
 | `zones.js` | Profile, HR and pace zones, HR ranges of each step and resolution of relative paces |
@@ -130,7 +133,7 @@ On load, the running HR and pace zones are read from Intervals.icu (running spor
 | `hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `serve.py` | Static server for local development (not deployed) |
-| `test.mjs` | Hardware-free tests: `cd nordictrack && npm test` |
+| `test.mjs` | Hardware-free tests: `npm test` |
 
 ## Protocol origin
 
@@ -150,7 +153,7 @@ Everything comes from qdomyos-zwift's `nordictrack_treadmill_exp_5i` profile ([s
 
 ## Troubleshooting
 
-Open the page with `?debug=true` (for example http://localhost:8000/?debug=true) and go to the **Debug** tab. Look at **Treadmill state** first. The **mode** tells you whether the console is running, paused or missing the key, and the equipment info confirms that activation got a response.
+Open the page with `?debug=true` (for example https://ycaceres.github.io/treadwise/?debug=true) and go to the **Debug** tab. Look at **Treadmill state** first. The **mode** tells you whether the console is running, paused or missing the key, and the equipment info confirms that activation got a response.
 
 Then open **Communication log**, tick **Show TX/RX packets** and use **Download log**. The log includes:
 - every decoded response (`= {…}` lines);
@@ -160,4 +163,17 @@ Then open **Communication log**, tick **Show TX/RX packets** and use **Download 
 
 If the treadmill does not respond, the most likely culprit is the activation code: qdomyos-zwift captured it on a different EXP 5i. In that case you need to capture your unit's code with `ifit discover-activation` from the [`ifit`](https://pypi.org/project/ifit/) package, or with an Android HCI log while using the iFit app.
 
-The `nordictrack-*.html`, `nordictrack-examples.js` and `nordictrack_bluetooth_test.py` files in the parent folder are earlier versions. Their protocol is wrong: do not use them to control the treadmill.
+## References
+
+Open-source projects consulted while building Treadwise:
+
+| Repository | What it contributed |
+|---|---|
+| [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift) | The EXP 5i activation sequence, polling cycle and speed/incline packets (`nordictrack_treadmill_exp_5i` profile), captured from a real unit |
+| [ianchi/ifit](https://github.com/ianchi/ifit) ([PyPI](https://pypi.org/project/ifit/)) | The iFit message format, characteristics table and response decoding used in `ifit-messages.js`; its `ifit discover-activation` command captures a unit's activation code |
+| [dawsontoth/zwifit](https://github.com/dawsontoth/zwifit) | An earlier iFit treadmill bridge, reviewed to understand the BLE protocol |
+| [cagnulein/QZCompanionNordictrackTreadmill](https://github.com/cagnulein/QZCompanionNordictrackTreadmill) | Companion app for NordicTrack treadmills, reviewed for alternative connection methods |
+| [nategreco/uBike](https://github.com/nategreco/uBike) | Console replacement firmware for NordicTrack equipment, reviewed for the low-level protocol |
+| [dvmarinoff/Auuki](https://github.com/dvmarinoff/Auuki) | Web Bluetooth trainer app whose workout graph inspired the session chart |
+
+Workouts, zones and uploads use the [Intervals.icu API](https://intervals.icu/api-docs.html).

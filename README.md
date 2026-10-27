@@ -114,6 +114,7 @@ On load, the running HR and pace zones are read from Intervals.icu (running spor
 - **Closing or reloading the page** during an active workout pauses the belt (Mode = 3). The command goes out when the browser asks whether to leave; if you stay, the session remains paused and START on the console resumes it. It is best effort: if the browser closes abruptly (or hangs), the command may not arrive.
 - If the belt stops for more than 2 s, the session pauses. If the connection drops or data stops arriving, no distance is counted.
 - Speed is limited to 0.8–16 km/h and incline to 0–10 %.
+- **The screen stays on** from ▶ until the session ends (Screen Wake Lock API). The browser drops the lock whenever the page is hidden, so it is requested again when you come back to it. If the browser cannot keep the screen on (no Wake Lock support, or battery saver mode), a note under the controls says so: turn off auto-lock in the device settings.
 
 ## Files
 

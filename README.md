@@ -15,10 +15,10 @@ To run it locally:
 ```bash
 git clone https://github.com/ycaceres/brickwise.git
 cd brickwise
-npm start            # python3 serve.py 8000; open http://localhost:8000
+npm start            # python3 tools/serve.py 8000; open http://localhost:8000
 ```
 
-`serve.py` is for development only: it enlarges the connection queue (with `python3 -m http.server` macOS drops some module downloads and the app does not start), listens on IPv4 and IPv6 and disables caching. If a module download still fails, the page reloads itself up to twice and then shows a notice.
+`tools/serve.py` is for development only: it enlarges the connection queue (with `python3 -m http.server` macOS drops some module downloads and the app does not start), listens on IPv4 and IPv6 and disables caching. If a module download still fails, the page reloads itself up to twice and then shows a notice.
 
 **Deploy:** the repository root is the site, with no build step. It is published with GitHub Pages from the `main` branch, so every push to `main` updates the live app in a minute or two. Any other static host with HTTPS (Netlify, Cloudflare Pages) works the same way.
 
@@ -168,7 +168,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `library.js` | Turns `library.json` into workouts for every duration and level |
 | `hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
-| `serve.py` | Static server for local development (not deployed) |
+| `tools/serve.py` | Static server for local development (not deployed) |
 | `test.mjs` | Hardware-free tests: `npm test` |
 
 ## Protocol origin

@@ -8,8 +8,8 @@ so app.js never runs. This server enlarges the queue, listens on IPv4 and
 IPv6 and disables caching so the latest version is always served.
 
 Usage:
-    python3 serve.py            # http://localhost:8000
-    python3 serve.py 8080
+    python3 tools/serve.py            # http://localhost:8000
+    python3 tools/serve.py 8080
 """
 
 import socket
@@ -39,7 +39,7 @@ class Server(ThreadingHTTPServer):
 
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
-    handler = partial(Handler, directory=str(Path(__file__).resolve().parent))
+    handler = partial(Handler, directory=str(Path(__file__).resolve().parent.parent))
     with Server(("::", port), handler) as server:
         print(f"Brickwise: http://localhost:{port}  (Ctrl+C to quit)")
         try:

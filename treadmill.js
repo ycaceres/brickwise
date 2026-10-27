@@ -17,7 +17,7 @@ import {
 import {
   MessageAssembler, parseRequest, parseResponse, toStatus, buildWriteAndRead, MODES, MODE,
 } from './ifit-messages.js';
-import { sleep, every } from './timer.js';
+import { sleep, every } from './src/lib/timer.js';
 
 const noop = () => {};
 

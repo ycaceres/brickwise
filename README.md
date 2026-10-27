@@ -157,9 +157,9 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `ifit-messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
 | `treadmill.js` | Web Bluetooth connection (write queue, retries), simulator and HRM |
 | `workout.js` | Turns the Intervals.icu `workout_doc` into speed steps |
-| `tcx.js` | Builds the session TCX |
+| `src/export/tcx.js`, `src/export/csv.js` | Build the session TCX and CSV |
 | `src/main.js`, `index.html` | UI and workout execution |
-| `timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
+| `src/lib/timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
 | `chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
 | `thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
 | `hrcontrol.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
@@ -167,7 +167,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `data/library.json` | The workout library (data; edited by hand) |
 | `library.js` | Turns `data/library.json` into workouts for every duration and level |
 | `hrv.js` | RR intervals: artifact cleanup and DFA α1 |
-| `intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
+| `src/services/intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `tools/serve.py` | Static server for local development (not deployed) |
 | `tests/` | Hardware-free tests by area (`*.test.mjs`, shared data in `fixtures.mjs`): `npm test` |
 

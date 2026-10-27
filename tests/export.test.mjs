@@ -1,7 +1,7 @@
 // Session export
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTcx } from '../tcx.js';
+import { buildTcx } from '../src/export/tcx.js';
 
 test('buildTcx', () => {
   const t0 = Date.UTC(2026, 9, 25, 12, 0, 0);

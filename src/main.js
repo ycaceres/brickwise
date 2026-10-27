@@ -1,10 +1,12 @@
-import { Exp5iTreadmill, SimulatedTreadmill, HeartRateStrap } from '../treadmill.js';
+import { Exp5iTreadmill } from './devices/treadmill/exp5i.js';
+import { SimulatedTreadmill } from './devices/treadmill/simulated.js';
+import { HeartRateStrap } from './devices/hr-strap.js';
 import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from './workouts/steps.js';
 import { buildTcx } from './export/tcx.js';
-import { LIMITS } from '../exp5i-protocol.js';
+import { LIMITS } from './devices/treadmill/exp5i-protocol.js';
 import { SessionChart } from './ui/chart.js';
 import { samplesToCsv } from './export/csv.js';
-import { MODES, MODE, PULSE_SOURCES } from '../ifit-messages.js';
+import { MODES, MODE, PULSE_SOURCES } from './devices/treadmill/ifit-messages.js';
 import { every } from './lib/timer.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from './physiology/zones.js';
 import { loadLibrary } from './workouts/library.js';

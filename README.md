@@ -153,9 +153,11 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 
 | File | What it does |
 |---|---|
-| `exp5i-protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
-| `ifit-messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
-| `treadmill.js` | Web Bluetooth connection (write queue, retries), simulator and HRM |
+| `src/devices/treadmill/exp5i-protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
+| `src/devices/treadmill/ifit-messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
+| `src/devices/treadmill/exp5i.js` | Web Bluetooth connection to the treadmill (write queue, retries) |
+| `src/devices/treadmill/simulated.js` | Treadmill simulator with the same interface (and simulated RR) |
+| `src/devices/hr-strap.js` | Standard Bluetooth heart rate strap: HR, contact and RR intervals |
 | `src/workouts/steps.js` | Turns the Intervals.icu `workout_doc` into speed steps |
 | `src/export/tcx.js`, `src/export/csv.js` | Build the session TCX and CSV |
 | `src/main.js`, `index.html` | UI and workout execution |
@@ -206,7 +208,7 @@ Open-source projects consulted while building Brickwise:
 | Repository | What it contributed |
 |---|---|
 | [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift) | The EXP 5i activation sequence, polling cycle and speed/incline packets (`nordictrack_treadmill_exp_5i` profile), captured from a real unit |
-| [ianchi/ifit](https://github.com/ianchi/ifit) ([PyPI](https://pypi.org/project/ifit/)) | The iFit message format, characteristics table and response decoding used in `ifit-messages.js`; its `ifit discover-activation` command captures a unit's activation code |
+| [ianchi/ifit](https://github.com/ianchi/ifit) ([PyPI](https://pypi.org/project/ifit/)) | The iFit message format, characteristics table and response decoding used in `src/devices/treadmill/ifit-messages.js`; its `ifit discover-activation` command captures a unit's activation code |
 | [dawsontoth/zwifit](https://github.com/dawsontoth/zwifit) | An earlier iFit treadmill bridge, reviewed to understand the BLE protocol |
 | [cagnulein/QZCompanionNordictrackTreadmill](https://github.com/cagnulein/QZCompanionNordictrackTreadmill) | Companion app for NordicTrack treadmills, reviewed for alternative connection methods |
 | [nategreco/uBike](https://github.com/nategreco/uBike) | Console replacement firmware for NordicTrack equipment, reviewed for the low-level protocol |

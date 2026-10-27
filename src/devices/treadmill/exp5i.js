@@ -1,5 +1,6 @@
 /**
- * Connection to the EXP 5i over Web Bluetooth, and a simulator with the same interface.
+ * Connection to the EXP 5i over Web Bluetooth. The simulator (simulated.js)
+ * has the same interface.
  *
  * Events (constructor callbacks):
  *   onStatus(state, detail)  'connecting' | 'initializing' | 'ready' | 'disconnected' | 'error'
@@ -8,7 +9,6 @@
  *   onLog(direction, text)   'tx' | 'rx' | 'info' | 'warn' | 'error'
  */
 
-import { RrSimulator } from './src/physiology/hrv.js';
 import {
   SERVICE_UUID, WRITE_UUID, NOTIFY_UUID, INIT_SEQUENCE, INIT_DELAY_MS, POLL_CYCLE,
   POLL_INTERVAL_MS, RESPONSE_TIMEOUT_MS, WRITE_HEADER, LIMITS,
@@ -17,7 +17,7 @@ import {
 import {
   MessageAssembler, parseRequest, parseResponse, toStatus, buildWriteAndRead, MODES, MODE,
 } from './ifit-messages.js';
-import { sleep, every } from './src/lib/timer.js';
+import { sleep } from '../../lib/timer.js';
 
 const noop = () => {};
 
@@ -376,156 +376,5 @@ export class Exp5iTreadmill {
     this.notifyChar = null;
     this._responseWaiter?.();
     if (was) this.onStatus('disconnected');
-  }
-}
-
-/**
- * Simulator: same interface, no Bluetooth. The belt accelerates ~1.5 km/h per
- * second and incline changes 0.5 % per second, like a real treadmill.
- * Starts stopped: use toggleBelt() to mimic the console buttons.
- */
-export class SimulatedTreadmill {
-  constructor({ onStatus = noop, onData = noop, onInfo = noop, onLog = noop } = {}) {
-    Object.assign(this, { onStatus, onData, onInfo, onLog });
-    this.state = { speed: 0, incline: 0, targetSpeed: 0, mode: 1, distance: 0, time: 0, calories: 0, pulse: null, updatedAt: 0 };
-    this.target = { speed: 0, incline: 0 };
-    this.belt = false;
-    this.running = false;
-    this.simulated = true;
-  }
-
-  get connected() {
-    return this.running;
-  }
-
-  async connect() {
-    this.onStatus('connecting');
-    await sleep(300);
-    this.onStatus('initializing');
-    await sleep(500);
-    this.running = true;
-    this.info = { firmware: 'simulator', serial: 'SIM-0001', reference: 0, supported: [0, 1, 4, 9, 10, 12, 16, 20, 21] };
-    this.onInfo({ ...this.info });
-    this.onLog('info', 'Simulator ready. Use "Console Start/Stop" to move the belt.');
-    this.onStatus('ready', 'Simulator');
-    this._stopTimer = every(POLL_INTERVAL_MS, () => this._tick(0.2));
-  }
-
-  disconnect() {
-    this._stopTimer?.();
-    this.running = false;
-    this.onStatus('disconnected');
-  }
-
-  pause() {
-    this.belt = false;
-    this.target.speed = 0;
-    this.onLog('info', 'Pause mode (sim)');
-  }
-
-  pauseNow() {
-    this.pause();
-  }
-
-  /** Same as pressing START/STOP on the console. */
-  toggleBelt() {
-    this.belt = !this.belt;
-    if (this.belt && this.target.speed < LIMITS.speedMin) this.target.speed = 3.2;
-    if (!this.belt) this.target.speed = 0;
-    this.onLog('info', this.belt ? 'Console: START' : 'Console: STOP');
-  }
-
-  setSpeed(kmh) {
-    if (!this.belt) return this.onLog('warn', `Ignored (belt stopped): speed ${kmh}`);
-    this.target.speed = Math.min(LIMITS.speedMax, Math.max(0, Math.round(kmh * 10) / 10));
-    if (this.target.speed === 0) this.belt = false;
-    this.onLog('tx', `speed ${this.target.speed} km/h (sim)`);
-  }
-
-  setIncline(pct) {
-    this.target.incline = Math.min(LIMITS.inclineMax, Math.max(0, Math.round(pct * 2) / 2));
-    this.onLog('tx', `incline ${this.target.incline}% (sim)`);
-  }
-
-  _tick(dt) {
-    const approach = (cur, tgt, rate) =>
-      Math.abs(tgt - cur) <= rate * dt ? tgt : cur + Math.sign(tgt - cur) * rate * dt;
-    const s = this.state;
-    s.speed = Math.round(approach(s.speed, this.target.speed, 1.5) * 100) / 100;
-    s.incline = Math.round(approach(s.incline, this.target.incline, 0.5) * 100) / 100;
-    s.updatedAt = Date.now();
-    s.targetSpeed = this.target.speed;
-    s.mode = this.belt ? 2 : s.time > 0 ? 3 : 1; // running / paused / idle
-    if (this.belt) {
-      s.distance += (s.speed / 3.6) * dt;
-      s.time += dt;
-      s.calories += s.speed * dt * 0.02;
-    }
-    // Simulated "hand grip" HR: follows effort with a ~20 s lag
-    const effort = 70 + s.speed * 9 + s.incline * 3;
-    this.hr = (this.hr ?? 70) + (effort - (this.hr ?? 70)) * (dt / 20);
-    s.pulse = { bpm: Math.round(this.hr), avg: 0, count: 0, source: 1 };
-    // Simulated RR intervals, like a chest strap's
-    if (this.belt) {
-      this.rrSim ??= new RrSimulator();
-      s.rr = this.rrSim.next(this.hr, dt);
-    } else {
-      s.rr = [];
-    }
-    this.onData({ ...s, distance: Math.round(s.distance), time: Math.floor(s.time) });
-  }
-}
-
-/**
- * Reads a Heart Rate service measurement (0x2A37): heart rate, skin contact
- * and RR intervals (in 1/1024 s, returned in ms).
- * @param {DataView} v
- */
-export function parseHeartRate(v) {
-  const flags = v.getUint8(0);
-  const wide = flags & 0x01;
-  const bpm = wide ? v.getUint16(1, true) : v.getUint8(1);
-  // Bit 2: the strap reports contact; bit 1: contact present
-  const contact = flags & 0x04 ? !!(flags & 0x02) : null;
-  let offset = wide ? 3 : 2;
-  if (flags & 0x08) offset += 2; // energy expended
-  const rr = [];
-  if (flags & 0x10) {
-    for (; offset + 1 < v.byteLength; offset += 2) rr.push(Math.round((v.getUint16(offset, true) / 1024) * 1000));
-  }
-  return { bpm, contact, rr };
-}
-
-/** Standard heart rate strap (Heart Rate service 0x180D). */
-export class HeartRateStrap {
-  constructor({ onHr = noop, onStatus = noop, onRr = noop } = {}) {
-    Object.assign(this, { onHr, onStatus, onRr });
-    this.contact = null;
-    this.bpm = null;
-    this.device = null;
-  }
-
-  async connect() {
-    this.device = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
-    this.device.addEventListener('gattserverdisconnected', () => {
-      this.bpm = null;
-      this.onStatus('disconnected');
-    });
-    const server = await this.device.gatt.connect();
-    const service = await server.getPrimaryService('heart_rate');
-    const ch = await service.getCharacteristic('heart_rate_measurement');
-    ch.addEventListener('characteristicvaluechanged', (e) => {
-      const m = parseHeartRate(e.target.value);
-      this.bpm = m.bpm;
-      this.contact = m.contact;
-      this.onHr(this.bpm);
-      if (m.rr.length) this.onRr(m.rr, m.contact);
-    });
-    await ch.startNotifications();
-    this.onStatus('ready', this.device.name);
-  }
-
-  disconnect() {
-    if (this.device?.gatt?.connected) this.device.gatt.disconnect();
   }
 }

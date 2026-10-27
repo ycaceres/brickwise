@@ -1,9 +1,9 @@
 // Intervals.icu workout_doc → treadmill steps, and the workout library
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from '../workout.js';
+import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from '../src/workouts/steps.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc } from '../src/physiology/zones.js';
-import { parseDur } from '../library.js';
+import { parseDur } from '../src/workouts/library.js';
 import { inclineStep } from '../hrcontrol.js';
 import { easyRun, runSettings, LIBRARY } from './fixtures.mjs';
 

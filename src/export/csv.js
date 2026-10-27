@@ -1,4 +1,4 @@
-import { formatPace } from '../../workout.js';
+import { formatPace } from '../workouts/steps.js';
 
 /** CSV of the session samples (the chart's table view). */
 export function samplesToCsv(samples) {

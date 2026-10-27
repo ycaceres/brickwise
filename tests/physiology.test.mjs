@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { paceZoneOf, hrTargetRange, hrZoneOf, zonesFromProfile, profileFromIntervals, resolveDoc } from '../src/physiology/zones.js';
 import { cleanRr, dfaAlpha1, alpha1Window, alphaState } from '../src/physiology/hrv.js';
 import { analyzeRamp, flatKmh } from '../src/physiology/thresholds.js';
-import { flattenWorkout } from '../workout.js';
+import { flattenWorkout } from '../src/workouts/steps.js';
 import { runSettings, LIBRARY } from './fixtures.mjs';
 
 test('zones: HR and pace ranges', () => {

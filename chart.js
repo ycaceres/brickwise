@@ -21,7 +21,7 @@
  * samples: [{ elapsed, speed, incline, hr, target }]
  */
 
-import { formatDuration, formatPace } from './workout.js';
+import { formatDuration, formatPace } from './src/workouts/steps.js';
 import { DEFAULT_PACE_PCT, paceZoneOf, hrZoneOf } from './src/physiology/zones.js';
 import { alphaState, ALPHA_LABELS } from './src/physiology/hrv.js';
 

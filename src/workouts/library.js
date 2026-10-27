@@ -183,7 +183,7 @@ export function buildLibrary(json) {
 /** Types for the filters, in file order. */
 export const libraryTypes = (json) => json.types.map((t) => ({ id: t.id, name: t.name }));
 
-export async function loadLibrary(url = new URL('data/library.json', import.meta.url)) {
+export async function loadLibrary(url = new URL('../../data/library.json', import.meta.url)) {
   const res = await fetch(url, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`Could not read ${url} (HTTP ${res.status})`);
   const json = await res.json();

@@ -1,5 +1,5 @@
 import { Exp5iTreadmill, SimulatedTreadmill, HeartRateStrap } from '../treadmill.js';
-import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from '../workout.js';
+import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from './workouts/steps.js';
 import { buildTcx } from './export/tcx.js';
 import { LIMITS } from '../exp5i-protocol.js';
 import { SessionChart } from '../chart.js';
@@ -7,7 +7,7 @@ import { samplesToCsv } from './export/csv.js';
 import { MODES, MODE, PULSE_SOURCES } from '../ifit-messages.js';
 import { every } from './lib/timer.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from './physiology/zones.js';
-import { loadLibrary } from '../library.js';
+import { loadLibrary } from './workouts/library.js';
 import { alpha1Window, alphaState, ALPHA_LABELS, VT1, VT2 } from './physiology/hrv.js';
 import { hrDecision, hrSlope, inclineStep, SLOPE_WINDOW_S } from '../hrcontrol.js';
 import { analyzeRamp } from './physiology/thresholds.js';
@@ -497,7 +497,7 @@ function docSeconds(doc) {
   return walk(doc?.steps || []);
 }
 
-// Library (library.json): loaded at startup
+// Library (data/library.json): loaded at startup
 let LIBRARY = [];
 let libTypes = [];
 let libDurations = [30, 45, 60];

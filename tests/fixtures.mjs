@@ -24,5 +24,5 @@ export const runSettings = {
 };
 
 // The workout library, as the page builds it
-import { buildLibrary } from '../library.js';
+import { buildLibrary } from '../src/workouts/library.js';
 export const LIBRARY = buildLibrary(JSON.parse(fs.readFileSync(new URL('../data/library.json', import.meta.url), 'utf8')));

@@ -149,6 +149,7 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
         incline: clampIncline(inclineText ?? defaultIncline),
         hasTarget: speedStart != null,
         ramp: !!step.ramp,
+        warmup: !!step.warmup,
         hr,
         intensity: stepIntensity(step),
         zone,   // pace zone (or HR zone for an HR target), to color the chart

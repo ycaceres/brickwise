@@ -104,9 +104,13 @@ With a chest strap that sends RR intervals (time between beats; nearly all do: P
 
 On load, the running HR and pace zones are read from Intervals.icu (running sport-settings) and shown on the workout card. With **Adjust speed by HR** on:
 
-- **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR goes above that cap, speed drops 0.2 km/h, up to 2 km/h in total. When HR is back 5 bpm below the cap, the removed speed returns.
-- **Steps with an HR target:** the starting speed comes from the matching pace zone. Then it goes up or down 0.2 km/h to keep HR in range (at most +1.5 km/h and −2 km/h).
-- HR must be out of range for 15 s in a row before an adjustment, and at least 25 s pass between adjustments. Nothing is adjusted in the first 45 s of each step, because HR takes time to respond. Every adjustment is logged.
+HR is projected 30 s ahead with its slope over the last 20 s, so speed changes while HR is still heading somewhere instead of after it got there. Corrections are proportional: 0.1 km/h per bpm off target, between 0.1 and 0.5 km/h (`hrcontrol.js`).
+
+- **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR is heading above that cap, speed drops, up to 2 km/h in total. Once HR is 5 bpm below the cap and no longer rising, the removed speed returns.
+- **Steps with an HR target:** the starting speed comes from the matching pace zone. Then speed moves to keep HR in the **middle** of the range (±3 bpm), not at its top (at most +1.5 km/h and −2 km/h).
+- **α1 guard on aerobic steps (Z1–Z2):** with a chest strap, if α1 stays below 0.75 for 60 s, the effort is above the aerobic threshold even when HR is still in its zone, so speed drops 0.2 km/h and is never raised while it lasts. α1 is only trusted after the first 2 minutes and with a clean signal.
+- **Warm-up ramps end early:** once HR has been at or above the top of Z1 for 5 s, the warm-up is over and the next step starts.
+- The same correction must be asked for 10 s in a row, and at least 25 s pass between adjustments. Nothing is adjusted in the first 45 s of each step, because HR takes time to respond. Every adjustment is logged with its reason.
 
 ## Safety
 - The belt is started only from the console, with the safety key attached (same as qdomyos-zwift with this model).
@@ -128,6 +132,7 @@ On load, the running HR and pace zones are read from Intervals.icu (running spor
 | `app.js`, `index.html` | UI and workout execution |
 | `timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
 | `chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
+| `hrcontrol.js` | Speed adjustment by HR: projection, proportional correction and the α1 guard |
 | `zones.js` | Profile, HR and pace zones, HR ranges of each step and resolution of relative paces |
 | `library.json` | The workout library (data; edited by hand) |
 | `library.js` | Turns `library.json` into workouts for every duration and level |

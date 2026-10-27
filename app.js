@@ -7,7 +7,8 @@ import { MODES, MODE, PULSE_SOURCES } from './ifit-messages.js';
 import { every } from './timer.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from './zones.js';
 import { loadLibrary } from './library.js';
-import { alpha1Window, alphaState, ALPHA_LABELS } from './hrv.js';
+import { alpha1Window, alphaState, ALPHA_LABELS, VT1 } from './hrv.js';
+import { hrDecision, hrSlope, SLOPE_WINDOW_S } from './hrcontrol.js';
 import * as intervals from './intervals.js';
 
 const $ = (id) => document.getElementById(id);
@@ -18,11 +19,13 @@ const STALE_MS = 3000;       // no notifications this long → speed unknown
 
 // Speed adjustment by HR (steps carry the HR range of their zones)
 const HR_GRACE_S = 45;       // at the start of a step HR takes a while to respond
-const HR_HOLD_S = 15;        // HR must be out of range this long in a row
+const HR_HOLD_S = 10;        // the same correction must be asked for this long in a row
 const HR_SPACING_S = 25;     // between one adjustment and the next
-const HR_STEP_KMH = 0.2;
 const HR_MAX_DOWN = 2.0;     // at most this much below the target
 const HR_MAX_UP = 1.5;       // only on steps with an HR target
+const ALPHA_HOLD_S = 60;     // α1 below VT1 this long on an aerobic step → slow down
+const ALPHA_MIN_S = 120;     // into the session before α1 is trusted (full 2 min window)
+const WARMUP_HOLD_S = 5;     // HR at the top of Z1 this long ends a warm-up ramp
 
 // ---------------------------------------------------------------------------
 // Log
@@ -637,8 +640,11 @@ const session = {
   totalDist: 0,
   adjust: 0,
   hrAdjust: 0,        // km/h the HR adjustment removed (or added) in this step
-  hrOutSince: null,   // since when (step s) HR has been out of range
+  hrOutSince: null,   // since when (step s) the same correction has been asked for
+  hrWantDir: 0,       // direction of that correction: -1, 0 or 1
   hrLastAdjust: null, // step s of the last HR adjustment
+  alphaLowSince: null, // session s since α1 has been below VT1
+  warmupHrSince: null, // step s since HR has been at the top of Z1 in a warm-up ramp
   target: null,       // km/h the page is requesting right now
   stopSince: null,
   samples: [],
@@ -652,7 +658,7 @@ const session = {
 function resetSession() {
   Object.assign(session, {
     state: 'idle', steps: [], stepIdx: 0, stepElapsed: 0, stepDist: 0, totalElapsed: 0, totalDist: 0,
-    adjust: 0, hrAdjust: 0, hrOutSince: null, hrLastAdjust: null, target: null, stopSince: null, samples: [], lastSampleAt: 0, startedAt: null, event: null, lastBeep: null,
+    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrLastAdjust: null, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], lastSampleAt: 0, startedAt: null, event: null, lastBeep: null,
     stepStarts: [], uploaded: false,
   });
 }
@@ -676,7 +682,9 @@ function applyStep(i) {
   session.adjust = 0;
   session.hrAdjust = 0;
   session.hrOutSince = null;
+  session.hrWantDir = 0;
   session.hrLastAdjust = null;
+  session.warmupHrSince = null;
   session.lastBeep = null;
   const step = currentStep();
   if (!step) {
@@ -742,6 +750,7 @@ function tick() {
   if (session.state === 'armed' && moving) {
     session.state = 'running';
     session.startedAt = now;
+    rrState.pending = []; // beats from before the start do not belong to the first sample
     log('info', 'Belt moving: session started');
     if (session.steps.length) applyStep(0);
     updateControls();
@@ -765,6 +774,7 @@ function tick() {
   } else if (session.state === 'paused' && moving) {
     session.state = 'running';
     session.stopSince = null;
+    rrState.pending = [];
     log('info', 'Belt moving: session resumed');
     const step = currentStep();
     if (step) { treadmill?.setIncline(step.incline); pushTarget(true); }
@@ -803,7 +813,10 @@ function tick() {
         }
       }
       if (stepProgress(step) >= 1) applyStep(session.stepIdx + 1);
-      else {
+      else if (warmupDone(step)) {
+        log('info', `HR ${live.hr} reached the top of Z1 (${zones.hr[0].hi}): warm-up done`);
+        applyStep(session.stepIdx + 1);
+      } else {
         adjustForHr(step);
         if (step.ramp) pushTarget();
       }
@@ -818,34 +831,60 @@ function tick() {
 }
 
 /**
- * Speed adjustment by HR, once per tick while a step runs.
- * - Step with a pace target ('cap'): if HR goes above the top of the
- *   matching zone, speed drops; when HR comes back, the removed speed returns.
- * - Step with an HR target ('target'): speeds up or down to stay in range.
- * Only reacts once HR has been out of range for HR_HOLD_S, and waits
- * HR_SPACING_S between adjustments, because HR responds with a lag.
+ * A warm-up ramp ends early once HR has been at or above the top of Z1 for
+ * WARMUP_HOLD_S: going on would only push HR further up before the main set.
+ */
+function warmupDone(step) {
+  if (!step.warmup || !step.ramp || !zones?.hr.length || !live.hr) return false;
+  if (live.hr < zones.hr[0].hi) { session.warmupHrSince = null; return false; }
+  session.warmupHrSince ??= session.stepElapsed;
+  return session.stepElapsed - session.warmupHrSince >= WARMUP_HOLD_S;
+}
+
+/** α1 has been below VT1 for ALPHA_HOLD_S with a clean signal (tracked every tick). */
+function alphaLow() {
+  const a = rrActive() ? rrState.alpha?.alpha1 : null;
+  if (a == null || a >= VT1 || session.totalElapsed < ALPHA_MIN_S) { session.alphaLowSince = null; return false; }
+  session.alphaLowSince ??= session.totalElapsed;
+  return session.totalElapsed - session.alphaLowSince >= ALPHA_HOLD_S;
+}
+
+/**
+ * Speed adjustment by HR, once per tick while a step runs (the decision is
+ * in hrcontrol.js).
+ * - Step with a pace target ('cap'): speed drops when HR is heading above
+ *   the top of the matching zone; once HR is back below, it returns.
+ * - Step with an HR target ('target'): speed moves to keep HR in the middle
+ *   of the range.
+ * - Aerobic steps (Z1–Z2): speed also drops while α1 stays below VT1.
+ * The same correction must be asked for HR_HOLD_S in a row, and at least
+ * HR_SPACING_S pass between adjustments, because HR responds with a lag.
  */
 function adjustForHr(step) {
+  const low = alphaLow();
   if (!$('wHrAdjust').checked || !step.hr || step.hr.mode === 'info' || !step.hasTarget || !live.hr) return;
   const t = session.stepElapsed;
   if (t < HR_GRACE_S) return;
   const { lo, hi, mode } = step.hr;
-  let dir = 0;
-  if (live.hr > hi) dir = -1;
-  else if (mode === 'target' && live.hr < lo) dir = 1;
-  else if (mode === 'cap' && session.hrAdjust < 0 && live.hr < hi - 5) dir = 1; // give back what was removed
-  if (!dir) { session.hrOutSince = null; return; }
-  session.hrOutSince ??= t;
+  const recent = session.samples.filter((s) => s.elapsed > session.totalElapsed - SLOPE_WINDOW_S);
+  const { delta, reason } = hrDecision({
+    mode, lo, hi, hr: live.hr, slope: hrSlope(recent), hrAdjust: session.hrAdjust,
+    alphaLow: low && step.zone != null && step.zone <= 2,
+  });
+  const dir = Math.sign(delta);
+  if (!dir) { session.hrOutSince = null; session.hrWantDir = 0; return; }
+  if (dir !== session.hrWantDir) { session.hrWantDir = dir; session.hrOutSince = t; }
   if (t - session.hrOutSince < HR_HOLD_S) return;
   if (session.hrLastAdjust != null && t - session.hrLastAdjust < HR_SPACING_S) return;
   const maxUp = mode === 'target' ? HR_MAX_UP : 0;
-  const next = Math.round(Math.min(maxUp, Math.max(-HR_MAX_DOWN, session.hrAdjust + dir * HR_STEP_KMH)) * 10) / 10;
+  const next = Math.round(Math.min(maxUp, Math.max(-HR_MAX_DOWN, session.hrAdjust + delta)) * 10) / 10;
   if (next === session.hrAdjust) return;
+  const applied = Math.round((next - session.hrAdjust) * 10) / 10;
   session.hrAdjust = next;
   session.hrLastAdjust = t;
   session.hrOutSince = null;
-  const range = mode === 'cap' ? `cap ${hi}` : `${lo}–${hi}`;
-  log('info', `HR ${live.hr} (${range}): speed ${dir > 0 ? '+' : '−'}${HR_STEP_KMH.toFixed(1)} km/h, HR adjustment ${next > 0 ? '+' : ''}${next.toFixed(1)}`);
+  session.hrWantDir = 0;
+  log('info', `${reason}: speed ${applied > 0 ? '+' : '−'}${Math.abs(applied).toFixed(1)} km/h, HR adjustment ${next > 0 ? '+' : ''}${next.toFixed(1)}`);
   pushTarget();
 }
 

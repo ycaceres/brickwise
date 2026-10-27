@@ -158,7 +158,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `treadmill.js` | Web Bluetooth connection (write queue, retries), simulator and HRM |
 | `workout.js` | Turns the Intervals.icu `workout_doc` into speed steps |
 | `tcx.js` | Builds the session TCX |
-| `app.js`, `index.html` | UI and workout execution |
+| `src/main.js`, `index.html` | UI and workout execution |
 | `timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
 | `chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
 | `thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |

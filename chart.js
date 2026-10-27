@@ -22,8 +22,8 @@
  */
 
 import { formatDuration, formatPace } from './workout.js';
-import { DEFAULT_PACE_PCT, paceZoneOf, hrZoneOf } from './zones.js';
-import { alphaState, ALPHA_LABELS } from './hrv.js';
+import { DEFAULT_PACE_PCT, paceZoneOf, hrZoneOf } from './src/physiology/zones.js';
+import { alphaState, ALPHA_LABELS } from './src/physiology/hrv.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const MARGIN = { left: 48, right: 46, top: 38 };

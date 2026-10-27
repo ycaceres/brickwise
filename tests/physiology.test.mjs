@@ -1,9 +1,9 @@
 // Zones, DFA α1 and ventilatory thresholds
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { paceZoneOf, hrTargetRange, hrZoneOf, zonesFromProfile, profileFromIntervals, resolveDoc } from '../zones.js';
-import { cleanRr, dfaAlpha1, alpha1Window, alphaState } from '../hrv.js';
-import { analyzeRamp, flatKmh } from '../thresholds.js';
+import { paceZoneOf, hrTargetRange, hrZoneOf, zonesFromProfile, profileFromIntervals, resolveDoc } from '../src/physiology/zones.js';
+import { cleanRr, dfaAlpha1, alpha1Window, alphaState } from '../src/physiology/hrv.js';
+import { analyzeRamp, flatKmh } from '../src/physiology/thresholds.js';
 import { flattenWorkout } from '../workout.js';
 import { runSettings, LIBRARY } from './fixtures.mjs';
 

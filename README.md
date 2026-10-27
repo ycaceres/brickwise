@@ -161,12 +161,12 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/main.js`, `index.html` | UI and workout execution |
 | `src/lib/timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
 | `chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
-| `thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
+| `src/physiology/thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
 | `hrcontrol.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
-| `zones.js` | Profile, HR and pace zones, HR ranges of each step and resolution of relative paces |
+| `src/physiology/zones.js` | Profile, HR and pace zones, HR ranges of each step and resolution of relative paces |
 | `data/library.json` | The workout library (data; edited by hand) |
 | `library.js` | Turns `data/library.json` into workouts for every duration and level |
-| `hrv.js` | RR intervals: artifact cleanup and DFA α1 |
+| `src/physiology/hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `src/services/intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `tools/serve.py` | Static server for local development (not deployed) |
 | `tests/` | Hardware-free tests by area (`*.test.mjs`, shared data in `fixtures.mjs`): `npm test` |

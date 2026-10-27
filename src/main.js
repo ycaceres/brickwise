@@ -6,11 +6,11 @@ import { SessionChart } from '../chart.js';
 import { samplesToCsv } from './export/csv.js';
 import { MODES, MODE, PULSE_SOURCES } from '../ifit-messages.js';
 import { every } from './lib/timer.js';
-import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../zones.js';
+import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from './physiology/zones.js';
 import { loadLibrary } from '../library.js';
-import { alpha1Window, alphaState, ALPHA_LABELS, VT1, VT2 } from '../hrv.js';
+import { alpha1Window, alphaState, ALPHA_LABELS, VT1, VT2 } from './physiology/hrv.js';
 import { hrDecision, hrSlope, inclineStep, SLOPE_WINDOW_S } from '../hrcontrol.js';
-import { analyzeRamp } from '../thresholds.js';
+import { analyzeRamp } from './physiology/thresholds.js';
 import * as intervals from './services/intervals.js';
 
 const $ = (id) => document.getElementById(id);

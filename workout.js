@@ -7,7 +7,7 @@
  */
 
 import { LIMITS } from './exp5i-protocol.js';
-import { paceZoneOf, hrTargetRange, hrZoneOf, DEFAULT_PACE_PCT } from './zones.js';
+import { paceZoneOf, hrTargetRange, hrZoneOf, DEFAULT_PACE_PCT } from './src/physiology/zones.js';
 
 const MS_TO_KMH = 3.6;
 

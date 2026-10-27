@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from '../workout.js';
-import { zonesFromProfile, profileFromIntervals, resolveDoc } from '../zones.js';
+import { zonesFromProfile, profileFromIntervals, resolveDoc } from '../src/physiology/zones.js';
 import { parseDur } from '../library.js';
 import { inclineStep } from '../hrcontrol.js';
 import { easyRun, runSettings, LIBRARY } from './fixtures.mjs';

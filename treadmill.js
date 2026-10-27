@@ -8,7 +8,7 @@
  *   onLog(direction, text)   'tx' | 'rx' | 'info' | 'warn' | 'error'
  */
 
-import { RrSimulator } from './hrv.js';
+import { RrSimulator } from './src/physiology/hrv.js';
 import {
   SERVICE_UUID, WRITE_UUID, NOTIFY_UUID, INIT_SEQUENCE, INIT_DELAY_MS, POLL_CYCLE,
   POLL_INTERVAL_MS, RESPONSE_TIMEOUT_MS, WRITE_HEADER, LIMITS,

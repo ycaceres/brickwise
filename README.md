@@ -169,7 +169,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `tools/serve.py` | Static server for local development (not deployed) |
-| `test.mjs` | Hardware-free tests: `npm test` |
+| `tests/` | Hardware-free tests by area (`*.test.mjs`, shared data in `fixtures.mjs`): `npm test` |
 
 ## Protocol origin
 

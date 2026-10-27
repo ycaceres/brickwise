@@ -1,0 +1,189 @@
+// Intervals.icu workout_doc → treadmill steps, and the workout library
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from '../workout.js';
+import { zonesFromProfile, profileFromIntervals, resolveDoc } from '../zones.js';
+import { parseDur } from '../library.js';
+import { inclineStep } from '../hrcontrol.js';
+import { easyRun, runSettings, LIBRARY } from './fixtures.mjs';
+
+test('flattenWorkout expands repeats', () => {
+  const steps = flattenWorkout(easyRun);
+  assert.equal(steps.length, 6);
+  assert.deepEqual(steps.map((s) => s.duration), [180, 540, 60, 540, 60, 120]);
+  assert.match(steps[1].label, /1\/2/);
+  assert.match(steps[3].label, /2\/2/);
+});
+
+test('flattenWorkout: speed by position within the zone', () => {
+  const kmh = (pos) => flattenWorkout(easyRun, { position: pos })[1].speedStart;
+  assert.equal(kmh('low'), 7.5);   // 2.0946 m/s
+  assert.equal(kmh('high'), 8.5);  // 2.3703 m/s
+  assert.equal(kmh('mid'), 8.0);
+});
+
+test('flattenWorkout: base incline and incline from text', () => {
+  const doc = { steps: [
+    { duration: 60, text: 'incline 3%', _pace: { value: 2.5 } },
+    { duration: 60, text: '2% incl', _pace: { value: 2.5 } },
+    { duration: 60, _pace: { value: 2.5 } },
+    { duration: 60, text: 'inclinación 12', _pace: { value: 2.5 } },
+  ] };
+  assert.deepEqual(flattenWorkout(doc, { defaultIncline: 1 }).map((s) => s.incline), [3, 2, 1, 10]);
+});
+
+test('flattenWorkout: ramps, distance and steps without a target', () => {
+  const doc = { steps: [
+    { duration: 300, ramp: true, _pace: { start: 2, end: 3 } },
+    { distance: 1000, _pace: { value: 3 } },
+    { duration: 120, hr: { units: 'hr_zone', value: 2 } },
+  ] };
+  const [ramp, dist, free] = flattenWorkout(doc);
+  assert.equal(ramp.speedStart, 7.2);
+  assert.equal(ramp.speedEnd, 10.8);
+  assert.equal(targetSpeedAt(ramp, 0.5), 9);
+  assert.equal(dist.distance, 1000);
+  assert.equal(dist.duration, null);
+  assert.equal(free.hasTarget, false);
+  assert.equal(targetSpeedAt(free, 0.5), null);
+});
+
+test('formats', () => {
+  assert.equal(formatPace(10), '6:00');
+  assert.equal(formatPace(9.73), '6:10');
+  assert.equal(formatPace(0), '--:--');
+  assert.equal(formatDuration(65), '1:05');
+  assert.equal(formatDuration(3725), '1:02:05');
+});
+
+test('flattenWorkout: absolute pace without a zone is labeled with the pace', () => {
+  const [s] = flattenWorkout({ steps: [{ duration: 5, pace: { units: 'secs/km', value: 720 }, _pace: { value: 5 / 3.6 } }] });
+  assert.match(s.label, /pace 12:00\/km/);
+  assert.equal(s.speedStart, 5);
+});
+
+test('flattenWorkout with zones: HR cap on pace steps and speed on HR steps', () => {
+  const zones = zonesFromProfile(profileFromIntervals(runSettings));
+  const doc = { steps: [
+    { duration: 600, pace: { units: 'pace_zone', value: 2 }, _pace: { start: 7.6 / 3.6, end: 8.4 / 3.6 } },
+    { duration: 600, hr: { units: 'hr_zone', value: 2 } },
+    { duration: 60 },
+  ] };
+  const [pace, hr, free] = flattenWorkout(doc, { zones });
+  assert.deepEqual(pace.hr, { lo: 135, hi: 150, mode: 'cap' });
+  assert.equal(pace.zone, 2);
+  assert.deepEqual(hr.hr, { lo: 135, hi: 150, mode: 'target' });
+  assert.ok(hr.hasTarget && hr.speedStart > 7.5 && hr.speedStart < 8.6, String(hr.speedStart));
+  assert.match(hr.label, /HR 135–150 \(Z2\)/);
+  assert.equal(free.hr, null);
+  assert.equal(free.hasTarget, false);
+});
+
+test('resolveDoc: % of threshold with the profile and the full library', () => {
+  const zones = zonesFromProfile({ ...profileFromIntervals(runSettings), thresholdKmh: 10 });
+  const doc = resolveDoc({ steps: [{ duration: 60, pace: { units: '%pace', value: 90 } }] }, zones);
+  assert.equal(Math.round(doc.steps[0]._pace.value * 3.6 * 10) / 10, 9);
+  for (const w of LIBRARY) {
+    const steps = flattenWorkout(resolveDoc(w.workout_doc, zones), { zones });
+    assert.ok(steps.length > 2, w.id);
+    assert.ok(steps.every((s) => s.hasTarget && s.speedStart >= 0.8 && s.speedStart <= 16), w.id);
+  }
+  const hills = flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === 'hills-45-2').workout_doc, zones), { zones });
+  assert.deepEqual([...new Set(hills.map((s) => s.incline))].sort(), [0, 1, 5]);
+});
+
+test('library: incline walk at Z2', () => {
+  const zones = zonesFromProfile(profileFromIntervals(runSettings));
+  const w = LIBRARY.find((x) => x.id === 'walk-incline-45-3');
+  const steps = flattenWorkout(resolveDoc(w.workout_doc, zones), { zones });
+  assert.equal(steps.reduce((a, s) => a + s.duration, 0), 45 * 60);
+  assert.ok(steps.every((s) => s.speedStart === 5 && !s.ramp));        // fixed 12:00/km
+  assert.equal(steps[0].duration, 300);
+  assert.equal(steps[0].incline, 2);
+  assert.deepEqual(steps.slice(1, 17).map((s) => s.incline), [2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10]);
+  assert.ok(steps.slice(1, 17).every((s) => s.duration === 60));
+  assert.equal(steps.at(-1).incline, 10);
+  assert.equal(steps.at(-1).duration, 24 * 60);
+  // Z2 HR is the goal, but speed never changes
+  assert.equal(steps[0].hr, null);
+  assert.ok(steps.slice(1).every((s) => s.hr.mode === 'info' && s.hr.hi === 150));
+});
+
+test('library: every combination lasts what it says and levels go up', () => {
+  assert.equal(parseDur('1m30s'), 90);
+  assert.equal(parseDur('90s'), 90);
+  assert.throws(() => parseDur('2 min'));
+  const secs = (steps) => steps.reduce((a, s) => a + (s.steps ? s.reps * secs(s.steps) : s.duration), 0);
+  const generated = LIBRARY.filter((w) => !w.featured);
+  assert.equal(generated.length, 9 * 3 * 5);
+  for (const w of generated) assert.equal(secs(w.workout_doc.steps), w.minutes * 60, w.id);
+  // Work time grows with level in interval sessions
+  const zones = zonesFromProfile(profileFromIntervals(runSettings));
+  for (const type of ['tempo', 'threshold', 'vo2']) {
+    for (const m of [30, 45, 60]) {
+      const work = [1, 2, 3, 4, 5].map((lv) => {
+        const steps = flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === `${type}-${m}-${lv}`).workout_doc, zones), { zones });
+        return steps.filter((s) => s.speedStart >= zones.thresholdKmh * 0.89).reduce((a, s) => a + s.duration, 0);
+      });
+      for (let i = 1; i < 5; i++) assert.ok(work[i] >= work[i - 1], `${type} ${m} min: ${work}`);
+    }
+  }
+});
+
+test('flattenWorkout marks warm-up steps (they end early at the top of Z1)', () => {
+  const steps = flattenWorkout(LIBRARY.find((w) => w.id === 'hr-z2').workout_doc);
+  assert.deepEqual(steps.map((s) => s.warmup), [true, false, false]);
+  assert.equal(steps[0].ramp, true);
+});
+
+test('library: hrControl flag only on workouts HR can steer', () => {
+  const flagged = new Set(LIBRARY.filter((w) => w.hrControl).map((w) => w.type));
+  assert.deepEqual([...flagged].sort(), ['aerobic', 'tempo', 'walk-hr']);
+  assert.equal(LIBRARY.find((w) => w.id === 'hr-z2').hrControl, true);
+  assert.equal(LIBRARY.find((w) => w.id === 'progressive').hrControl, false);
+  assert.ok(LIBRARY.filter((w) => w.type === 'vo2' || w.type === 'hills').every((w) => !w.hrControl));
+});
+
+test('flattenWorkout with hrTargets: long steps follow their HR zone, short ones keep the pace', () => {
+  const zones = zonesFromProfile({ ...profileFromIntervals(runSettings), thresholdKmh: 10 });
+  const doc = resolveDoc(LIBRARY.find((w) => w.id === 'tempo-45-3').workout_doc, zones);
+  const steps = flattenWorkout(doc, { zones, hrTargets: true });
+  const [wu, work, rec] = steps;
+  assert.equal(wu.hr.mode, 'cap');
+  assert.deepEqual(work.hr, { lo: zones.hr[2].lo, hi: zones.hr[2].hi, mode: 'target', settle: 150 });
+  assert.equal(work.speedStart, 9.2);                // starts at the planned pace
+  assert.match(work.label, /HR \d+–\d+ \(Z3\)/);
+  assert.equal(rec.hr, null);                        // 2′ recovery: pace only
+  assert.equal(steps.at(-1).hr.mode, 'cap');         // cooldown
+  // Without hrTargets nothing changes
+  assert.equal(flattenWorkout(doc, { zones })[1].hr.mode, 'cap');
+  // Aerobic Z2: the whole block, without the Z3 settle time
+  const z2 = flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === 'aerobic-45-3').workout_doc, zones), { zones, hrTargets: true });
+  assert.deepEqual(z2[1].hr, { lo: zones.hr[1].lo, hi: zones.hr[1].hi, mode: 'target' });
+});
+
+test('followsHr: Intervals workouts without a flag are judged by their steps', () => {
+  const zones = zonesFromProfile({ ...profileFromIntervals(runSettings), thresholdKmh: 10 });
+  const judge = (id) => followsHr(flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === id).workout_doc, zones), { zones }));
+  assert.equal(judge('aerobic-45-3'), true);
+  assert.equal(judge('tempo-45-3'), true);
+  assert.equal(judge('hr-z2'), true);
+  assert.equal(judge('vo2-45-3'), false);
+  assert.equal(judge('threshold-45-3'), false);
+  assert.equal(judge('hills-45-3'), false);
+  assert.equal(judge('aerobic-45-5'), false);       // strides at 100 %
+});
+
+test('Z2 walk by incline: HR target moved by the incline, speed fixed', () => {
+  const zones = zonesFromProfile({ ...profileFromIntervals(runSettings), thresholdKmh: 10 });
+  const steps = flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === 'walk-hr-45-3').workout_doc, zones), { zones, hrTargets: true });
+  const main = steps[1];
+  assert.deepEqual(main.hr, { lo: 135, hi: 150, mode: 'target', by: 'incline' });
+  assert.equal(main.incline, 4);
+  assert.equal(main.speedStart, 5.5);                       // 11:00/km
+  assert.match(main.label, /by incline/);
+  assert.equal(steps[0].hr, null);                         // warm-up walk: locked
+  assert.equal(inclineStep(0), 0);
+  assert.equal(inclineStep(-0.2), -0.5);
+  assert.equal(inclineStep(0.5), 1);
+});

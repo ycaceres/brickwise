@@ -9,7 +9,7 @@ import { formatPace } from '../workouts/steps.js';
 import { zonesFromProfile, profileFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
 import { log } from './debug.js';
-import { selectWorkout, selectedKey, loadWorkouts } from '../main.js';
+import { selectWorkout, selectedKey, loadWorkouts } from './workouts.js';
 
 let profile = null;  // see physiology/zones.js
 export let zones = null;    // zones computed from the profile

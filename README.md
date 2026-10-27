@@ -153,8 +153,18 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 
 | File | What it does |
 |---|---|
-| `src/main.js`, `index.html` | UI and workout execution |
+| `index.html`, `src/main.js` | The page; tabs and startup |
 | `css/app.css` | Page styles |
+| `src/ui/devices.js` | Treadmill and HR strap pills: connect, simulator, disconnect |
+| `src/ui/profile.js` | Profile tab: threshold pace, LTHR and max HR, the Intervals.icu account and the threshold test history |
+| `src/ui/workouts.js` | Workouts tab: planned runs, library and filters, the chosen workout and its preview |
+| `src/ui/train.js` | Train tab: live numbers, session buttons, chart, export and upload |
+| `src/ui/debug.js` | Debug tab: communication log and console state |
+| `src/ui/chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
+| `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test |
+| `src/session/hr-control.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
+| `src/session/live.js` | Live device readings: speed, incline, HR, console state, RR intervals and α1 |
+| `src/session/wake-lock.js` | Keeps the screen on during a session |
 | `src/devices/treadmill/exp5i.js` | Web Bluetooth connection to the treadmill (write queue, retries) |
 | `src/devices/treadmill/simulated.js` | Treadmill simulator with the same interface (and simulated RR) |
 | `src/devices/treadmill/exp5i-protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
@@ -166,11 +176,10 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/workouts/steps.js` | Turns the Intervals.icu `workout_doc` into speed steps |
 | `src/workouts/library.js` | Turns `data/library.json` into workouts for every duration and level |
 | `data/library.json` | The workout library (data; edited by hand) |
-| `src/session/hr-control.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
-| `src/ui/chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
 | `src/export/tcx.js`, `src/export/csv.js` | Build the session TCX and CSV |
 | `src/services/intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `src/lib/timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
+| `src/lib/dom.js`, `src/lib/storage.js`, `src/lib/sound.js` | DOM helpers, settings in `localStorage` (`brickwise.*`) and beeps |
 | `tools/serve.py` | Static server for local development (not deployed) |
 | `tests/` | Hardware-free tests by area (`*.test.mjs`, shared data in `fixtures.mjs`): `npm test` |
 

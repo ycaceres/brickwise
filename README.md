@@ -52,6 +52,8 @@ To add or tweak workouts only `library.json` is edited; the page reads it on loa
 | | `"Z2"` | profile pace zone |
 | | `"12:00"` | fixed pace in min/km (does not depend on the profile) |
 | `hr` | `"Z2"` | target HR zone |
+| `hrBy` | `"incline"` | the HR target moves the incline instead of the speed |
+| `test` | `true` | step of the threshold test ramp |
 | `incline` | `5` | incline in % (without it the base incline is used) |
 | `lock` | `true` | HR does not change the speed (it is only the goal) |
 | `ramp` | `true` | pace goes from the first to the second `pace` value |
@@ -61,6 +63,7 @@ To add or tweak workouts only `library.json` is edited; the page reads it on loa
 ```json
 {
   "id": "vo2", "name": "VO2max intervals", "description": "…",
+  "hrControl": true,                                             // optional: HR can steer it (see Zones and HR adjustment)
   "warmup": { "dur": "10m", "pace": [70, 80], "ramp": true },   // optional; if missing, the one in "defaults"
   "warmup30": { … },                                             // optional, for 30 min
   "cooldown": null,                                              // null = no cooldown
@@ -76,7 +79,9 @@ To add or tweak workouts only `library.json` is edited; the page reads it on loa
 - `summary` (optional) replaces the automatic summary ("6 × 3′ at 104–108 % · 2′ easy").
 - `byDuration` adjusts the level for one duration: `"byDuration": { "30": { "reps": 2, "work": { "dur": "7m" } } }`.
 
-**Featured:** `id`, `name`, `description`, `type`, `minutes`, `level` (for the filters) and `steps`, a list of segments (`"warmup": true` or `"cooldown": true` mark the warm-up and cooldown).
+A level can override the type's `hrControl`.
+
+**Featured:** `id`, `name`, `description`, `type`, `minutes`, `level` (for the filters), optional `hrControl` and `steps`, a list of segments (`"warmup": true` or `"cooldown": true` mark the warm-up and cooldown).
 
 `npm test` checks that every combination lasts what it says and that hard work grows with level in interval sessions.
 
@@ -102,15 +107,39 @@ With a chest strap that sends RR intervals (time between beats; nearly all do: P
 
 ## Zones and HR adjustment
 
-On load, the running HR and pace zones are read from Intervals.icu (running sport-settings) and shown on the workout card. With **Adjust speed by HR** on:
+On load, the running HR and pace zones are read from Intervals.icu (running sport-settings) and shown on the workout card.
+
+**Which workouts HR can steer.** HR responds 1–2 minutes late, so it only helps on long, steady steps. Those workouts get a **♥ HR** tag in the lists, and only they show the **Adjust speed by HR** checkbox:
+
+- **Library:** the ones with `"hrControl": true` in `library.json` (today: Aerobic Z2, Tempo intervals, Z2 walk by incline and Z2 heart rate run). VO2max, threshold, hills, strides and run-walk keep their pace.
+- **Intervals.icu:** judged by their steps. They qualify with an HR target, or with steps of 5 min or more in Z1–Z3 and only easy steps (Z1–Z2) in between.
+
+**With the checkbox on**, steps of 5 min or more in pace Z1–Z4 change their target from pace to the **HR zone in the same position** (pace Z3 → HR Z3). Speed starts at the planned pace and then follows HR; from Z3 up it is left alone for the first 2.5 min while HR climbs. Shorter steps (recoveries, strides) keep their pace with no HR control, and the warm-up and cooldown keep the HR cap. The steps table and chart show the HR range of the converted steps.
+
+**Z2 walk by incline:** speed stays fixed (a brisk walk) and the **incline** follows HR to keep it in the middle of Z2, with the same decision as speed (projection, middle of the range, α1 guard). Each correction moves 0.5 % (1 % when HR is far off), within 0–10 %, and at least 40 s apart because the incline motor is slow. Walking, 1 % weighs about as much as 0.9 km/h.
+
+How speed follows HR:
 
 HR is projected 30 s ahead with its slope over the last 20 s, so speed changes while HR is still heading somewhere instead of after it got there. Corrections are proportional: 0.1 km/h per bpm off target, between 0.1 and 0.5 km/h (`hrcontrol.js`).
 
 - **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR is heading above that cap, speed drops, up to 2 km/h in total. Once HR is 5 bpm below the cap and no longer rising, the removed speed returns.
 - **Steps with an HR target:** the starting speed comes from the matching pace zone. Then speed moves to keep HR in the **middle** of the range (±3 bpm), not at its top (at most +1.5 km/h and −2 km/h).
 - **α1 guard on aerobic steps (Z1–Z2):** with a chest strap, if α1 stays below 0.75 for 60 s, the effort is above the aerobic threshold even when HR is still in its zone, so speed drops 0.2 km/h and is never raised while it lasts. α1 is only trusted after the first 2 minutes and with a clean signal.
-- **Warm-up ramps end early:** once HR has been at or above the top of Z1 for 5 s, the warm-up is over and the next step starts.
-- The same correction must be asked for 10 s in a row, and at least 25 s pass between adjustments. Nothing is adjusted in the first 45 s of each step, because HR takes time to respond. Every adjustment is logged with its reason.
+- **Warm-up ramps end early** when the next step is aerobic (Z1–Z2): once HR has been at or above the top of Z1 for 5 s, the warm-up is over. Before harder steps the whole warm-up is kept.
+- The same correction must be asked for 10 s in a row, and at least 25 s pass between adjustments. Nothing is adjusted in the first 45 s of each step (2.5 min on HR-zone steps from Z3 up), because HR takes time to respond. Every adjustment is logged with its reason.
+
+## Threshold test (α1)
+
+The featured **Threshold test (α1)** finds your aerobic (VT1) and anaerobic (VT2) thresholds from DFA α1, without going to exhaustion. It needs a chest strap that sends RR intervals.
+
+1. 8′ warm-up jog.
+2. **Ramp:** easy jog (75 % of threshold pace) while the incline rises 1 % per minute up to 10 %, then the speed rises 3 % of threshold every minute. A ramp by incline is gentler than one by speed and its steps are finer.
+3. The ramp **ends by itself** once α1 stays below 0.45 for 20 s (just past VT2), or when HR gets within 2 bpm of max HR. You can also end it with ■. The log notes when α1 crosses 0.75 and 0.5.
+4. 5′ cooldown.
+
+**Analysis** (`thresholds.js`, after Rogers et al., 2021): every α1 is paired with the mean HR and the mean flat-equivalent speed of its own 2-minute window, and a straight line α1 = f(HR) is fitted over α1 values between 0.3 and 1.1. **VT1** is where the line crosses 0.75 and **VT2** where it crosses 0.5 (VT2 HR is close to LTHR). Speed with incline is turned into flat-equivalent speed with the ACSM running equation, v · (1 + 4.5 · grade). If α1 did not quite reach 0.5, VT2 is extrapolated (up to 0.1) and marked with *.
+
+Results are kept in **Profile › Threshold tests** (last 20, in this browser). A button there uses the latest VT2 as LTHR and threshold pace for the profile. With Intervals.icu connected, also update its running settings, or **Refresh** brings its values back. Repeat the test every 4–6 weeks, rested and at the same time of day, to compare.
 
 ## Safety
 - The belt is started only from the console, with the safety key attached (same as qdomyos-zwift with this model).
@@ -132,7 +161,8 @@ HR is projected 30 s ahead with its slope over the last 20 s, so speed changes w
 | `app.js`, `index.html` | UI and workout execution |
 | `timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
 | `chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
-| `hrcontrol.js` | Speed adjustment by HR: projection, proportional correction and the α1 guard |
+| `thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
+| `hrcontrol.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
 | `zones.js` | Profile, HR and pace zones, HR ranges of each step and resolution of relative paces |
 | `library.json` | The workout library (data; edited by hand) |
 | `library.js` | Turns `library.json` into workouts for every duration and level |

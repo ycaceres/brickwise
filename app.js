@@ -1,5 +1,5 @@
 import { Exp5iTreadmill, SimulatedTreadmill, HeartRateStrap } from './treadmill.js';
-import { flattenWorkout, targetSpeedAt, formatPace, formatDuration } from './workout.js';
+import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from './workout.js';
 import { buildTcx } from './tcx.js';
 import { LIMITS } from './exp5i-protocol.js';
 import { SessionChart, samplesToCsv } from './chart.js';
@@ -7,8 +7,9 @@ import { MODES, MODE, PULSE_SOURCES } from './ifit-messages.js';
 import { every } from './timer.js';
 import { zonesFromProfile, profileFromIntervals, resolveDoc, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from './zones.js';
 import { loadLibrary } from './library.js';
-import { alpha1Window, alphaState, ALPHA_LABELS, VT1 } from './hrv.js';
-import { hrDecision, hrSlope, SLOPE_WINDOW_S } from './hrcontrol.js';
+import { alpha1Window, alphaState, ALPHA_LABELS, VT1, VT2 } from './hrv.js';
+import { hrDecision, hrSlope, inclineStep, SLOPE_WINDOW_S } from './hrcontrol.js';
+import { analyzeRamp } from './thresholds.js';
 import * as intervals from './intervals.js';
 
 const $ = (id) => document.getElementById(id);
@@ -26,6 +27,11 @@ const HR_MAX_UP = 1.5;       // only on steps with an HR target
 const ALPHA_HOLD_S = 60;     // α1 below VT1 this long on an aerobic step → slow down
 const ALPHA_MIN_S = 120;     // into the session before α1 is trusted (full 2 min window)
 const WARMUP_HOLD_S = 5;     // HR at the top of Z1 this long ends a warm-up ramp
+const INCLINE_SPACING_S = 40; // between incline adjustments (the motor is slow and noisy)
+const TEST_STOP_ALPHA = 0.45; // the threshold test ends once α1 is this far past VT2…
+const TEST_STOP_HOLD_S = 20;  // …for this long
+const TEST_MIN_S = 180;       // and never before this much ramp
+const TESTS_KEPT = 20;        // threshold tests kept in the history
 
 // ---------------------------------------------------------------------------
 // Log
@@ -311,6 +317,7 @@ function renderProfile() {
 
   renderZoneTable();
   renderZones($('wZones'));
+  renderTests();
 }
 
 /** Profile zone table: HR and pace side by side. */
@@ -454,17 +461,33 @@ function listNote(text) {
   return div;
 }
 
-function workoutItem(key, title, sub) {
+function workoutItem(key, title, sub, hrControl = false) {
   const btn = document.createElement('button');
   btn.className = 'witem';
   btn.dataset.key = key;
   const strong = document.createElement('strong');
   strong.textContent = title;
+  if (hrControl) {
+    const tag = document.createElement('em');
+    tag.className = 'hr-tag';
+    tag.textContent = '♥ HR';
+    tag.title = 'Speed can follow your heart rate';
+    strong.append(' ', tag);
+  }
   const span = document.createElement('span');
   span.textContent = sub;
   btn.append(strong, span);
   btn.onclick = () => selectWorkout(key);
   return btn;
+}
+
+/**
+ * Whether HR can steer a workout: library workouts say so (hrControl), the
+ * Intervals.icu ones are judged by their steps.
+ */
+function hrControllable(w) {
+  if (w.hrControl != null) return w.hrControl;
+  return followsHr(flattenWorkout(resolveDoc(w.workout_doc, zones), { zones }));
 }
 
 /** Approximate total duration of a workout_doc (s). */
@@ -526,7 +549,7 @@ function renderLists() {
   if (workouts?.length) {
     workouts.forEach((w, i) => {
       const sec = docSeconds(w.workout_doc);
-      planned.appendChild(workoutItem(`i:${i}`, w.name || 'Workout', sec ? `~${formatDuration(sec)}` : ''));
+      planned.appendChild(workoutItem(`i:${i}`, w.name || 'Workout', sec ? `~${formatDuration(sec)}` : '', hrControllable(w)));
     });
   } else {
     planned.appendChild(listNote(workouts ? 'No runs planned that day.' : 'Loading…'));
@@ -538,7 +561,7 @@ function renderLists() {
   else if (!LIBRARY.length) lib.appendChild(listNote('Loading library…'));
   const shown = LIBRARY.filter(libraryMatches);
   for (const w of shown) {
-    const item = workoutItem(`l:${w.id}`, w.featured ? `★ ${w.name} · ${w.minutes} min` : w.name, w.summary);
+    const item = workoutItem(`l:${w.id}`, w.featured ? `★ ${w.name} · ${w.minutes} min` : w.name, w.summary, w.hrControl);
     lib.appendChild(item);
   }
   if (LIBRARY.length && !shown.length) lib.appendChild(listNote('No workouts match those filters.'));
@@ -562,17 +585,20 @@ function selectWorkout(key = selectedKey) {
   if (key.startsWith('i:')) event = workouts?.[Number(key.slice(2))] || null;
   if (key.startsWith('l:')) {
     const w = LIBRARY.find((x) => x.id === key.slice(2));
-    if (w) event = { name: w.name, description: w.description, workout_doc: w.workout_doc, library: true };
+    if (w) event = { name: w.name, description: w.description, workout_doc: w.workout_doc, library: true, hrControl: w.hrControl };
   }
   selectedKey = event ? key : 'none';
   if (event) {
     const needsProfile = event.library && !zones?.thresholdKmh;
+    const hrControl = hrControllable(event);
+    const hrOn = hrControl && $('wHrAdjust').checked;
     const steps = flattenWorkout(resolveDoc(event.workout_doc, zones), {
       position: $('wPosition').value,
       defaultIncline: parseFloat($('wIncline').value) || 0,
       zones,
+      hrTargets: hrOn,
     });
-    selected = { event, steps, needsProfile };
+    selected = { event, steps, needsProfile, hrControl, hrOn };
   } else {
     selected = null;
   }
@@ -587,6 +613,7 @@ function selectWorkout(key = selectedKey) {
 
 function renderWorkout() {
   const body = $('wSteps');
+  $('wHrAdjustRow').hidden = !selected?.hrControl;
   if (!selected) {
     body.innerHTML = '';
     $('wName').textContent = 'No workout: manual control';
@@ -596,7 +623,8 @@ function renderWorkout() {
   }
   $('wName').textContent = selected.event.name || 'Workout';
   $('wDesc').textContent = (selected.needsProfile ? 'Threshold pace is missing in Profile: without it, steps have no speed.\n' : '') +
-    (selected.event.description || '');
+    (selected.event.description || '') +
+    (selected.hrOn ? '\n♥ Long steps follow their HR zone (speed starts at the planned pace); short ones keep their pace.' : '');
   body.innerHTML = selected.steps.map((s, i) => {
     const dur = s.duration ? formatDuration(s.duration) : s.distance ? `${(s.distance / 1000).toFixed(2)} km` : '—';
     const spd = s.hasTarget ? (s.ramp ? `${s.speedStart}→${s.speedEnd}` : s.speedStart.toFixed(1)) : 'free';
@@ -625,6 +653,7 @@ $('wDate').onchange = loadWorkouts;
 $('btnReload').onclick = loadWorkouts;
 $('wPosition').onchange = () => selectWorkout();
 $('wIncline').onchange = () => selectWorkout();
+$('wHrAdjust').onchange = () => selectWorkout();
 $('btnGoTrain').onclick = () => showTab('train');
 
 // ---------------------------------------------------------------------------
@@ -658,7 +687,7 @@ const session = {
 function resetSession() {
   Object.assign(session, {
     state: 'idle', steps: [], stepIdx: 0, stepElapsed: 0, stepDist: 0, totalElapsed: 0, totalDist: 0,
-    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrLastAdjust: null, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], lastSampleAt: 0, startedAt: null, event: null, lastBeep: null,
+    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrOn: false, hrLastAdjust: null, inclineAdjust: 0, testStart: null, testEnd: null, testLowSince: null, testMarks: {}, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], lastSampleAt: 0, startedAt: null, event: null, lastBeep: null,
     stepStarts: [], uploaded: false,
   });
 }
@@ -681,12 +710,15 @@ function applyStep(i) {
   session.stepDist = 0;
   session.adjust = 0;
   session.hrAdjust = 0;
+  session.inclineAdjust = 0;
   session.hrOutSince = null;
   session.hrWantDir = 0;
   session.hrLastAdjust = null;
   session.warmupHrSince = null;
   session.lastBeep = null;
   const step = currentStep();
+  if (step?.test) session.testStart ??= session.totalElapsed;
+  else if (session.testStart != null) session.testEnd ??= session.totalElapsed;
   if (!step) {
     finish('Workout complete. Belt paused: finish or resume from the console.');
     treadmill?.pause();
@@ -694,9 +726,16 @@ function applyStep(i) {
   }
   log('info', `Step ${i + 1}/${session.steps.length}: ${step.label}`);
   beep(i === 0 ? 660 : 880, 0.25);
-  treadmill?.setIncline(step.incline);
+  pushIncline();
   pushTarget(true);
   highlightSteps();
+}
+
+/** Sends the step's incline plus what HR moved it (steps that follow HR by incline). */
+function pushIncline() {
+  const step = currentStep();
+  if (!step) return;
+  treadmill?.setIncline(Math.min(LIMITS.inclineMax, Math.max(LIMITS.inclineMin, step.incline + session.inclineAdjust)));
 }
 
 /** Sends the target speed if it changed (ramps and manual adjustments). */
@@ -715,6 +754,7 @@ function start() {
   resetSession();
   session.steps = selected ? selected.steps : [];
   session.event = selected ? selected.event : null;
+  session.hrOn = !!selected?.hrOn;
   session.state = 'armed';
   requestWakeLock();
   updateControls();
@@ -729,6 +769,10 @@ function finish(message) {
   log('info', message);
   $('sessionNote').textContent = message;
   if (session.steps.length) session.stepStarts[session.stepIdx + 1] ??= session.totalElapsed;
+  if (session.testStart != null) {
+    session.testEnd ??= session.totalElapsed;
+    saveTestResult();
+  }
   highlightSteps();
   updateControls();
   updateChart();
@@ -759,7 +803,7 @@ function tick() {
     // restarts at its own speed, so the target is resent
     if (restarted) {
       const step = currentStep();
-      if (step) { treadmill?.setIncline(step.incline); pushTarget(true); }
+      if (step) { pushIncline(); pushTarget(true); }
     }
     if (!moving) {
       session.stopSince ??= now;
@@ -777,7 +821,7 @@ function tick() {
     rrState.pending = [];
     log('info', 'Belt moving: session resumed');
     const step = currentStep();
-    if (step) { treadmill?.setIncline(step.incline); pushTarget(true); }
+    if (step) { pushIncline(); pushTarget(true); }
     updateControls();
   }
 
@@ -812,7 +856,12 @@ function tick() {
           beep(440, 0.12);
         }
       }
-      if (stepProgress(step) >= 1) applyStep(session.stepIdx + 1);
+      const testEnd = testOver(step);
+      if (testEnd) {
+        log('info', `Threshold test: ${testEnd}, ramp over`);
+        const cd = session.steps.findIndex((s, i) => i > session.stepIdx && !s.test);
+        applyStep(cd < 0 ? session.steps.length : cd);
+      } else if (stepProgress(step) >= 1) applyStep(session.stepIdx + 1);
       else if (warmupDone(step)) {
         log('info', `HR ${live.hr} reached the top of Z1 (${zones.hr[0].hi}): warm-up done`);
         applyStep(session.stepIdx + 1);
@@ -833,13 +882,91 @@ function tick() {
 /**
  * A warm-up ramp ends early once HR has been at or above the top of Z1 for
  * WARMUP_HOLD_S: going on would only push HR further up before the main set.
+ * Only before an aerobic step (Z1–Z2): harder sets keep the whole warm-up.
  */
 function warmupDone(step) {
   if (!step.warmup || !step.ramp || !zones?.hr.length || !live.hr) return false;
+  const next = session.steps[session.stepIdx + 1];
+  if (!next || next.zone == null || next.zone > 2) return false;
   if (live.hr < zones.hr[0].hi) { session.warmupHrSince = null; return false; }
   session.warmupHrSince ??= session.stepElapsed;
   return session.stepElapsed - session.warmupHrSince >= WARMUP_HOLD_S;
 }
+
+/**
+ * Threshold test ramp: why it should end now, or null. It ends once α1 has
+ * stayed below TEST_STOP_ALPHA (just past VT2) or HR gets near max HR. On the
+ * way it logs when α1 crosses VT1 and VT2.
+ */
+function testOver(step) {
+  if (!step.test) return null;
+  const a = rrActive() ? rrState.alpha?.alpha1 : null;
+  for (const [name, limit] of [['VT1', VT1], ['VT2', VT2]]) {
+    if (a != null && a < limit && !session.testMarks[name]) {
+      session.testMarks[name] = true;
+      log('info', `α1 ${a.toFixed(2)} with HR ${live.hr}: around ${name}`);
+    }
+  }
+  if (zones?.maxHr && live.hr >= zones.maxHr - 2) return `HR ${live.hr} near max HR ${zones.maxHr}`;
+  if (a == null || a >= TEST_STOP_ALPHA || session.totalElapsed - session.testStart < TEST_MIN_S) {
+    session.testLowSince = null;
+    return null;
+  }
+  session.testLowSince ??= session.totalElapsed;
+  return session.totalElapsed - session.testLowSince >= TEST_STOP_HOLD_S ? `α1 below ${TEST_STOP_ALPHA}` : null;
+}
+
+function loadTests() {
+  try { return JSON.parse(localStorage.getItem('treadwise.tests') || '[]'); } catch { return []; }
+}
+
+/** Analyzes the threshold test that just ended and keeps it in the history (Profile). */
+function saveTestResult() {
+  const result = analyzeRamp(session.samples, session.testStart, session.testEnd);
+  const peakHr = Math.max(0, ...session.samples.map((s) => s.hr || 0));
+  if (result.error) {
+    log('warn', `Threshold test: ${result.error}`);
+    $('sessionNote').textContent += ` Threshold test: ${result.error}`;
+    return;
+  }
+  const tests = [{ date: new Date().toISOString(), ...result, peakHr }, ...loadTests()].slice(0, TESTS_KEPT);
+  try { localStorage.setItem('treadwise.tests', JSON.stringify(tests)); } catch { /* optional */ }
+  const text = testText(result);
+  log('info', `Threshold test: ${text} (r² ${result.r2}, ${result.points} points)`);
+  $('sessionNote').textContent += ` Threshold test: ${text}. See Profile.`;
+  renderTests();
+}
+
+const vtText = (vt) => `${vt.hr} bpm at ${formatPace(vt.kmh)}/km`;
+const testText = (r) => `VT1 ${vtText(r.vt1)} · VT2 ${r.vt2 ? `${vtText(r.vt2)}${r.vt2.extrapolated ? ' (extrapolated)' : ''}` : 'not reached'}`;
+
+/** Profile: threshold test history; the latest VT2 can become LTHR and threshold pace. */
+function renderTests() {
+  const tests = loadTests();
+  $('pTestsCard').classList.toggle('hidden', !tests.length);
+  $('pTests').replaceChildren(...tests.map((t) => {
+    const tr = document.createElement('tr');
+    for (const v of [new Date(t.date).toLocaleDateString(), vtText(t.vt1), t.vt2 ? vtText(t.vt2) + (t.vt2.extrapolated ? ' *' : '') : '—', t.r2]) {
+      const td = document.createElement('td');
+      td.textContent = v;
+      tr.appendChild(td);
+    }
+    return tr;
+  }));
+  const last = tests.find((t) => t.vt2);
+  $('pTestApply').disabled = !last;
+  $('pTestApply').textContent = last
+    ? `Use VT2 as LTHR (${last.vt2.hr}) and threshold pace (${formatPace(last.vt2.kmh)}/km)`
+    : 'Use VT2 as LTHR and threshold pace';
+}
+
+$('pTestApply').onclick = () => {
+  const last = loadTests().find((t) => t.vt2);
+  if (!last) return;
+  const base = profile || { pacePct: DEFAULT_PACE_PCT, hrPct: DEFAULT_HR_PCT };
+  setProfile({ ...base, thresholdKmh: last.vt2.kmh, lthr: last.vt2.hr, source: 'manual' });
+  log('info', `Profile from the threshold test: LTHR ${last.vt2.hr}, threshold ${formatPace(last.vt2.kmh)}/km`);
+};
 
 /** α1 has been below VT1 for ALPHA_HOLD_S with a clean signal (tracked every tick). */
 function alphaLow() {
@@ -862,9 +989,9 @@ function alphaLow() {
  */
 function adjustForHr(step) {
   const low = alphaLow();
-  if (!$('wHrAdjust').checked || !step.hr || step.hr.mode === 'info' || !step.hasTarget || !live.hr) return;
+  if (!session.hrOn || !step.hr || step.hr.mode === 'info' || !step.hasTarget || !live.hr) return;
   const t = session.stepElapsed;
-  if (t < HR_GRACE_S) return;
+  if (t < (step.hr.settle ?? HR_GRACE_S)) return;
   const { lo, hi, mode } = step.hr;
   const recent = session.samples.filter((s) => s.elapsed > session.totalElapsed - SLOPE_WINDOW_S);
   const { delta, reason } = hrDecision({
@@ -875,17 +1002,28 @@ function adjustForHr(step) {
   if (!dir) { session.hrOutSince = null; session.hrWantDir = 0; return; }
   if (dir !== session.hrWantDir) { session.hrWantDir = dir; session.hrOutSince = t; }
   if (t - session.hrOutSince < HR_HOLD_S) return;
-  if (session.hrLastAdjust != null && t - session.hrLastAdjust < HR_SPACING_S) return;
-  const maxUp = mode === 'target' ? HR_MAX_UP : 0;
-  const next = Math.round(Math.min(maxUp, Math.max(-HR_MAX_DOWN, session.hrAdjust + delta)) * 10) / 10;
-  if (next === session.hrAdjust) return;
-  const applied = Math.round((next - session.hrAdjust) * 10) / 10;
-  session.hrAdjust = next;
+  const byIncline = step.hr.by === 'incline';
+  if (session.hrLastAdjust != null && t - session.hrLastAdjust < (byIncline ? INCLINE_SPACING_S : HR_SPACING_S)) return;
+  if (byIncline) {
+    // The incline moves within the treadmill's range; speed stays as planned
+    const next = Math.min(LIMITS.inclineMax - step.incline, Math.max(LIMITS.inclineMin - step.incline, session.inclineAdjust + inclineStep(delta)));
+    if (next === session.inclineAdjust) return;
+    const applied = next - session.inclineAdjust;
+    session.inclineAdjust = next;
+    log('info', `${reason}: incline ${applied > 0 ? '+' : '−'}${Math.abs(applied).toFixed(1)} %, now ${(step.incline + next).toFixed(1)} %`);
+    pushIncline();
+  } else {
+    const maxUp = mode === 'target' ? HR_MAX_UP : 0;
+    const next = Math.round(Math.min(maxUp, Math.max(-HR_MAX_DOWN, session.hrAdjust + delta)) * 10) / 10;
+    if (next === session.hrAdjust) return;
+    const applied = Math.round((next - session.hrAdjust) * 10) / 10;
+    session.hrAdjust = next;
+    log('info', `${reason}: speed ${applied > 0 ? '+' : '−'}${Math.abs(applied).toFixed(1)} km/h, HR adjustment ${next > 0 ? '+' : ''}${next.toFixed(1)}`);
+    pushTarget();
+  }
   session.hrLastAdjust = t;
   session.hrOutSince = null;
   session.hrWantDir = 0;
-  log('info', `${reason}: speed ${applied > 0 ? '+' : '−'}${Math.abs(applied).toFixed(1)} km/h, HR adjustment ${next > 0 ? '+' : ''}${next.toFixed(1)}`);
-  pushTarget();
 }
 
 // ---------------------------------------------------------------------------
@@ -989,7 +1127,7 @@ function updateControls() {
   $('btnExport').disabled = !finished;
   $('btnUpload').disabled = !(finished && session.samples.length > 10 && intervals.getApiKey() && !session.uploaded);
   $('btnUpload').title = intervals.getApiKey() ? 'Upload to Intervals.icu (when finished)' : 'Upload to Intervals.icu: sign in with your API key in Profile';
-  $('wPosition').disabled = $('wIncline').disabled = active;
+  $('wPosition').disabled = $('wIncline').disabled = $('wHrAdjust').disabled = active;
   document.querySelectorAll('.witem').forEach((b) => { b.disabled = active; });
   document.querySelectorAll('[data-speed],[data-incline]').forEach((b) => { b.disabled = !connected; });
 

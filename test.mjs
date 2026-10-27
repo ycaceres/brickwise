@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildSpeedPacket, buildInclinePacket, parseNotification, INIT_SEQUENCE, POLL_CYCLE, toHex, WRITE_HEADER,
 } from './exp5i-protocol.js';
-import { flattenWorkout, targetSpeedAt, formatPace, formatDuration } from './workout.js';
+import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from './workout.js';
 import { buildTcx } from './tcx.js';
 
 // Literal replica of qdomyos-zwift's forceSpeed/forceIncline for the EXP 5i
@@ -496,7 +496,7 @@ test('library: every combination lasts what it says and levels go up', () => {
   assert.throws(() => parseDur('2 min'));
   const secs = (steps) => steps.reduce((a, s) => a + (s.steps ? s.reps * secs(s.steps) : s.duration), 0);
   const generated = LIBRARY.filter((w) => !w.featured);
-  assert.equal(generated.length, 8 * 3 * 5);
+  assert.equal(generated.length, 9 * 3 * 5);
   for (const w of generated) assert.equal(secs(w.workout_doc.steps), w.minutes * 60, w.id);
   // Work time grows with level in interval sessions
   const zones = zonesFromProfile(profileFromIntervals(runSettings));
@@ -547,4 +547,84 @@ test('flattenWorkout marks warm-up steps (they end early at the top of Z1)', () 
   const steps = flattenWorkout(LIBRARY.find((w) => w.id === 'hr-z2').workout_doc);
   assert.deepEqual(steps.map((s) => s.warmup), [true, false, false]);
   assert.equal(steps[0].ramp, true);
+});
+
+test('library: hrControl flag only on workouts HR can steer', () => {
+  const flagged = new Set(LIBRARY.filter((w) => w.hrControl).map((w) => w.type));
+  assert.deepEqual([...flagged].sort(), ['aerobic', 'tempo', 'walk-hr']);
+  assert.equal(LIBRARY.find((w) => w.id === 'hr-z2').hrControl, true);
+  assert.equal(LIBRARY.find((w) => w.id === 'progressive').hrControl, false);
+  assert.ok(LIBRARY.filter((w) => w.type === 'vo2' || w.type === 'hills').every((w) => !w.hrControl));
+});
+
+test('flattenWorkout with hrTargets: long steps follow their HR zone, short ones keep the pace', () => {
+  const zones = zonesFromProfile({ ...profileFromIntervals(runSettings), thresholdKmh: 10 });
+  const doc = resolveDoc(LIBRARY.find((w) => w.id === 'tempo-45-3').workout_doc, zones);
+  const steps = flattenWorkout(doc, { zones, hrTargets: true });
+  const [wu, work, rec] = steps;
+  assert.equal(wu.hr.mode, 'cap');
+  assert.deepEqual(work.hr, { lo: zones.hr[2].lo, hi: zones.hr[2].hi, mode: 'target', settle: 150 });
+  assert.equal(work.speedStart, 9.2);                // starts at the planned pace
+  assert.match(work.label, /HR \d+–\d+ \(Z3\)/);
+  assert.equal(rec.hr, null);                        // 2′ recovery: pace only
+  assert.equal(steps.at(-1).hr.mode, 'cap');         // cooldown
+  // Without hrTargets nothing changes
+  assert.equal(flattenWorkout(doc, { zones })[1].hr.mode, 'cap');
+  // Aerobic Z2: the whole block, without the Z3 settle time
+  const z2 = flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === 'aerobic-45-3').workout_doc, zones), { zones, hrTargets: true });
+  assert.deepEqual(z2[1].hr, { lo: zones.hr[1].lo, hi: zones.hr[1].hi, mode: 'target' });
+});
+
+test('followsHr: Intervals workouts without a flag are judged by their steps', () => {
+  const zones = zonesFromProfile({ ...profileFromIntervals(runSettings), thresholdKmh: 10 });
+  const judge = (id) => followsHr(flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === id).workout_doc, zones), { zones }));
+  assert.equal(judge('aerobic-45-3'), true);
+  assert.equal(judge('tempo-45-3'), true);
+  assert.equal(judge('hr-z2'), true);
+  assert.equal(judge('vo2-45-3'), false);
+  assert.equal(judge('threshold-45-3'), false);
+  assert.equal(judge('hills-45-3'), false);
+  assert.equal(judge('aerobic-45-5'), false);       // strides at 100 %
+});
+
+import { inclineStep } from './hrcontrol.js';
+import { analyzeRamp, flatKmh } from './thresholds.js';
+
+test('Z2 walk by incline: HR target moved by the incline, speed fixed', () => {
+  const zones = zonesFromProfile({ ...profileFromIntervals(runSettings), thresholdKmh: 10 });
+  const steps = flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === 'walk-hr-45-3').workout_doc, zones), { zones, hrTargets: true });
+  const main = steps[1];
+  assert.deepEqual(main.hr, { lo: 135, hi: 150, mode: 'target', by: 'incline' });
+  assert.equal(main.incline, 4);
+  assert.equal(main.speedStart, 5.5);                       // 11:00/km
+  assert.match(main.label, /by incline/);
+  assert.equal(steps[0].hr, null);                         // warm-up walk: locked
+  assert.equal(inclineStep(0), 0);
+  assert.equal(inclineStep(-0.2), -0.5);
+  assert.equal(inclineStep(0.5), 1);
+});
+
+test('threshold test: ramp steps and VT1/VT2 from α1 vs HR', () => {
+  const zones = zonesFromProfile({ ...profileFromIntervals(runSettings), thresholdKmh: 10 });
+  const steps = flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === 'alpha-test').workout_doc, zones), { zones });
+  const ramp = steps.filter((s) => s.test);
+  assert.equal(ramp.length, 17);
+  assert.deepEqual(ramp.slice(0, 10).map((s) => s.incline), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.ok(ramp.every((s) => s.hr === null), 'no HR control during the test');
+  assert.equal(Math.round(flatKmh(8, 10) * 100) / 100, 11.6);
+
+  // HR climbs 2.5 bpm/min from 115; α1 falls with the mean HR of its 2 min window
+  const samples = [];
+  for (let t = 0; t <= 1500; t++) {
+    const hr = 115 + (2.5 * t) / 60;
+    const meanHr = hr - 2.5;                                   // mean of the last 2 min
+    samples.push({ elapsed: t, hr, speed: 7.5, incline: Math.min(10, t / 60), alpha1: t % 5 ? null : 1.2 - (meanHr - 120) * 0.015 });
+  }
+  const r = analyzeRamp(samples, 300, 1500);
+  assert.equal(r.vt1.hr, 150);                               // 1.2 − 0.015·30 = 0.75
+  assert.equal(r.vt2.hr, 167);
+  assert.equal(r.vt2.extrapolated, false);
+  assert.ok(r.r2 > 0.99 && r.vt2.kmh > r.vt1.kmh);
+  assert.match(analyzeRamp(samples.map((s) => ({ ...s, alpha1: null })), 300, 1500).error, /chest strap/);
+  assert.match(analyzeRamp(samples, 300, 500).error, /too early|Not enough/);
 });

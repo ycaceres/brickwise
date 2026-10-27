@@ -61,9 +61,25 @@
       }
     },
     {
+      "id": "walk-hr",
+      "name": "Z2 walk by incline",
+      "description": "Brisk walk at a fixed speed; the incline moves by itself to keep HR in zone 2 (turn on \"Adjust speed by HR\"). Low impact.",
+      "hrControl": true,
+      "warmup": { "dur": "5m", "pace": "12:00", "incline": 1, "lock": true },
+      "cooldown": { "dur": "5m", "pace": "12:30", "incline": 0, "lock": true },
+      "levels": {
+        "1": { "kind": "continuous", "main": {"pace": "12:00", "hr": "Z2", "hrBy": "incline", "incline": 4}, "summary": "walk at 12:00/km, incline keeps HR in Z2" },
+        "2": { "kind": "continuous", "main": {"pace": "11:30", "hr": "Z2", "hrBy": "incline", "incline": 4}, "summary": "walk at 11:30/km, incline keeps HR in Z2" },
+        "3": { "kind": "continuous", "main": {"pace": "11:00", "hr": "Z2", "hrBy": "incline", "incline": 4}, "summary": "walk at 11:00/km, incline keeps HR in Z2" },
+        "4": { "kind": "continuous", "main": {"pace": "10:30", "hr": "Z2", "hrBy": "incline", "incline": 4}, "summary": "walk at 10:30/km, incline keeps HR in Z2" },
+        "5": { "kind": "continuous", "main": {"pace": "10:00", "hr": "Z2", "hrBy": "incline", "incline": 4}, "summary": "walk at 10:00/km, incline keeps HR in Z2" }
+      }
+    },
+    {
       "id": "aerobic",
       "name": "Aerobic Z2",
       "description": "Steady run in pace zone 2: the foundation of endurance.",
+      "hrControl": true,
       "levels": {
         "1": { "kind": "continuous", "main": {"pace": [78, 82]}, "summary": "low Z2" },
         "2": { "kind": "continuous", "main": {"pace": [80, 84]}, "summary": "mid Z2" },
@@ -81,6 +97,7 @@
       "id": "tempo",
       "name": "Tempo intervals",
       "description": "Zone 3 blocks (88–94 % of threshold) with short recoveries.",
+      "hrControl": true,
       "levels": {
         "1": {
           "kind": "intervals",
@@ -271,10 +288,40 @@
   ],
   "featured": [
     {
+      "id": "alpha-test",
+      "name": "Threshold test (α1)",
+      "description": "Finds your aerobic (VT1) and anaerobic (VT2) thresholds with DFA α1; needs a chest strap that sends RR. Easy jog while the incline rises 1 % per minute up to 10 %, then the speed rises every minute. It ends by itself just past VT2 (α1 below 0.45). Results in Profile.",
+      "type": "test",
+      "minutes": 30,
+      "level": 3,
+      "steps": [
+        { "dur": "8m", "pace": [65, 75], "ramp": true, "incline": 1, "warmup": true },
+        { "dur": "1m", "pace": 75, "incline": 1, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 2, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 3, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 4, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 5, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 6, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 7, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 8, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 9, "lock": true, "test": true },
+        { "dur": "1m", "pace": 75, "incline": 10, "lock": true, "test": true },
+        { "dur": "1m", "pace": 78, "incline": 10, "lock": true, "test": true },
+        { "dur": "1m", "pace": 81, "incline": 10, "lock": true, "test": true },
+        { "dur": "1m", "pace": 84, "incline": 10, "lock": true, "test": true },
+        { "dur": "1m", "pace": 87, "incline": 10, "lock": true, "test": true },
+        { "dur": "1m", "pace": 90, "incline": 10, "lock": true, "test": true },
+        { "dur": "1m", "pace": 93, "incline": 10, "lock": true, "test": true },
+        { "dur": "1m", "pace": 96, "incline": 10, "lock": true, "test": true },
+        { "dur": "5m", "pace": [72, 65], "ramp": true, "incline": 0, "cooldown": true }
+      ]
+    },
+    {
       "id": "hr-z2",
       "name": "Z2 heart rate run",
       "description": "Speed adjusts itself to keep HR in zone 2 (turn on \"Adjust speed by HR\").",
       "type": "aerobic",
+      "hrControl": true,
       "minutes": 45,
       "level": 3,
       "steps": [

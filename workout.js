@@ -11,6 +11,11 @@ import { paceZoneOf, hrTargetRange, hrZoneOf, DEFAULT_PACE_PCT } from './zones.j
 
 const MS_TO_KMH = 3.6;
 
+/** With HR targets, only steps this long follow an HR zone: HR needs 1–2 min to respond. */
+export const HR_STEP_MIN_S = 300;
+/** Seconds an HR-zone step leaves speed alone while HR climbs (Z3 and above). */
+const HR_SETTLE_S = 150;
+
 /** Picks the target speed within the range: 'low' | 'mid' | 'high'. */
 function pickSpeed(pace, position) {
   if (!pace) return null;
@@ -72,7 +77,7 @@ function describePace(pace) {
 
 /**
  * @param {object} doc       resolved workout_doc
- * @param {object} opts      { position: 'low'|'mid'|'high', defaultIncline: number, zones }
+ * @param {object} opts      { position: 'low'|'mid'|'high', defaultIncline: number, zones, hrTargets }
  *
  * With zones (zones.js) every step also carries `hr` = { lo, hi, mode }:
  * - mode 'cap':    step with a pace target; hi is the top of the matching HR
@@ -80,10 +85,17 @@ function describePace(pace) {
  * - mode 'target': step with an HR target; the starting speed comes from the
  *                  matching pace zone and is then adjusted by HR.
  * - mode 'info':   step with lockSpeed; the HR range is only displayed.
+ * An HR target with `hrBy: 'incline'` keeps the speed and moves the incline
+ * instead (hr.by = 'incline').
+ *
+ * hrTargets (the workout follows HR): steps of HR_STEP_MIN_S or more in pace
+ * Z1–Z4 become 'target' steps on the HR zone with the same index, starting at
+ * their pace. Shorter steps (reps, recoveries, strides) keep their pace and get
+ * no HR control; warm-up and cooldown keep the cap.
  *
  * @returns {Array<{label, kind, duration, distance, speedStart, speedEnd, incline, hasTarget, hr}>}
  */
-export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zones = null } = {}) {
+export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zones = null, hrTargets = false } = {}) {
   const out = [];
 
   const walk = (steps, path) => {
@@ -112,12 +124,13 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
       const hrRange = hrTargetRange(zones, step.hr, step._hr);
       if (hrRange) {
         // lockSpeed: HR is only the step's goal; speed is left alone
-        hr = { ...hrRange, mode: step.lockSpeed ? 'info' : 'target' };
+        const byIncline = step.hrBy === 'incline' && !step.lockSpeed;
+        hr = { ...hrRange, mode: step.lockSpeed ? 'info' : 'target', ...(byIncline && { by: 'incline' }) };
         const z = hrZoneOf(zones, Math.round((hrRange.lo + hrRange.hi) / 2));
         zone = z;
         hrLabel = step.lockSpeed
           ? `HR goal ${z ? `Z${z}` : `${hrRange.lo}–${hrRange.hi}`}`
-          : `HR ${hrRange.lo}–${hrRange.hi}${z ? ` (Z${z})` : ''}`;
+          : `HR ${hrRange.lo}–${hrRange.hi}${z ? ` (Z${z})` : ''}${byIncline ? ' by incline' : ''}`;
         if (speedStart == null) {
           // Starting speed: the pace zone in the same position
           const pz = z && zones.pace[Math.min(z, zones.pace.length) - 1];
@@ -130,7 +143,13 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
         const pz = paceZoneOf(zones, Math.max(speedStart, speedEnd));
         zone = pz;
         const hz = zones.hr[Math.min(pz, zones.hr.length) - 1];
-        if (hz && !step.lockSpeed) hr = { lo: hz.lo, hi: hz.hi, mode: 'cap' };
+        const edge = step.warmup || step.cooldown;
+        if (!hz || step.lockSpeed) hr = null;
+        else if (!hrTargets || edge) hr = { lo: hz.lo, hi: hz.hi, mode: 'cap' };
+        else if (pz <= 4 && (step.duration || 0) >= HR_STEP_MIN_S) {
+          hr = { lo: hz.lo, hi: hz.hi, mode: 'target', ...(pz >= 3 && { settle: HR_SETTLE_S }) };
+          hrLabel = `HR ${hz.lo}–${hz.hi} (Z${pz})`;
+        }
       }
 
       const inclineText = parseIncline(step.text);
@@ -150,6 +169,7 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
         hasTarget: speedStart != null,
         ramp: !!step.ramp,
         warmup: !!step.warmup,
+        test: !!step.test,
         hr,
         intensity: stepIntensity(step),
         zone,   // pace zone (or HR zone for an HR target), to color the chart
@@ -159,6 +179,19 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
 
   walk(doc?.steps || [], []);
   return out;
+}
+
+/**
+ * Whether a workout (flattened without hrTargets) is one HR can steer, for
+ * workouts that carry no hrControl flag (Intervals.icu): it has an HR target,
+ * or long aerobic/tempo steps (Z1–Z3) and only easy steps (Z1–Z2) between them.
+ */
+export function followsHr(steps) {
+  if (steps.some((s) => s.hr?.mode === 'target')) return true;
+  const main = steps.filter((s) => s.kind === 'Work' && s.hasTarget);
+  const long = main.filter((s) => (s.duration || 0) >= HR_STEP_MIN_S);
+  return long.length > 0 &&
+    main.every((s) => s.zone != null && s.zone <= (long.includes(s) ? 3 : 2));
 }
 
 /** Target speed within a step for a given progress (0..1), with ramps. */

@@ -7,6 +7,8 @@
  * - Steps with an HR target aim at the middle of the range, not at its top.
  * - The correction is proportional to how far off HR is (GAIN km/h per bpm,
  *   between MIN_STEP and MAX_STEP).
+ * - Steps that follow HR by incline use the same decision, turned into
+ *   incline by inclineStep().
  * - α1 guard: on aerobic steps (Z1–Z2), a sustained α1 below VT1 means the
  *   effort is above the aerobic threshold even if HR is still in its zone,
  *   so speed drops and never rises.
@@ -22,6 +24,7 @@ const MIN_STEP = 0.1;
 const MAX_STEP = 0.5;
 const ALPHA_STEP = 0.2;          // km/h per α1 correction
 const CAP_MARGIN = 5;            // pace steps give speed back once HR is this far below the cap
+const INCLINE_STEP = 0.5;        // % per incline correction (the treadmill's resolution)
 
 const round1 = (v) => Math.round(v * 10) / 10;
 const stepFor = (bpm) => round1(Math.min(MAX_STEP, Math.max(MIN_STEP, GAIN * bpm)));
@@ -80,4 +83,14 @@ export function hrDecision({ mode, lo, hi, hr, slope, hrAdjust, alphaLow }) {
     reason = `α1 below ${VT1} with HR ${hr}`;
   }
   return { delta: round1(delta), reason };
+}
+
+/**
+ * The same correction on the incline (steps with hr.by = 'incline'): walking,
+ * 1 % weighs about as much as 0.9 km/h, so small corrections move 0.5 % and
+ * big ones (over 0.25 km/h) 1 %.
+ */
+export function inclineStep(kmh) {
+  if (!kmh) return 0;
+  return Math.sign(kmh) * (Math.abs(kmh) > 0.25 ? 2 * INCLINE_STEP : INCLINE_STEP);
 }

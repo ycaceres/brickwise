@@ -53,6 +53,8 @@ function toStep(seg, extra = {}) {
   if (seg.lock) step.lockSpeed = true;
   if (seg.warmup) step.warmup = true;
   if (seg.cooldown) step.cooldown = true;
+  if (seg.hrBy) step.hrBy = seg.hrBy;
+  if (seg.test) step.test = true;
   if (seg.incline != null) step.text = `incl ${seg.incline}%`;
   return step;
 }
@@ -144,6 +146,7 @@ export function buildWorkout(type, minutes, levelNum, defaults = {}) {
     minutes,
     level: Number(levelNum),
     name: `${type.name} · ${minutes} min · level ${levelNum}`,
+    hrControl: !!(level.hrControl ?? type.hrControl),
     summary: main.summary,
     description: `${main.summary[0].toUpperCase()}${main.summary.slice(1)}. ${type.description}`,
     workout_doc: { steps },
@@ -162,6 +165,7 @@ export function buildLibrary(json) {
       minutes: f.minutes,
       level: f.level,
       featured: true,
+      hrControl: !!f.hrControl,
       name: f.name,
       summary: f.description,
       description: f.description,

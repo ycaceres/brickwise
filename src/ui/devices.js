@@ -9,7 +9,7 @@ import { SimulatedTreadmill } from '../devices/treadmill/simulated.js';
 import { HeartRateStrap } from '../devices/hr-strap.js';
 import { live, addRr } from '../session/live.js';
 import { log, renderInfo } from './debug.js';
-import { updateControls } from '../main.js';
+import { updateControls } from './train.js';
 
 export let treadmill = null;
 

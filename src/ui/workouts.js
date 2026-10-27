@@ -13,7 +13,7 @@ import { SessionChart } from './chart.js';
 import { log } from './debug.js';
 import { zones } from './profile.js';
 import { session } from '../session/runner.js';
-import { render, updateChart, updateControls, planTimeline } from '../main.js';
+import { render, updateChart, updateControls, planTimeline } from './train.js';
 
 let workouts = null;       // planned in Intervals.icu (null = not loaded)
 export let selected = null;       // { event, steps }

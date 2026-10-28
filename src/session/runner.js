@@ -11,7 +11,7 @@ import { LIMITS } from '../devices/treadmill/exp5i-protocol.js';
 import { targetSpeedAt } from '../workouts/steps.js';
 import { VT1, VT2 } from '../physiology/hrv.js';
 import { analyzeRamp } from '../physiology/thresholds.js';
-import { hrDecision, hrSlope, inclineStep, SLOPE_WINDOW_S } from './hr-control.js';
+import { hrDecision, hrSlope, inclineStep, alphaGuardApplies, SLOPE_WINDOW_S, AEROBIC_AIM } from './hr-control.js';
 import { live, rrState, rrActive, updateAlpha, STALE_MS } from './live.js';
 import { requestWakeLock, releaseWakeLock } from './wake-lock.js';
 import { log } from '../ui/debug.js';
@@ -27,6 +27,7 @@ const AUTO_PAUSE_MS = 2000;  // belt stopped this long → pause
 const HR_GRACE_S = 45;       // at the start of a step HR takes a while to respond
 const HR_HOLD_S = 10;        // the same correction must be asked for this long in a row
 const HR_SPACING_S = 25;     // between one adjustment and the next
+const HR_RISE_SPACING_S = 60; // between two rises: HR answers a rise 1–2 min later (#10)
 const HR_MAX_DOWN = 2.0;     // at most this much below the target
 const HR_MAX_UP = 1.5;       // only on steps with an HR target
 const ALPHA_HOLD_S = 60;     // α1 below VT1 this long on an aerobic step → slow down
@@ -51,6 +52,7 @@ export const session = {
   hrOutSince: null,   // since when (step s) the same correction has been asked for
   hrWantDir: 0,       // direction of that correction: -1, 0 or 1
   hrLastAdjust: null, // step s of the last HR adjustment
+  hrLastRise: null,   // step s of the last HR adjustment that raised speed
   alphaLowSince: null, // session s since α1 has been below VT1
   warmupHrSince: null, // step s since HR has been at the top of Z1 in a warm-up ramp
   target: null,       // km/h the page is requesting right now
@@ -66,7 +68,7 @@ export const session = {
 export function resetSession() {
   Object.assign(session, {
     state: 'idle', steps: [], stepIdx: 0, stepElapsed: 0, stepDist: 0, totalElapsed: 0, totalDist: 0,
-    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrOn: false, hrLastAdjust: null, inclineAdjust: 0, testStart: null, testEnd: null, testLowSince: null, testMarks: {}, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], lastSampleAt: 0, startedAt: null, event: null, lastBeep: null,
+    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrOn: false, hrLastAdjust: null, hrLastRise: null, inclineAdjust: 0, testStart: null, testEnd: null, testLowSince: null, testMarks: {}, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], lastSampleAt: 0, startedAt: null, event: null, lastBeep: null,
     stepStarts: [], uploaded: false,
   });
 }
@@ -93,6 +95,7 @@ export function applyStep(i) {
   session.hrOutSince = null;
   session.hrWantDir = 0;
   session.hrLastAdjust = null;
+  session.hrLastRise = null;
   session.warmupHrSince = null;
   session.lastBeep = null;
   const step = currentStep();
@@ -326,10 +329,12 @@ function alphaLow() {
  * - Step with a pace target ('cap'): speed drops when HR is heading above
  *   the top of the matching zone; once HR is back below, it returns.
  * - Step with an HR target ('target'): speed moves to keep HR in the middle
- *   of the range.
- * - Aerobic steps (Z1–Z2): speed also drops while α1 stays below VT1.
+ *   of the range (lower on aerobic steps).
+ * - Aerobic steps (Z1–Z2, past the warm-up, HR above Z1): speed also drops
+ *   while α1 stays below VT1.
  * The same correction must be asked for HR_HOLD_S in a row, and at least
- * HR_SPACING_S pass between adjustments, because HR responds with a lag.
+ * HR_SPACING_S pass between adjustments (HR_RISE_SPACING_S between rises),
+ * because HR responds with a lag.
  */
 function adjustForHr(step) {
   const low = alphaLow();
@@ -340,7 +345,8 @@ function adjustForHr(step) {
   const recent = session.samples.filter((s) => s.elapsed > session.totalElapsed - SLOPE_WINDOW_S);
   const { delta, reason } = hrDecision({
     mode, lo, hi, hr: live.hr, slope: hrSlope(recent), hrAdjust: session.hrAdjust,
-    alphaLow: low && step.zone != null && step.zone <= 2,
+    alphaLow: low && alphaGuardApplies({ zone: step.zone, warmup: step.warmup, hr: live.hr, z1Top: zones?.hr[0]?.hi }),
+    aim: mode === 'target' && step.zone != null && step.zone <= 2 ? AEROBIC_AIM : 0.5,
   });
   const dir = Math.sign(delta);
   if (!dir) { session.hrOutSince = null; session.hrWantDir = 0; return; }
@@ -348,6 +354,7 @@ function adjustForHr(step) {
   if (t - session.hrOutSince < HR_HOLD_S) return;
   const byIncline = step.hr.by === 'incline';
   if (session.hrLastAdjust != null && t - session.hrLastAdjust < (byIncline ? INCLINE_SPACING_S : HR_SPACING_S)) return;
+  if (dir > 0 && session.hrLastRise != null && t - session.hrLastRise < HR_RISE_SPACING_S) return;
   if (byIncline) {
     // The incline moves within the treadmill's range; speed stays as planned
     const next = Math.min(LIMITS.inclineMax - step.incline, Math.max(LIMITS.inclineMin - step.incline, session.inclineAdjust + inclineStep(delta)));
@@ -366,6 +373,7 @@ function adjustForHr(step) {
     pushTarget();
   }
   session.hrLastAdjust = t;
+  if (dir > 0) session.hrLastRise = t;
   session.hrOutSince = null;
   session.hrWantDir = 0;
 }

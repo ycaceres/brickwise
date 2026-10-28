@@ -10,7 +10,6 @@ import { flattenWorkout, followsHr, formatPace, formatDuration } from '../workou
 import { loadLibrary } from '../workouts/library.js';
 import { resolveDoc } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
-import { SessionChart } from './chart.js';
 import { log } from './debug.js';
 import { zones } from './profile.js';
 import { session } from '../session/runner.js';
@@ -285,9 +284,8 @@ $('wIncline').onchange = () => selectWorkout();
 $('wHrAdjust').onchange = () => selectWorkout();
 
 // The chosen workout's chart, on this tab
-const preview = new SessionChart($('wPreview'), { compact: true });
 export function updatePreview() {
-  preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones: zonesFor(selected?.event) });
+  $('wPreview').update({ plan: planTimeline(true), samples: [], elapsed: 0, zones: zonesFor(selected?.event) });
 }
 
 /** Startup: restores the saved library choice and loads the library. */

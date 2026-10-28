@@ -15,7 +15,6 @@ import * as intervals from '../services/intervals.js';
 import { live, rrState, rrActive } from '../session/live.js';
 import { session, resetSession, currentStep, applyStep, pushTarget, start, finish } from '../session/runner.js';
 import { wakeError, releaseWakeLock } from '../session/wake-lock.js';
-import { SessionChart } from './chart.js';
 import { log, renderConsole } from './debug.js';
 import { treadmill } from './devices.js';
 import { zones } from './profile.js';
@@ -24,7 +23,6 @@ import { selected, zonesFor } from './workouts.js';
 // ---------------------------------------------------------------------------
 // Chart
 // ---------------------------------------------------------------------------
-const chart = new SessionChart($('chart'), { compact: true });
 
 /** Estimated duration of a step (distance steps are converted with their target). */
 function plannedSeconds(step) {
@@ -65,8 +63,8 @@ export function planTimeline(planOnly = false) {
 
 export function updateChart() {
   const event = session.state !== 'idle' ? session.event : selected?.event;
-  chart.update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones: zonesFor(event) });
-  $('chartTitle').textContent = event?.name || 'Free session';
+  $('chart').update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones: zonesFor(event) });
+  $('chart').heading = event?.name || 'Free session';
 }
 
 $('btnCsv').onclick = () => {

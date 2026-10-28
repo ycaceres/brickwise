@@ -160,7 +160,7 @@
     <section class="card">
       <div class="workout-title" id="wName">No workout: manual control</div>
       <div class="workout-desc" id="wDesc"></div>
-      <div id="wPreview" style="margin-top: 12px"></div>
+      <bw-chart id="wPreview" compact style="margin-top: 12px"></bw-chart>
       <div class="row" style="margin-top: 12px">
         <label class="field">Pace within the zone
           <select id="wPosition">
@@ -201,25 +201,7 @@
     </div>
 
     <section class="card">
-      <div class="viz-head">
-        <h2 id="chartTitle">Session chart</h2>
-        <button class="help" popovertarget="helpChart" aria-label="What each color means" title="What each color means">?</button>
-      </div>
-      <div id="chart"></div>
-      <div popover id="helpChart" class="help-pop">
-        <h2>How to read the chart</h2>
-        <ul>
-          <li><i class="line" style="background: var(--series-speed)"></i><span>Actual <b>pace</b>, on the left scale (min/km).</span></li>
-          <li><i class="line" style="background: var(--series-hr)"></i><span>Actual <b>HR</b>, on the right scale (bpm).</span></li>
-          <li><i class="line" style="background: var(--series-incline)"></i><span>Actual <b>incline</b>, in the lower part (no scale; the value is in the tooltip).</span></li>
-          <li><i class="dash"></i><span><b>Dashed lines:</b> the plan. Red is the step's HR cap or goal; green is the planned incline.</span></li>
-          <li><i class="block"></i><span><b>Background blocks:</b> the whole workout. Width = duration, height = speed, color = zone. What is done gets dimmed and the white bar marks where you are.</span></li>
-          <li><i class="block alpha-key"></i><span><b>Bottom ribbon (α1):</b> with a chest strap, heart rate variability (DFA α1 over the last 2 min). Green: aerobic (&gt; 0.75); orange: transition (0.5–0.75); red: above the anaerobic threshold (&lt; 0.5); gray: computing or noisy signal.</span></li>
-          <li><i class="block cols"></i><span><b>Side columns:</b> pace zones (left) and HR zones (right), aligned at the same height. On top, the zone you are in right now.</span></li>
-        </ul>
-        <div class="zones"><span><i style="background: var(--zone-1)"></i>Z1 gray</span><span><i style="background: var(--zone-2)"></i>Z2 blue</span><span><i style="background: var(--zone-3)"></i>Z3 green</span><span><i style="background: var(--zone-4)"></i>Z4 yellow</span><span><i style="background: var(--zone-5)"></i>Z5 orange</span><span><i style="background: var(--zone-6)"></i>Z6 red</span><span><i style="background: var(--zone-7)"></i>Z7 violet</span></div>
-        <p class="note">Hover (or drag a finger) over the chart to see the values at each moment.</p>
-      </div>
+      <bw-chart id="chart" compact help heading="Session chart"></bw-chart>
     </section>
 
     <section class="dash card" aria-label="Session controls">

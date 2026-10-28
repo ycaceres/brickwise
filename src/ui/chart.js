@@ -27,7 +27,7 @@ import { alphaState, ALPHA_LABELS } from '../physiology/hrv.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const MARGIN = { left: 48, right: 46, top: 38 };
-const PLOT_H = 280;
+const PLOT_H = 280;     // full height; compact charts (workout page and Train) use half
 const AXIS_H = 20;      // time ticks under the chart
 const RIBBON_H = 12;    // α1 ribbon, under the time axis (only with RR intervals)
 const RIBBON_GAP = 6;
@@ -93,8 +93,14 @@ function thin(samples, maxPoints) {
 }
 
 export class SessionChart {
-  constructor(root) {
+  /**
+   * compact: half height, with the axis starting just below the slowest
+   * speed, so easy Z1 space does not take it over (workout page and Train).
+   */
+  constructor(root, { compact = false } = {}) {
     this.root = root;
+    this.plotH = compact ? PLOT_H / 2 : PLOT_H;
+    this.floor = compact ? 0.92 : 0.7; // axis bottom, as a fraction of the lowest speed
     this.plan = [];
     this.samples = [];
     this.elapsed = 0;
@@ -159,7 +165,7 @@ export class SessionChart {
     if (map) spd.push(...hrs.map(map.toKmh).filter((v) => v >= 3));
     const vMax = Math.max(6, ...spd) * 1.08;
     // The background starts below the lowest speed, like in Intervals
-    const vMin = spd.length ? Math.min(...spd) * 0.7 : 3;
+    const vMin = spd.length ? Math.min(...spd) * this.floor : 3;
 
     let hr;
     if (map) {
@@ -188,7 +194,7 @@ export class SessionChart {
     svg.replaceChildren();
 
     const top = MARGIN.top;
-    const bottom = top + PLOT_H;
+    const bottom = top + this.plotH;
     const hasAlpha = this.samples.some((p) => p.alpha1 !== undefined);
     const totalH = bottom + AXIS_H + (hasAlpha ? RIBBON_GAP + RIBBON_H : 0);
     svg.setAttribute('viewBox', `0 0 ${width} ${totalH}`);
@@ -205,7 +211,7 @@ export class SessionChart {
     this.yOf = {};
     for (const s of SERIES) {
       const { lo, hi } = dom[s.key];
-      this.yOf[s.key] = (v) => bottom - ((Math.max(lo, v) - lo) / (hi - lo)) * PLOT_H;
+      this.yOf[s.key] = (v) => bottom - ((Math.max(lo, v) - lo) / (hi - lo)) * this.plotH;
     }
     if (dom.hr.toKmh) this.yOf.hr = (v) => this.yOf.speed(dom.hr.toKmh(v));
     this._drawZoneColumns(dom, right, width);
@@ -216,14 +222,14 @@ export class SessionChart {
     let yInt = null;
     if (byIntensity) {
       const vals = this.plan.flatMap((p) => p.intensity || []);
-      const lo = Math.min(...vals) * 0.7;
+      const lo = Math.min(...vals) * this.floor;
       const hi = Math.max(...vals) * 1.08;
-      yInt = (v) => bottom - ((v - lo) / (hi - lo)) * PLOT_H;
+      yInt = (v) => bottom - ((v - lo) / (hi - lo)) * this.plotH;
     }
     for (const p of this.plan) {
       const x0 = this.xOf(p.t0) + 1; // 2 px gap between blocks
       const x1 = Math.max(x0 + 1, this.xOf(p.t1) - 1);
-      let a = bottom - PLOT_H * 0.15;
+      let a = bottom - this.plotH * 0.15;
       let b = a;
       if (p.speedStart != null) {
         a = this.yOf.speed(p.speedStart);
@@ -243,7 +249,7 @@ export class SessionChart {
     // What is done gets dimmed
     if (this.elapsed > 0 && this.plan.length) {
       const x = this.xOf(Math.min(this.elapsed, T));
-      el('rect', { x: MARGIN.left, y: top, width: Math.max(0, x - MARGIN.left), height: PLOT_H, class: 'viz-elapsed' }, svg);
+      el('rect', { x: MARGIN.left, y: top, width: Math.max(0, x - MARGIN.left), height: this.plotH, class: 'viz-elapsed' }, svg);
     }
 
     // Left axis: pace, at the heights of its speed
@@ -300,7 +306,7 @@ export class SessionChart {
     el('line', { x1: MARGIN.left, x2: right, y1: bottom, y2: bottom, class: 'viz-baseline' }, svg);
 
     if (!this.plan.length && !this.samples.length) {
-      const msg = el('text', { x: MARGIN.left + plotW / 2, y: top + PLOT_H / 2, class: 'viz-empty', 'text-anchor': 'middle' }, svg);
+      const msg = el('text', { x: MARGIN.left + plotW / 2, y: top + this.plotH / 2, class: 'viz-empty', 'text-anchor': 'middle' }, svg);
       msg.textContent = 'No workout: lines appear once the belt starts moving';
     }
 

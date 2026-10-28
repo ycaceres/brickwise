@@ -198,32 +198,6 @@ function renderRideZones() {
   $('pRideNote').textContent = r?.indoorFtp && r.indoorFtp !== r.ftp ? `Power from the indoor FTP (${r.indoorFtp} W; outdoor ${r.ftp ?? '—'} W).` : '';
 }
 
-/** Compact zone list (Workouts tab): HR plus pace, or power for a bike workout's zones. */
-export function renderZones(box, z = zones) {
-  box.replaceChildren();
-  if (!z) return;
-  const row = (title, items) => {
-    if (!items.length) return;
-    const div = document.createElement('div');
-    const b = document.createElement('b');
-    b.textContent = title;
-    div.appendChild(b);
-    for (const [z, text] of items) {
-      const span = document.createElement('span');
-      const sw = document.createElement('i');
-      sw.style.background = `var(--zone-${Math.min(7, z)})`;
-      span.append(sw, `Z${z} ${text}`);
-      div.appendChild(span);
-    }
-    box.appendChild(div);
-  };
-  row('HR', z.hr.map((h) => [h.z, h.lo ? `${h.lo}–${h.hi}` : `≤${h.hi}`]));
-  row('Power', (z.power || []).map((p) => [p.z, !p.lo ? `≤${p.hi}` : Number.isFinite(p.hi) ? `${p.lo}–${p.hi}` : `≥${p.lo}`]));
-  row('Pace', z.pace.map((p) => [p.z,
-    !p.lo ? `>${formatPace(p.hi)}` : Number.isFinite(p.hi) ? `${formatPace(p.hi)}–${formatPace(p.lo)}` : `<${formatPace(p.lo)}`]));
-}
-
-
 function renderKeyState(text) {
   $('pKeyNote').textContent = text ?? '';
 }

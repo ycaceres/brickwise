@@ -24,7 +24,7 @@ import { selected, zonesFor } from './workouts.js';
 // ---------------------------------------------------------------------------
 // Chart
 // ---------------------------------------------------------------------------
-const chart = new SessionChart($('chart'));
+const chart = new SessionChart($('chart'), { compact: true });
 
 /** Estimated duration of a step (distance steps are converted with their target). */
 function plannedSeconds(step) {

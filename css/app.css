@@ -1,3 +1,5 @@
+/* Themes: the palette of the app chrome, picked in Configuration (data-theme on <html>).
+   Without data-theme the page follows the system light/dark setting. */
 :root {
   --bg: #f4f5f7;
   --surface: #ffffff;
@@ -12,15 +14,10 @@
   --danger: #cf222e;
   --log-bg: #0f1216;
   --log-text: #c9d1d9;
-  --series-speed: #2a78d6;
-  --series-incline: #1baf7a;
-  --series-hr: #eb6834;
-  --zone-free: #c4c9d0; --zone-1: #8c939d; --zone-2: #3d84e0; --zone-3: #22a06b;
-  --zone-4: #e0b030; --zone-5: #ef7a2d; --zone-6: #e0442b; --zone-7: #7c5cd6;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     --bg: #0d1014;
     --surface: #161a20;
     --surface-2: #1e232b;
@@ -34,11 +31,6 @@
     --danger: #f85149;
     --log-bg: #080a0d;
     --log-text: #b1bac4;
-    --series-speed: #3987e5;
-    --series-incline: #199e70;
-    --series-hr: #d95926;
-    --zone-free: #3a414c; --zone-1: #6b727c; --zone-2: #4c8dff; --zone-3: #2fb37a;
-    --zone-4: #e8c34a; --zone-5: #f08a3c; --zone-6: #e5492d; --zone-7: #9b82f0;
     color-scheme: dark;
   }
 }
@@ -56,22 +48,59 @@
   --danger: #f85149;
   --log-bg: #080a0d;
   --log-text: #b1bac4;
-  --series-speed: #3987e5;
-  --series-incline: #199e70;
-  --series-hr: #d95926;
-  --zone-free: #3a414c; --zone-1: #6b727c; --zone-2: #4c8dff; --zone-3: #2fb37a;
-  --zone-4: #e8c34a; --zone-5: #f08a3c; --zone-6: #e5492d; --zone-7: #9b82f0;
   color-scheme: dark;
+}
+:root[data-theme="monochrome"] {
+  --bg: #f2f2f2;
+  --surface: #ffffff;
+  --surface-2: #e9e9e9;
+  --border: #cfcfcf;
+  --text: #111111;
+  --muted: #5e5e5e;
+  --accent: #1c1c1c;
+  --accent-text: #ffffff;
+  --ok: #3a3a3a;
+  --warn: #6e6e6e;
+  --danger: #111111;
+  --log-bg: #161616;
+  --log-text: #d4d4d4;
+  color-scheme: light;
+}
+:root[data-theme="vivid"] {
+  --bg: #120d24;
+  --surface: #1c1536;
+  --surface-2: #281e4a;
+  --border: #3d2f6b;
+  --text: #f4f0ff;
+  --muted: #a99bd6;
+  --accent: #ff4fa3;
+  --accent-text: #120d24;
+  --ok: #34e0a1;
+  --warn: #ffc23d;
+  --danger: #ff5c5c;
+  --log-bg: #0b0818;
+  --log-text: #cfc5f0;
+  color-scheme: dark;
+}
+/* Chart series and training zones keep the same colors in every theme */
+:root {
+  --series-speed: #2a78d6;
+  --series-incline: #1baf7a;
+  --series-hr: #eb6834;
+  --zone-free: #c4c9d0; --zone-1: #8c939d; --zone-2: #3d84e0; --zone-3: #22a06b;
+  --zone-4: #e0b030; --zone-5: #ef7a2d; --zone-6: #e0442b; --zone-7: #7c5cd6;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
+  --sidebar-w: 60px;
   background: var(--bg);
   color: var(--text);
   font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  padding: 16px;
+  padding: 16px 16px 16px calc(var(--sidebar-w) + 16px);
 }
-main { max-width: 1120px; margin: 0 auto; display: grid; gap: 16px; }
+/* Left-aligned next to the sidebar: the gap to it is the body padding, whatever the width */
+main { max-width: 1120px; margin: 0; display: grid; gap: 16px; }
 .footer { text-align: center; padding: 8px 0 16px; }
 h1 { font-size: 20px; font-weight: 650; }
 h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 12px; }
@@ -235,10 +264,13 @@ tr.done td { color: var(--muted); }
 .ztable td { white-space: nowrap; }
 .zsummary { margin-top: 8px; font-size: 13px; color: var(--muted); }
 .ztable i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; }
-.tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
-.tabs button { border: 0; background: transparent; min-height: 36px; padding: 6px 14px; color: var(--muted); display: inline-grid; place-items: center; }
-.tabs .ico { stroke: currentColor; }
-.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); }
+.sidebar { position: fixed; inset: 0 auto 0 0; width: var(--sidebar-w); display: flex; flex-direction: column; justify-content: space-between; gap: 8px; padding: 12px 8px; background: var(--surface); border-right: 1px solid var(--border); z-index: 10; }
+.nav-group { display: grid; gap: 6px; }
+/* Optional and contextual buttons: fill the space between the top and bottom groups, from its top */
+.nav-context { flex: 1; align-content: start; }
+.sidebar button { border: 0; background: transparent; min-height: 44px; padding: 0; color: var(--muted); display: grid; place-items: center; border-radius: 10px; }
+.sidebar .ico { stroke: currentColor; }
+.sidebar button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); }
 .stack { display: grid; gap: 16px; }
 .wlist { display: grid; gap: 6px; margin-top: 10px; max-height: 70vh; overflow-y: auto; }
 .filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
@@ -262,3 +294,5 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   .dash-half + .dash-half { border-left: 0; border-top: 1px solid var(--border); }
   .layout { grid-template-columns: 1fr; }
 }
+/* Workout page: the workout's name as the page title, on one line (long names end in …) */
+.workout-title { font-size: 18px; font-weight: 650; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

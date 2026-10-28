@@ -1,9 +1,10 @@
 /**
- * Workouts tab: the runs and rides planned in Intervals.icu for a day, the library
- * with its filters, and the chosen workout (steps, totals and chart).
+ * Workouts: the runs and rides planned in Intervals.icu for a day (Home), the
+ * training library with its filters, and the workout page (steps, totals and
+ * chart) that a click on any of them opens.
  */
 
-import { $, setPill, escapeHtml } from '../lib/dom.js';
+import { $, escapeHtml } from '../lib/dom.js';
 import { loadJson, saveJson, loadText, saveText } from '../lib/storage.js';
 import { flattenWorkout, followsHr, formatPace, formatDuration } from '../workouts/steps.js';
 import { loadLibrary } from '../workouts/library.js';
@@ -11,11 +12,13 @@ import { resolveDoc } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
 import { SessionChart } from './chart.js';
 import { log } from './debug.js';
-import { zones, renderZones } from './profile.js';
+import { zones } from './profile.js';
 import { session } from '../session/runner.js';
 import { render, updateChart, updateControls, planTimeline } from './train.js';
+import { showTab } from './tabs.js';
 
 let workouts = null;       // planned in Intervals.icu (null = not loaded)
+let plannedError = null;   // why they could not be loaded, shown in the lists
 
 const SPORT_ICONS = { run: ['🏃', 'Run'], ride: ['🚴', 'Ride'] };
 export let selected = null;       // { event, steps }
@@ -27,23 +30,21 @@ const today = () => {
 };
 
 export async function loadWorkouts() {
-  const day = $('wDate').value || today();
-  $('hDate').value = day;
-  for (const id of ['wPlanned', 'hPlanned']) $(id).replaceChildren(listNote('Loading…'));
+  const day = $('hDate').value || today();
+  $('hPlanned').replaceChildren(listNote('Loading…'));
   if (!intervals.getApiKey()) {
     workouts = [];
-    setPill('pillIntervals', 'idle', 'Intervals.icu: no API key');
     renderLists();
     selectWorkout(selectedKey.startsWith('i:') ? 'none' : selectedKey);
     return;
   }
-  setPill('pillIntervals', 'busy', 'Intervals.icu: loading…');
+  plannedError = null;
   try {
     workouts = await intervals.getWorkouts(day, day);
-    setPill('pillIntervals', 'ready', `Intervals.icu: ${workouts.length} workout(s) on ${day}`);
+    log('info', `Intervals.icu: ${workouts.length} workout(s) on ${day}`);
   } catch (err) {
     workouts = [];
-    setPill('pillIntervals', 'error', 'Intervals.icu: offline');
+    plannedError = err.message;
     log('error', `Intervals.icu: ${err.message}`);
   }
   if (selectedKey.startsWith('i:')) selectedKey = 'none';
@@ -84,7 +85,11 @@ function workoutItem(key, title, sub, hrControl = false, sport = null) {
   const span = document.createElement('span');
   span.textContent = sub;
   btn.append(strong, span);
-  btn.onclick = () => selectWorkout(key);
+  // Opens the workout page; during a session the items are disabled
+  btn.onclick = () => {
+    selectWorkout(key);
+    showTab('workout');
+  };
   return btn;
 }
 
@@ -170,12 +175,11 @@ function renderPlanned(box, sport = 'all') {
   }
   if (!shown.length) {
     const none = { all: 'No runs or rides planned that day.', run: 'No runs planned that day.', ride: 'No rides planned that day.' }[sport];
-    box.appendChild(listNote(workouts ? none : 'Loading…'));
+    box.appendChild(listNote(plannedError ? `Could not load from Intervals.icu: ${plannedError}` : workouts ? none : 'Loading…'));
   }
 }
 
 function renderLists() {
-  renderPlanned($('wPlanned'));
   renderPlanned($('hPlanned'), homeSport);
   renderFilters();
   const lib = $('wLibrary');
@@ -253,16 +257,15 @@ function renderWorkout() {
   const ride = selected?.event.sport === 'ride';
   $('wHrAdjustRow').hidden = !selected?.hrControl;
   $('wPosition').closest('label').hidden = $('wIncline').closest('label').hidden = ride;
-  renderZones($('wZones'), zonesFor(selected?.event));
   renderStepHead(ride ? 'ride' : 'run');
   if (!selected) {
     body.innerHTML = '';
-    $('wName').textContent = 'No workout: manual control';
+    $('wName').textContent = $('wName').title = 'No workout: manual control';
     $('wDesc').textContent = 'On the Train tab you set speed and incline with the buttons.';
     $('wTotal').textContent = '';
     return;
   }
-  $('wName').textContent = selected.event.name || 'Workout';
+  $('wName').textContent = $('wName').title = selected.event.name || 'Workout'; // title: the full name when it is cut
   const missing = ride ? 'FTP is missing in Intervals.icu: without it, steps have no watts.\n' : 'Threshold pace is missing in Profile: without it, steps have no speed.\n';
   $('wDesc').textContent = (selected.needsProfile ? missing : '') +
     (selected.event.description || '') +
@@ -303,10 +306,9 @@ export function highlightSteps() {
   });
 }
 
-$('wDate').value = $('hDate').value = today();
-$('wDate').onchange = loadWorkouts;
-$('btnReload').onclick = loadWorkouts;
-// Home: the same day (wDate keeps it) and a sport filter of its own
+// Home: the day and a sport filter
+$('hDate').value = today();
+$('hDate').onchange = loadWorkouts;
 let homeSport = loadText('homeSport') || 'all';
 $('hSport').value = homeSport;
 $('hSport').onchange = () => {
@@ -314,17 +316,13 @@ $('hSport').onchange = () => {
   saveText('homeSport', homeSport);
   renderLists();
 };
-$('hDate').onchange = () => {
-  $('wDate').value = $('hDate').value;
-  loadWorkouts();
-};
 $('hReload').onclick = loadWorkouts;
 $('wPosition').onchange = () => selectWorkout();
 $('wIncline').onchange = () => selectWorkout();
 $('wHrAdjust').onchange = () => selectWorkout();
 
 // The chosen workout's chart, on this tab
-const preview = new SessionChart($('wPreview'));
+const preview = new SessionChart($('wPreview'), { compact: true });
 export function updatePreview() {
   preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones: zonesFor(selected?.event) });
 }

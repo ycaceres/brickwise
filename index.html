@@ -5,26 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Brickwise</title>
   <link rel="stylesheet" href="css/app.css">
+  <!-- Saved color palette before the first paint (src/ui/config.js keeps it in sync) -->
+  <script>try { const t = localStorage.getItem('brickwise.theme'); if (t && t !== 'system') document.documentElement.dataset.theme = t; } catch { /* optional */ }</script>
 </head>
 <body>
+<nav class="sidebar" role="tablist" aria-orientation="vertical">
+  <div class="nav-group">
+    <button role="tab" id="nav-home" data-i18n-label="nav.home" aria-selected="false" aria-label="Home" title="Home"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button>
+    <button role="tab" id="nav-workouts" data-i18n-label="nav.workouts" aria-selected="false" aria-label="Training library" title="Training library"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4.5" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg></button>
+  </div>
+  <!-- Between the groups: optional and contextual buttons -->
+  <div class="nav-group nav-context">
+    <button role="tab" id="nav-train" data-i18n-label="nav.train" aria-selected="true" aria-label="Train" title="Train"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="15.5" cy="4.5" r="2"/><path d="M14 8.5l-3 5.5M7.5 10.5l3-2.5h3.5l2.5 3.5M11 14l3.5 2.5-1 4.5M11 14l-2.5 4H5"/></svg></button>
+    <button role="tab" id="nav-debug" data-i18n-label="nav.debug" aria-selected="false" aria-label="Debug" title="Debug" class="hidden"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7.5a3 3 0 0 1 6 0"/><rect x="7" y="8.5" width="10" height="12" rx="5"/><path d="M12 10v10M3.5 13H7M17 13h3.5M4.5 8.5L7 10M19.5 8.5L17 10M4.5 19l2.7-1.8M19.5 19l-2.7-1.8"/></svg></button>
+  </div>
+  <div class="nav-group">
+    <button role="tab" id="nav-config" data-i18n-label="nav.config" aria-selected="false" aria-label="Configuration" title="Configuration"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
+    <button role="tab" id="nav-profile" data-i18n-label="nav.profile" aria-selected="false" aria-label="User profile" title="User profile"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button>
+  </div>
+</nav>
 <main>
   <header>
     <h1>Brickwise</h1>
-    <nav class="tabs" role="tablist">
-      <button role="tab" id="nav-home" aria-selected="false" aria-label="Home" title="Home"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button>
-      <button role="tab" id="nav-profile" aria-selected="false" aria-label="Profile" title="Profile"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button>
-      <button role="tab" id="nav-workouts" aria-selected="false" aria-label="Workouts" title="Workouts"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4.5" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg></button>
-      <button role="tab" id="nav-train" aria-selected="true" aria-label="Train" title="Train"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="15.5" cy="4.5" r="2"/><path d="M14 8.5l-3 5.5M7.5 10.5l3-2.5h3.5l2.5 3.5M11 14l3.5 2.5-1 4.5M11 14l-2.5 4H5"/></svg></button>
-      <button role="tab" id="nav-debug" aria-selected="false" aria-label="Debug" title="Debug" class="hidden"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7.5a3 3 0 0 1 6 0"/><rect x="7" y="8.5" width="10" height="12" rx="5"/><path d="M12 10v10M3.5 13H7M17 13h3.5M4.5 8.5L7 10M19.5 8.5L17 10M4.5 19l2.7-1.8M19.5 19l-2.7-1.8"/></svg></button>
-    </nav>
-    <div class="pills">
+    <!-- Device pills: only on the Train tab -->
+    <div class="pills hidden" id="devicePills">
       <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect the controllable (treadmill or bike trainer)">Controllable</button>
       <button class="pill" id="pillHr" title="Connect a heart rate monitor (HRM)">HRM</button>
-      <button class="pill" id="pillIntervals" title="API key in Profile">Intervals.icu</button>
     </div>
     <div popover id="menuTreadmill" class="menu">
       <button class="primary" id="btnConnect">Connect treadmill</button>
-      <button id="btnSim">Simulation mode</button>
+      <button id="btnSim" class="hidden">Simulation mode</button>
       <button id="btnSimBelt" class="hidden">Console Start/Stop (sim)</button>
       <button id="btnDisconnect" class="danger" disabled>Disconnect</button>
     </div>
@@ -70,6 +80,28 @@
         <button class="icon" id="hReload" aria-label="Reload the day" title="Reload the day"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></svg></button>
       </div>
       <div class="wlist" id="hPlanned"></div>
+    </section>
+  </div>
+
+  <!-- ===================== Configuration ===================== -->
+  <div id="tab-config" class="tab hidden">
+    <section class="card">
+      <h2 data-i18n="config.appearance">Appearance</h2>
+      <div class="row">
+        <label class="field"><span data-i18n="config.theme">Color palette</span>
+          <select id="cfgTheme">
+            <option value="system" data-i18n="config.theme.system">System (light or dark)</option>
+            <option value="light" data-i18n="config.theme.light">Light</option>
+            <option value="dark" data-i18n="config.theme.dark">Dark</option>
+            <option value="monochrome" data-i18n="config.theme.monochrome">Monochrome</option>
+            <option value="vivid" data-i18n="config.theme.vivid">Vivid</option>
+          </select>
+        </label>
+        <label class="field"><span data-i18n="config.language">Language</span>
+          <select id="cfgLang"></select>
+        </label>
+      </div>
+      <p class="note" data-i18n="config.themeNote">Chart and training zone colors stay the same in every palette.</p>
     </section>
   </div>
 
@@ -156,69 +188,83 @@
 
   <!-- ===================== Workouts ===================== -->
   <div id="tab-workouts" class="tab hidden">
-    <div class="layout">
-      <div class="stack">
-        <section class="card">
-          <div class="row" style="justify-content: space-between">
-            <h2 style="margin: 0">Planned in Intervals.icu</h2>
-            <div class="row">
-              <input type="date" id="wDate" aria-label="Day">
-              <button id="btnReload">Refresh</button>
-            </div>
-          </div>
-          <div class="wlist" id="wPlanned"></div>
-        </section>
-        <section class="card">
-          <div class="row" style="justify-content: space-between">
-            <h2 style="margin: 0">Library</h2>
-            <span class="note num" id="wLibCount"></span>
-          </div>
-          <p class="note" style="margin: 4px 0 8px">Adapted to your profile (threshold pace and HR zones). ★ featured.</p>
-          <div class="filters" id="wFilters"></div>
-          <div class="wlist" id="wLibrary"></div>
-        </section>
+    <section class="card">
+      <div class="row" style="justify-content: space-between">
+        <h2 style="margin: 0">Training library</h2>
+        <span class="note num" id="wLibCount"></span>
       </div>
+      <p class="note" style="margin: 4px 0 8px">Adapted to your profile (threshold pace and HR zones). ★ featured.</p>
+      <div class="filters" id="wFilters"></div>
+      <div class="wlist" id="wLibrary"></div>
+    </section>
+  </div>
 
-      <section class="card">
-        <h2>Selected workout</h2>
-        <div class="step-title" id="wName">No workout: manual control</div>
-        <div class="workout-desc" id="wDesc"></div>
-        <div id="wPreview" style="margin-top: 12px"></div>
-        <div class="row" style="margin-top: 12px">
-          <label class="field">Pace within the zone
-            <select id="wPosition">
-              <option value="low">Low (slower)</option>
-              <option value="mid" selected>Mid</option>
-              <option value="high">High (faster)</option>
-            </select>
-          </label>
-          <label class="field">Base incline (%)
-            <input type="number" id="wIncline" min="0" max="10" step="0.5" value="1" style="width: 90px">
-          </label>
-          <label class="row note" id="wHrAdjustRow" style="align-self: end; min-height: 40px" title="Long steps follow their HR zone instead of the pace">
-            <input type="checkbox" id="wHrAdjust" checked style="min-height: auto"> Adjust speed by HR
-          </label>
-        </div>
-        <div class="zones num" id="wZones"></div>
-        <div class="steps-wrap" style="margin-top: 10px">
-          <table>
-            <thead id="wStepsHead"><tr><th>#</th><th>Step</th><th class="r">Dur.</th><th class="r">km/h</th><th class="r">Pace</th><th class="r">%</th></tr></thead>
-            <tbody id="wSteps"></tbody>
-          </table>
-        </div>
-        <div class="note" id="wTotal" style="margin-top: 8px"></div>
-        <div class="row" style="margin-top: 12px">
-          <button class="primary" id="btnGoTrain">Go train</button>
-        </div>
-      </section>
-    </div>
+  <!-- ===================== Workout (no nav button: opened from a workout in Home or the library) ===================== -->
+  <div id="tab-workout" class="tab hidden">
+    <section class="card">
+      <div class="workout-title" id="wName">No workout: manual control</div>
+      <div class="workout-desc" id="wDesc"></div>
+      <div id="wPreview" style="margin-top: 12px"></div>
+      <div class="row" style="margin-top: 12px">
+        <label class="field">Pace within the zone
+          <select id="wPosition">
+            <option value="low">Low (slower)</option>
+            <option value="mid" selected>Mid</option>
+            <option value="high">High (faster)</option>
+          </select>
+        </label>
+        <label class="field">Base incline (%)
+          <input type="number" id="wIncline" min="0" max="10" step="0.5" value="1" style="width: 90px">
+        </label>
+        <label class="row note" id="wHrAdjustRow" style="align-self: end; min-height: 40px" title="Long steps follow their HR zone instead of the pace">
+          <input type="checkbox" id="wHrAdjust" checked style="min-height: auto"> Adjust speed by HR
+        </label>
+      </div>
+      <div class="steps-wrap" style="margin-top: 10px">
+        <table>
+          <thead id="wStepsHead"><tr><th>#</th><th>Step</th><th class="r">Dur.</th><th class="r">km/h</th><th class="r">Pace</th><th class="r">%</th></tr></thead>
+          <tbody id="wSteps"></tbody>
+        </table>
+      </div>
+      <div class="note" id="wTotal" style="margin-top: 8px"></div>
+      <div class="row" style="margin-top: 12px">
+        <button class="primary" id="btnGoTrain">Go train</button>
+      </div>
+    </section>
   </div>
 
   <!-- ===================== Train ===================== -->
   <div id="tab-train" class="tab">
-    <div class="banner">
-      Start the belt from the console, with the safety key attached. The ■ (finish) button and the end of the workout pause the belt, but if anything goes wrong use STOP on the console or pull the key.
+    <!-- Safety reminder: shown on arriving here while no session runs, until acknowledged -->
+    <div popover="manual" id="safetyPop" class="help-pop" role="alertdialog" aria-labelledby="safetyTitle">
+      <h2 id="safetyTitle">Safety</h2>
+      <p>Start the belt from the console, with the safety key attached. The ■ (finish) button and the end of the workout pause the belt, but if anything goes wrong use STOP on the console or pull the key.</p>
+      <div class="row" style="margin-top: 14px; justify-content: flex-end">
+        <button class="primary" id="safetyOk">Got it</button>
+      </div>
     </div>
+
+    <section class="card">
+      <div class="viz-head">
+        <h2 id="chartTitle">Session chart</h2>
+        <button class="help" popovertarget="helpChart" aria-label="What each color means" title="What each color means">?</button>
+      </div>
+      <div id="chart"></div>
+      <div popover id="helpChart" class="help-pop">
+        <h2>How to read the chart</h2>
+        <ul>
+          <li><i class="line" style="background: var(--series-speed)"></i><span>Actual <b>pace</b>, on the left scale (min/km).</span></li>
+          <li><i class="line" style="background: var(--series-hr)"></i><span>Actual <b>HR</b>, on the right scale (bpm).</span></li>
+          <li><i class="line" style="background: var(--series-incline)"></i><span>Actual <b>incline</b>, in the lower part (no scale; the value is in the tooltip).</span></li>
+          <li><i class="dash"></i><span><b>Dashed lines:</b> the plan. Red is the step's HR cap or goal; green is the planned incline.</span></li>
+          <li><i class="block"></i><span><b>Background blocks:</b> the whole workout. Width = duration, height = speed, color = zone. What is done gets dimmed and the white bar marks where you are.</span></li>
+          <li><i class="block alpha-key"></i><span><b>Bottom ribbon (α1):</b> with a chest strap, heart rate variability (DFA α1 over the last 2 min). Green: aerobic (&gt; 0.75); orange: transition (0.5–0.75); red: above the anaerobic threshold (&lt; 0.5); gray: computing or noisy signal.</span></li>
+          <li><i class="block cols"></i><span><b>Side columns:</b> pace zones (left) and HR zones (right), aligned at the same height. On top, the zone you are in right now.</span></li>
+        </ul>
+        <div class="zones"><span><i style="background: var(--zone-1)"></i>Z1 gray</span><span><i style="background: var(--zone-2)"></i>Z2 blue</span><span><i style="background: var(--zone-3)"></i>Z3 green</span><span><i style="background: var(--zone-4)"></i>Z4 yellow</span><span><i style="background: var(--zone-5)"></i>Z5 orange</span><span><i style="background: var(--zone-6)"></i>Z6 red</span><span><i style="background: var(--zone-7)"></i>Z7 violet</span></div>
+        <p class="note">Hover (or drag a finger) over the chart to see the values at each moment.</p>
+      </div>
+    </section>
 
     <section class="dash card" aria-label="Session controls">
       <div class="dash-half">
@@ -261,28 +307,6 @@
       <div class="dash-note note" id="sessionNote">Connect a controllable to begin.</div>
     </section>
 
-    <section class="card">
-      <div class="viz-head">
-        <h2 id="chartTitle">Session chart</h2>
-        <button class="help" popovertarget="helpChart" aria-label="What each color means" title="What each color means">?</button>
-      </div>
-      <div id="chart"></div>
-      <div popover id="helpChart" class="help-pop">
-        <h2>How to read the chart</h2>
-        <ul>
-          <li><i class="line" style="background: var(--series-speed)"></i><span>Actual <b>pace</b>, on the left scale (min/km).</span></li>
-          <li><i class="line" style="background: var(--series-hr)"></i><span>Actual <b>HR</b>, on the right scale (bpm).</span></li>
-          <li><i class="line" style="background: var(--series-incline)"></i><span>Actual <b>incline</b>, in the lower part (no scale; the value is in the tooltip).</span></li>
-          <li><i class="dash"></i><span><b>Dashed lines:</b> the plan. Red is the step's HR cap or goal; green is the planned incline.</span></li>
-          <li><i class="block"></i><span><b>Background blocks:</b> the whole workout. Width = duration, height = speed, color = zone. What is done gets dimmed and the white bar marks where you are.</span></li>
-          <li><i class="block alpha-key"></i><span><b>Bottom ribbon (α1):</b> with a chest strap, heart rate variability (DFA α1 over the last 2 min). Green: aerobic (&gt; 0.75); orange: transition (0.5–0.75); red: above the anaerobic threshold (&lt; 0.5); gray: computing or noisy signal.</span></li>
-          <li><i class="block cols"></i><span><b>Side columns:</b> pace zones (left) and HR zones (right), aligned at the same height. On top, the zone you are in right now.</span></li>
-        </ul>
-        <div class="zones"><span><i style="background: var(--zone-1)"></i>Z1 gray</span><span><i style="background: var(--zone-2)"></i>Z2 blue</span><span><i style="background: var(--zone-3)"></i>Z3 green</span><span><i style="background: var(--zone-4)"></i>Z4 yellow</span><span><i style="background: var(--zone-5)"></i>Z5 orange</span><span><i style="background: var(--zone-6)"></i>Z6 red</span><span><i style="background: var(--zone-7)"></i>Z7 violet</span></div>
-        <p class="note">Hover (or drag a finger) over the chart to see the values at each moment.</p>
-      </div>
-    </section>
-
   </div>
 
   <!-- ===================== Debug (only with ?debug=true) ===================== -->
@@ -312,7 +336,7 @@
       </details>
     </section>
   </div>
-  <footer class="note footer">Brickwise is an independent project, not affiliated with iFIT Inc. NordicTrack and iFit are trademarks of their respective owners.</footer>
+  <footer class="note footer">Brickwise is an independent project, not affiliated with or endorsed by any equipment manufacturer. All trademarks belong to their respective owners.</footer>
 </main>
 
 <script>

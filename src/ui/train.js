@@ -67,44 +67,9 @@ export function updateChart() {
   $('chart').heading = event?.name || 'Free session';
 }
 
-$('btnCsv').onclick = () => {
-  $('menuExport').hidePopover();
-  if (!session.samples.length) return;
-  download(`brickwise-${new Date(session.startedAt).toISOString().slice(0, 16).replace(':', '')}.csv`, samplesToCsv(session.samples), 'text/csv');
-};
-
 // ---------------------------------------------------------------------------
 // Controls
 // ---------------------------------------------------------------------------
-document.querySelectorAll('[data-speed]').forEach((btn) => {
-  btn.onclick = () => {
-    const delta = parseFloat(btn.dataset.speed);
-    if (currentStep()?.hasTarget && session.state === 'running') {
-      session.adjust = Math.round((session.adjust + delta) * 10) / 10;
-      pushTarget();
-    } else {
-      // Base: the requested speed the console reports (includes changes made on it)
-      const reported = live.console.targetSpeed;
-      const base = reported > 0 ? reported : session.target ?? live.speed;
-      session.target = Math.round(Math.min(LIMITS.speedMax, Math.max(LIMITS.speedMin, base + delta)) * 10) / 10;
-      treadmill?.setSpeed(session.target);
-    }
-  };
-});
-
-document.querySelectorAll('[data-incline]').forEach((btn) => {
-  btn.onclick = () => treadmill?.setIncline(live.incline + parseFloat(btn.dataset.incline));
-});
-
-$('btnStart').onclick = start;
-$('btnSkip').onclick = () => {
-  if (session.state === 'running' || session.state === 'paused') applyStep(session.stepIdx + 1);
-};
-$('btnFinish').onclick = () => {
-  if (session.state === 'armed') { resetSession(); releaseWakeLock(); updateControls(); return; }
-  finish('Session ended. Belt paused: finish or resume from the console.');
-  treadmill?.pause();
-};
 
 export function updateControls() {
   const connected = !!treadmill?.connected;
@@ -192,47 +157,88 @@ function activityName() {
   return session.event ? `${session.event.name} (treadmill)` : 'Treadmill run';
 }
 
-const fromExport = (fn) => () => { $('menuExport').hidePopover(); fn(); };
-$('menuExport').addEventListener('toggle', (e) => {
-  if (e.newState !== 'open') return;
-  const r = $('btnExport').getBoundingClientRect();
-  const m = $('menuExport');
-  m.style.top = `${r.bottom + 6}px`;
-  m.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8))}px`;
-});
-
-$('btnTcx').onclick = fromExport(() => {
-  const tcx = buildTcx(session.samples, { name: activityName() });
-  download(`brickwise-${new Date(session.startedAt).toISOString().slice(0, 16).replace(':', '')}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
-});
-
-$('btnUpload').onclick = async () => {
-  const btn = $('btnUpload');
-  const note = $('sessionNote');
-  btn.disabled = true;
-  note.textContent = 'Uploading to Intervals.icu…';
-  try {
-    const tcx = buildTcx(session.samples, { name: activityName() });
-    const meta = {
-      name: activityName(),
-      description: `NordicTrack EXP 5i controlled by Brickwise. Base incline ${$('wIncline').value}%. Pace ${$('wPosition').selectedOptions[0].text.toLowerCase()} within the zone.`,
-      external_id: `brickwise-${session.startedAt}`,
-      paired_event_id: session.event?.id,
+// ---------------------------------------------------------------------------
+// Startup
+// ---------------------------------------------------------------------------
+/** Startup: the session buttons, the speed and incline buttons, and export. */
+export function initTrain() {
+  document.querySelectorAll('[data-speed]').forEach((btn) => {
+    btn.onclick = () => {
+      const delta = parseFloat(btn.dataset.speed);
+      if (currentStep()?.hasTarget && session.state === 'running') {
+        session.adjust = Math.round((session.adjust + delta) * 10) / 10;
+        pushTarget();
+      } else {
+        // Base: the requested speed the console reports (includes changes made on it)
+        const reported = live.console.targetSpeed;
+        const base = reported > 0 ? reported : session.target ?? live.speed;
+        session.target = Math.round(Math.min(LIMITS.speedMax, Math.max(LIMITS.speedMin, base + delta)) * 10) / 10;
+        treadmill?.setSpeed(session.target);
+      }
     };
-    const data = await intervals.uploadTcx(tcx, meta);
-    const id = data.id || data.activities?.[0]?.id;
-    session.uploaded = true;
-    note.textContent = 'Activity uploaded. ';
-    if (id) {
-      const a = Object.assign(document.createElement('a'), {
-        href: `https://intervals.icu/activities/${encodeURIComponent(id)}`, target: '_blank', rel: 'noopener', textContent: 'View on Intervals.icu',
-      });
-      note.appendChild(a);
+  });
+
+  document.querySelectorAll('[data-incline]').forEach((btn) => {
+    btn.onclick = () => treadmill?.setIncline(live.incline + parseFloat(btn.dataset.incline));
+  });
+
+  $('btnStart').onclick = start;
+  $('btnSkip').onclick = () => {
+    if (session.state === 'running' || session.state === 'paused') applyStep(session.stepIdx + 1);
+  };
+  $('btnFinish').onclick = () => {
+    if (session.state === 'armed') { resetSession(); releaseWakeLock(); updateControls(); return; }
+    finish('Session ended. Belt paused: finish or resume from the console.');
+    treadmill?.pause();
+  };
+
+  $('btnCsv').onclick = () => {
+    $('menuExport').hidePopover();
+    if (!session.samples.length) return;
+    download(`brickwise-${new Date(session.startedAt).toISOString().slice(0, 16).replace(':', '')}.csv`, samplesToCsv(session.samples), 'text/csv');
+  };
+  const fromExport = (fn) => () => { $('menuExport').hidePopover(); fn(); };
+  $('menuExport').addEventListener('toggle', (e) => {
+    if (e.newState !== 'open') return;
+    const r = $('btnExport').getBoundingClientRect();
+    const m = $('menuExport');
+    m.style.top = `${r.bottom + 6}px`;
+    m.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8))}px`;
+  });
+
+  $('btnTcx').onclick = fromExport(() => {
+    const tcx = buildTcx(session.samples, { name: activityName() });
+    download(`brickwise-${new Date(session.startedAt).toISOString().slice(0, 16).replace(':', '')}.tcx`, tcx, 'application/vnd.garmin.tcx+xml');
+  });
+
+  $('btnUpload').onclick = async () => {
+    const btn = $('btnUpload');
+    const note = $('sessionNote');
+    btn.disabled = true;
+    note.textContent = 'Uploading to Intervals.icu…';
+    try {
+      const tcx = buildTcx(session.samples, { name: activityName() });
+      const meta = {
+        name: activityName(),
+        description: `NordicTrack EXP 5i controlled by Brickwise. Base incline ${$('wIncline').value}%. Pace ${$('wPosition').selectedOptions[0].text.toLowerCase()} within the zone.`,
+        external_id: `brickwise-${session.startedAt}`,
+        paired_event_id: session.event?.id,
+      };
+      const data = await intervals.uploadTcx(tcx, meta);
+      const id = data.id || data.activities?.[0]?.id;
+      session.uploaded = true;
+      note.textContent = 'Activity uploaded. ';
+      if (id) {
+        const a = Object.assign(document.createElement('a'), {
+          href: `https://intervals.icu/activities/${encodeURIComponent(id)}`, target: '_blank', rel: 'noopener', textContent: 'View on Intervals.icu',
+        });
+        note.appendChild(a);
+      }
+      log('info', `Activity uploaded to Intervals.icu ${id || ''}`);
+    } catch (err) {
+      note.textContent = `Upload failed: ${err.message}`;
+      log('error', `Upload: ${err.message}`);
+      btn.disabled = false;
     }
-    log('info', `Activity uploaded to Intervals.icu ${id || ''}`);
-  } catch (err) {
-    note.textContent = `Upload failed: ${err.message}`;
-    log('error', `Upload: ${err.message}`);
-    btn.disabled = false;
-  }
-};
+  };
+}

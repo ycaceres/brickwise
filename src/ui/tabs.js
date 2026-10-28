@@ -16,8 +16,6 @@ export const NAV_TABS = ['home', 'workouts', 'train', 'config', 'profile', ...(D
 const PAGES = ['workout'];
 const ALL = [...NAV_TABS, ...PAGES];
 
-$('safetyOk').onclick = () => $('safetyPop').hidePopover();
-
 export function showTab(name) {
   if (!ALL.includes(name)) name = 'home';
   for (const t of ALL) $(`tab-${t}`).classList.toggle('hidden', t !== name);
@@ -31,4 +29,14 @@ export function showTab(name) {
   const pop = $('safetyPop');
   if ((name === 'train' && idle) !== pop.matches(':popover-open')) pop.togglePopover();
   if (name === 'workout') updatePreview();
+}
+
+/** Startup: the sidebar, the links between tabs and the safety reminder. */
+export function initTabs() {
+  $('nav-debug').classList.toggle('hidden', !DEBUG);
+  $('btnSim').classList.toggle('hidden', !DEBUG);
+  for (const t of NAV_TABS) $(`nav-${t}`).onclick = () => showTab(t);
+  $('btnGoTrain').onclick = () => showTab('train');
+  $('hGoProfile').onclick = () => showTab('profile');
+  $('safetyOk').onclick = () => $('safetyPop').hidePopover();
 }

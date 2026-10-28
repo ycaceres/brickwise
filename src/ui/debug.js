@@ -25,7 +25,10 @@ export function log(kind, text) {
   box.scrollTop = box.scrollHeight;
 }
 
-$('btnLogDownload').onclick = () => download(`brickwise-log-${Date.now()}.txt`, logLines.join('\n'), 'text/plain');
+/** Startup: wires the Debug tab. */
+export function initDebug() {
+  $('btnLogDownload').onclick = () => download(`brickwise-log-${Date.now()}.txt`, logLines.join('\n'), 'text/plain');
+}
 
 // What the console reports
 let lastMode;

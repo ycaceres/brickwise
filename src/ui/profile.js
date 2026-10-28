@@ -132,25 +132,6 @@ export async function refreshWellness() {
   renderProfile();
 }
 
-$('pKeySave').onclick = async () => {
-  const key = $('pKey').value.trim();
-  if (!key) return;
-  intervals.setApiKey(key);
-  renderKeyState('Checking…');
-  try {
-    const a = await intervals.getAthlete();
-    $('pKey').value = '';
-    renderKeyState();
-    setAthlete(a);
-    refreshWellness().catch((err) => log('warn', `Intervals.icu wellness: ${err.message}`));
-    log('info', `Intervals.icu: signed in as ${a.name}`);
-    loadWorkouts();
-    loadProfileFromIntervals(); // the account wins: replaces the profile, even a manual one
-  } catch (err) {
-    intervals.setApiKey(''); // a key that does not work does not sign in
-    renderKeyState(`That didn't work: ${err.message}`);
-  }
-};
 
 const refreshAll = async () => {
   try {
@@ -173,9 +154,6 @@ const signOut = () => {
   log('info', 'Intervals.icu: signed out');
   loadWorkouts();
 };
-document.addEventListener('bw-refresh', refreshAll);
-document.addEventListener('bw-signout', signOut);
-$('pSave').onclick = saveManualProfile;
 
 // Threshold test history (the tests are run and analyzed in the session)
 export function loadTests() {
@@ -207,12 +185,35 @@ export function renderTests() {
     : 'Use VT2 as LTHR and threshold pace';
 }
 
-
-$('pTestApply').onclick = () => {
-  const last = loadTests().find((t) => t.vt2);
-  if (!last) return;
-  const base = profile || { pacePct: DEFAULT_PACE_PCT, hrPct: DEFAULT_HR_PCT };
-  setProfile({ ...base, thresholdKmh: last.vt2.kmh, lthr: last.vt2.hr, source: 'manual' });
-  log('info', `Profile from the threshold test: LTHR ${last.vt2.hr}, threshold ${formatPace(last.vt2.kmh)}/km`);
-};
-
+/** Startup: sign in, the manual profile, the account buttons and the tests. */
+export function initProfile() {
+  $('pKeySave').onclick = async () => {
+    const key = $('pKey').value.trim();
+    if (!key) return;
+    intervals.setApiKey(key);
+    renderKeyState('Checking…');
+    try {
+      const a = await intervals.getAthlete();
+      $('pKey').value = '';
+      renderKeyState();
+      setAthlete(a);
+      refreshWellness().catch((err) => log('warn', `Intervals.icu wellness: ${err.message}`));
+      log('info', `Intervals.icu: signed in as ${a.name}`);
+      loadWorkouts();
+      loadProfileFromIntervals(); // the account wins: replaces the profile, even a manual one
+    } catch (err) {
+      intervals.setApiKey(''); // a key that does not work does not sign in
+      renderKeyState(`That didn't work: ${err.message}`);
+    }
+  };
+  $('pSave').onclick = saveManualProfile;
+  document.addEventListener('bw-refresh', refreshAll);
+  document.addEventListener('bw-signout', signOut);
+  $('pTestApply').onclick = () => {
+    const last = loadTests().find((t) => t.vt2);
+    if (!last) return;
+    const base = profile || { pacePct: DEFAULT_PACE_PCT, hrPct: DEFAULT_HR_PCT };
+    setProfile({ ...base, thresholdKmh: last.vt2.kmh, lthr: last.vt2.hr, source: 'manual' });
+    log('info', `Profile from the threshold test: LTHR ${last.vt2.hr}, threshold ${formatPace(last.vt2.kmh)}/km`);
+  };
+}

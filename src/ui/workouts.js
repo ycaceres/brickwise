@@ -263,33 +263,36 @@ export function highlightSteps() {
   });
 }
 
-// Home: the day and a sport filter
-$('hDate').value = today();
-$('hDate').onchange = loadWorkouts;
-let homeSport = loadText('homeSport') || 'all';
-$('hSport').value = homeSport;
-$('hSport').onchange = () => {
-  homeSport = $('hSport').value;
-  saveText('homeSport', homeSport);
-  renderLists();
-};
-$('hReload').onclick = loadWorkouts;
-// A workout picked in any list opens the workout page; during a session the lists are locked
-document.addEventListener('bw-select', (e) => {
-  selectWorkout(e.detail.key);
-  showTab('workout');
-});
-$('wPosition').onchange = () => selectWorkout();
-$('wIncline').onchange = () => selectWorkout();
-$('wHrAdjust').onchange = () => selectWorkout();
+// Home: the sport filter
+let homeSport = 'all';
 
 // The chosen workout's chart, on this tab
 export function updatePreview() {
   $('wPreview').update({ plan: planTimeline(true), samples: [], elapsed: 0, zones: zonesFor(selected?.event) });
 }
 
-/** Startup: restores the saved library choice and loads the library. */
+/** Startup: wires Home and the workout page, restores the saved library choice and loads the library. */
 export function initWorkouts() {
+  // Home: the day and a sport filter
+  $('hDate').value = today();
+  $('hDate').onchange = loadWorkouts;
+  homeSport = loadText('homeSport') || 'all';
+  $('hSport').value = homeSport;
+  $('hSport').onchange = () => {
+    homeSport = $('hSport').value;
+    saveText('homeSport', homeSport);
+    renderLists();
+  };
+  $('hReload').onclick = loadWorkouts;
+  // A workout picked in any list opens the workout page; during a session the lists are locked
+  document.addEventListener('bw-select', (e) => {
+    selectWorkout(e.detail.key);
+    showTab('workout');
+  });
+  $('wPosition').onchange = () => selectWorkout();
+  $('wIncline').onchange = () => selectWorkout();
+  $('wHrAdjust').onchange = () => selectWorkout();
+
   const w = loadText('workout');
   if (w?.startsWith('l:')) selectedKey = w; // confirmed once the library loads
   renderLists();

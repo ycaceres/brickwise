@@ -68,20 +68,6 @@ async function connectTreadmill(simulated) {
   }
 }
 
-// Treadmill menu: opens under its pill and closes on choice
-const menu = $('menuTreadmill');
-menu.addEventListener('toggle', (e) => {
-  if (e.newState !== 'open') return;
-  const r = $('pillTreadmill').getBoundingClientRect();
-  menu.style.top = `${r.bottom + 6}px`;
-  menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8))}px`;
-});
-const fromMenu = (fn) => () => { menu.hidePopover(); fn(); };
-$('btnConnect').onclick = fromMenu(() => connectTreadmill(false));
-$('btnSim').onclick = fromMenu(() => connectTreadmill(true));
-$('btnDisconnect').onclick = fromMenu(() => treadmill?.disconnect());
-$('btnSimBelt').onclick = fromMenu(() => treadmill?.toggleBelt?.());
-
 const hrStrap = new HeartRateStrap({
   onHr: (bpm) => { live.hr = bpm; live.hrSource = 'strap'; },
   onRr: addRr,
@@ -90,14 +76,30 @@ const hrStrap = new HeartRateStrap({
     else { live.hr = null; live.hrSource = null; setPill('pillHr', 'error', 'HRM: disconnected'); }
   },
 });
-$('pillHr').onclick = async () => {
-  if ($('pillHr').dataset.state === 'ready' || $('pillHr').dataset.state === 'busy') return;
-  try {
-    setPill('pillHr', 'busy', 'HRM: connecting…');
-    await hrStrap.connect();
-  } catch (err) {
-    log('error', `HRM: ${err.message}`);
-    setPill('pillHr', 'error', 'HRM: error');
-  }
-};
 
+/** Startup: the controllable menu and the HRM pill. */
+export function initDevices() {
+  // Treadmill menu: opens under its pill and closes on choice
+  const menu = $('menuTreadmill');
+  menu.addEventListener('toggle', (e) => {
+    if (e.newState !== 'open') return;
+    const r = $('pillTreadmill').getBoundingClientRect();
+    menu.style.top = `${r.bottom + 6}px`;
+    menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8))}px`;
+  });
+  const fromMenu = (fn) => () => { menu.hidePopover(); fn(); };
+  $('btnConnect').onclick = fromMenu(() => connectTreadmill(false));
+  $('btnSim').onclick = fromMenu(() => connectTreadmill(true));
+  $('btnDisconnect').onclick = fromMenu(() => treadmill?.disconnect());
+  $('btnSimBelt').onclick = fromMenu(() => treadmill?.toggleBelt?.());
+  $('pillHr').onclick = async () => {
+    if ($('pillHr').dataset.state === 'ready' || $('pillHr').dataset.state === 'busy') return;
+    try {
+      setPill('pillHr', 'busy', 'HRM: connecting…');
+      await hrStrap.connect();
+    } catch (err) {
+      log('error', `HRM: ${err.message}`);
+      setPill('pillHr', 'error', 'HRM: error');
+    }
+  };
+}

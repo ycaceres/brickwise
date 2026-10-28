@@ -5,26 +5,17 @@ import './components/workout-list.js';
 import './components/chart.js';
 import { every } from './lib/timer.js';
 import * as intervals from './services/intervals.js';
-import { $ } from './lib/dom.js';
 import { loadJson, loadText } from './lib/storage.js';
-import { log } from './ui/debug.js';
+import { initDebug, log } from './ui/debug.js';
+import { initDevices } from './ui/devices.js';
 import { tick } from './session/runner.js';
-import { updateControls } from './ui/train.js';
+import { initTrain, updateControls } from './ui/train.js';
 import { loadWorkouts, initWorkouts } from './ui/workouts.js';
-import { DEBUG, NAV_TABS, showTab } from './ui/tabs.js';
+import { initTabs, showTab } from './ui/tabs.js';
 import { initConfig } from './ui/config.js';
-import { athlete, setProfile, loadProfileFromIntervals, renderProfile, refreshAthlete, refreshWellness } from './ui/profile.js';
+import { initProfile, athlete, setProfile, loadProfileFromIntervals, renderProfile, refreshAthlete, refreshWellness } from './ui/profile.js';
 
 const TICK_MS = 250; // how often the session advances and the screen refreshes
-
-// ---------------------------------------------------------------------------
-// Tabs
-// ---------------------------------------------------------------------------
-$('nav-debug').classList.toggle('hidden', !DEBUG);
-$('btnSim').classList.toggle('hidden', !DEBUG);
-for (const t of NAV_TABS) $(`nav-${t}`).onclick = () => showTab(t);
-$('btnGoTrain').onclick = () => showTab('train');
-$('hGoProfile').onclick = () => showTab('profile');
 
 // ---------------------------------------------------------------------------
 // Startup
@@ -32,6 +23,12 @@ $('hGoProfile').onclick = () => showTab('profile');
 {
   const saved = loadJson('profile');
   const tab = loadText('tab');
+  // Wiring first, then the data
+  initTabs();
+  initDebug();
+  initDevices();
+  initTrain();
+  initProfile();
   initConfig();
   initWorkouts();
   if (saved?.pacePct) setProfile(saved, { save: false });

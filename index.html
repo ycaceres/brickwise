@@ -11,17 +11,17 @@
 <body>
 <nav class="sidebar" role="tablist" aria-orientation="vertical">
   <div class="nav-group">
-    <button role="tab" id="nav-home" data-i18n-label="nav.home" aria-selected="false" aria-label="Home" title="Home"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button>
-    <button role="tab" id="nav-workouts" data-i18n-label="nav.workouts" aria-selected="false" aria-label="Training library" title="Training library"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4.5" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg></button>
+    <button role="tab" id="nav-home" data-i18n-label="nav.home" aria-selected="false" aria-label="Home" title="Home"><bw-icon name="home"></bw-icon></button>
+    <button role="tab" id="nav-workouts" data-i18n-label="nav.workouts" aria-selected="false" aria-label="Training library" title="Training library"><bw-icon name="library"></bw-icon></button>
   </div>
   <!-- Between the groups: optional and contextual buttons -->
   <div class="nav-group nav-context">
-    <button role="tab" id="nav-train" data-i18n-label="nav.train" aria-selected="true" aria-label="Train" title="Train"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="15.5" cy="4.5" r="2"/><path d="M14 8.5l-3 5.5M7.5 10.5l3-2.5h3.5l2.5 3.5M11 14l3.5 2.5-1 4.5M11 14l-2.5 4H5"/></svg></button>
-    <button role="tab" id="nav-debug" data-i18n-label="nav.debug" aria-selected="false" aria-label="Debug" title="Debug" class="hidden"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7.5a3 3 0 0 1 6 0"/><rect x="7" y="8.5" width="10" height="12" rx="5"/><path d="M12 10v10M3.5 13H7M17 13h3.5M4.5 8.5L7 10M19.5 8.5L17 10M4.5 19l2.7-1.8M19.5 19l-2.7-1.8"/></svg></button>
+    <button role="tab" id="nav-train" data-i18n-label="nav.train" aria-selected="true" aria-label="Train" title="Train"><bw-icon name="train"></bw-icon></button>
+    <button role="tab" id="nav-debug" data-i18n-label="nav.debug" aria-selected="false" aria-label="Debug" title="Debug" class="hidden"><bw-icon name="debug"></bw-icon></button>
   </div>
   <div class="nav-group">
-    <button role="tab" id="nav-config" data-i18n-label="nav.config" aria-selected="false" aria-label="Configuration" title="Configuration"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></button>
-    <button role="tab" id="nav-profile" data-i18n-label="nav.profile" aria-selected="false" aria-label="User profile" title="User profile"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button>
+    <button role="tab" id="nav-config" data-i18n-label="nav.config" aria-selected="false" aria-label="Configuration" title="Configuration"><bw-icon name="settings"></bw-icon></button>
+    <button role="tab" id="nav-profile" data-i18n-label="nav.profile" aria-selected="false" aria-label="User profile" title="User profile"><bw-icon name="user"></bw-icon></button>
   </div>
 </nav>
 <main>
@@ -52,8 +52,8 @@
           <div class="note" id="hMeta"></div>
         </div>
         <div class="row">
-          <button class="icon" id="hRefresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></svg></button>
-          <button class="icon danger" id="hLogout" aria-label="Sign out" title="Sign out"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5H14"/><path d="M10 12h10M16.5 8.5L20 12l-3.5 3.5"/></svg></button>
+          <button class="icon" id="hRefresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><bw-icon name="refresh"></bw-icon></button>
+          <button class="icon danger" id="hLogout" aria-label="Sign out" title="Sign out"><bw-icon name="signout"></bw-icon></button>
         </div>
       </div>
       <div class="stats num" id="hStats"></div>
@@ -77,7 +77,7 @@
             <option value="ride">🚴 Ride</option>
           </select>
         </label>
-        <button class="icon" id="hReload" aria-label="Reload the day" title="Reload the day"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></svg></button>
+        <button class="icon" id="hReload" aria-label="Reload the day" title="Reload the day"><bw-icon name="refresh"></bw-icon></button>
       </div>
       <div class="wlist" id="hPlanned"></div>
     </section>
@@ -116,8 +116,8 @@
           <div class="note" id="pMeta"></div>
         </div>
         <div class="row">
-          <button class="icon" id="pRefresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></svg></button>
-          <button class="icon danger" id="pLogout" aria-label="Sign out" title="Sign out"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5H14"/><path d="M10 12h10M16.5 8.5L20 12l-3.5 3.5"/></svg></button>
+          <button class="icon" id="pRefresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><bw-icon name="refresh"></bw-icon></button>
+          <button class="icon danger" id="pLogout" aria-label="Sign out" title="Sign out"><bw-icon name="signout"></bw-icon></button>
         </div>
       </div>
       <div class="stats num" id="pStats"></div>
@@ -270,16 +270,16 @@
       <div class="dash-half">
         <div class="dash-vals num">
           <span class="dv" title="Distance"><b id="mDist">0.00</b><small>km</small></span>
-          <span class="dv" title="Time"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg><b id="mTime">0:00</b></span>
-          <span class="dv" title="Heart rate"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><b id="mHr">--</b><small id="mHrSub">bpm</small></span>
+          <span class="dv" title="Time"><bw-icon name="time"></bw-icon><b id="mTime">0:00</b></span>
+          <span class="dv" title="Heart rate"><bw-icon name="heart"></bw-icon><b id="mHr">--</b><small id="mHrSub">bpm</small></span>
           <span class="dv alpha hidden" id="mAlphaBox"><i class="alpha-dot" aria-hidden="true"></i><b id="mAlpha">--</b><small id="mAlphaSub">α1</small></span>
         </div>
         <div class="dash-btns">
-          <button class="icon primary" id="btnStart" aria-label="Start" title="Start" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M8 5.5v13l10.5-6.5z"/></svg></button>
-          <button class="icon" id="btnSkip" aria-label="Skip step" title="Skip step" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M5.5 5.5v13L15 12z"/><path d="M18 5.5v13"/></svg></button>
-          <button class="icon danger" id="btnFinish" aria-label="Finish (pauses the belt)" title="Finish (pauses the belt)" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect class="fill" x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg></button>
-          <button class="icon" id="btnExport" popovertarget="menuExport" aria-label="Download the session" title="Download (when finished)" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg></button>
-          <button class="icon" id="btnUpload" aria-label="Upload to Intervals.icu" title="Upload to Intervals.icu (when finished)" disabled><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 18H7a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17.2 9 4.5 4.5 0 0 1 17 18h-.5"/><path d="M12 12.5V20M9 15.5l3-3 3 3"/></svg></button>
+          <button class="icon primary" id="btnStart" aria-label="Start" title="Start" disabled><bw-icon name="play"></bw-icon></button>
+          <button class="icon" id="btnSkip" aria-label="Skip step" title="Skip step" disabled><bw-icon name="skip"></bw-icon></button>
+          <button class="icon danger" id="btnFinish" aria-label="Finish (pauses the belt)" title="Finish (pauses the belt)" disabled><bw-icon name="stop"></bw-icon></button>
+          <button class="icon" id="btnExport" popovertarget="menuExport" aria-label="Download the session" title="Download (when finished)" disabled><bw-icon name="download"></bw-icon></button>
+          <button class="icon" id="btnUpload" aria-label="Upload to Intervals.icu" title="Upload to Intervals.icu (when finished)" disabled><bw-icon name="upload"></bw-icon></button>
           <div popover id="menuExport" class="menu">
             <button id="btnCsv">CSV (second by second)</button>
             <button id="btnTcx">TCX (for Strava, Garmin…)</button>
@@ -288,7 +288,7 @@
       </div>
       <div class="dash-half dash-split">
         <div class="dash-ctl">
-          <span class="dv" title="Incline"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19h18L21 7z"/><path d="M15 19a4.5 4.5 0 0 0-1.2-3.4"/></svg><b id="mIncline">0.0</b><small>%</small></span>
+          <span class="dv" title="Incline"><bw-icon name="incline"></bw-icon><b id="mIncline">0.0</b><small>%</small></span>
           <span class="dash-sub num" id="mInclineSub">&nbsp;</span>
           <div class="pm">
             <button data-incline="0.5" aria-label="Raise incline 0.5 %" title="+0.5 %">+</button>
@@ -296,7 +296,7 @@
           </div>
         </div>
         <div class="dash-ctl">
-          <span class="dv" title="Pace"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 14l4-5"/><circle cx="12" cy="14" r="1.2"/></svg><b id="mPace">--:--</b><small>min/km</small></span>
+          <span class="dv" title="Pace"><bw-icon name="pace"></bw-icon><b id="mPace">--:--</b><small>min/km</small></span>
           <span class="dash-sub num" id="mSpeedSub">0.0 km/h</span>
           <div class="pm">
             <button data-speed="0.5" aria-label="Faster 0.5 km/h" title="+0.5 km/h">+</button>

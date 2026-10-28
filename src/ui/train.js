@@ -124,7 +124,7 @@ export function updateControls() {
   $('btnUpload').disabled = !(finished && session.samples.length > 10 && intervals.getApiKey() && !session.uploaded);
   $('btnUpload').title = intervals.getApiKey() ? 'Upload to Intervals.icu (when finished)' : 'Upload to Intervals.icu: sign in with your API key in Profile';
   $('wPosition').disabled = $('wIncline').disabled = $('wHrAdjust').disabled = active;
-  document.querySelectorAll('.witem').forEach((b) => { b.disabled = active; });
+  for (const list of document.querySelectorAll('bw-workout-list')) list.disabled = active;
   document.querySelectorAll('[data-speed],[data-incline]').forEach((b) => { b.disabled = !connected; });
 
   const notes = {

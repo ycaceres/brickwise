@@ -20,7 +20,6 @@ import { showTab } from './tabs.js';
 let workouts = null;       // planned in Intervals.icu (null = not loaded)
 let plannedError = null;   // why they could not be loaded, shown in the lists
 
-const SPORT_ICONS = { run: ['🏃', 'Run'], ride: ['🚴', 'Ride'] };
 export let selected = null;       // { event, steps }
 export let selectedKey = 'none';  // 'none' | 'i:<index>' | 'l:<id>'
 
@@ -31,7 +30,7 @@ const today = () => {
 
 export async function loadWorkouts() {
   const day = $('hDate').value || today();
-  $('hPlanned').replaceChildren(listNote('Loading…'));
+  $('hPlanned').entries = [{ note: 'Loading…' }];
   if (!intervals.getApiKey()) {
     workouts = [];
     renderLists();
@@ -51,46 +50,6 @@ export async function loadWorkouts() {
   if (selectedKey === 'none' && workouts.length) selectedKey = 'i:0';
   renderLists();
   selectWorkout(selectedKey);
-}
-
-function listNote(text) {
-  const div = document.createElement('div');
-  div.className = 'note';
-  div.textContent = text;
-  return div;
-}
-
-function workoutItem(key, title, sub, hrControl = false, sport = null) {
-  const btn = document.createElement('button');
-  btn.className = 'witem';
-  btn.dataset.key = key;
-  const strong = document.createElement('strong');
-  if (SPORT_ICONS[sport]) {
-    const [icon, label] = SPORT_ICONS[sport];
-    const tag = document.createElement('span');
-    tag.className = 'sport-icon';
-    tag.textContent = icon;
-    tag.title = label;
-    tag.setAttribute('aria-label', label);
-    strong.append(tag, ' ');
-  }
-  strong.append(title);
-  if (hrControl) {
-    const tag = document.createElement('em');
-    tag.className = 'hr-tag';
-    tag.textContent = '♥ HR';
-    tag.title = 'Speed can follow your heart rate';
-    strong.append(' ', tag);
-  }
-  const span = document.createElement('span');
-  span.textContent = sub;
-  btn.append(strong, span);
-  // Opens the workout page; during a session the items are disabled
-  btn.onclick = () => {
-    selectWorkout(key);
-    showTab('workout');
-  };
-  return btn;
 }
 
 /**
@@ -165,39 +124,38 @@ function renderFilters() {
   select('Level', 'level', [['all', 'All'], ...[1, 2, 3, 4, 5].map((n) => [n, String(n)])]);
 }
 
-/** Planned workouts of the day into a list; Home filters them by sport. */
-function renderPlanned(box, sport = 'all') {
-  box.replaceChildren();
+/** Planned workouts of the day; Home filters them by sport. */
+function plannedEntries(sport = 'all') {
   const shown = (workouts || []).map((w, i) => [w, i]).filter(([w]) => sport === 'all' || w.sport === sport);
-  for (const [w, i] of shown) {
+  const entries = shown.map(([w, i]) => {
     const sec = docSeconds(w.workout_doc);
-    box.appendChild(workoutItem(`i:${i}`, w.name || 'Workout', sec ? `~${formatDuration(sec)}` : '', hrControllable(w), w.sport));
-  }
+    return { key: `i:${i}`, title: w.name || 'Workout', sub: sec ? `~${formatDuration(sec)}` : '', hrControl: hrControllable(w), sport: w.sport };
+  });
   if (!shown.length) {
     const none = { all: 'No runs or rides planned that day.', run: 'No runs planned that day.', ride: 'No rides planned that day.' }[sport];
-    box.appendChild(listNote(plannedError ? `Could not load from Intervals.icu: ${plannedError}` : workouts ? none : 'Loading…'));
+    entries.push({ note: plannedError ? `Could not load from Intervals.icu: ${plannedError}` : workouts ? none : 'Loading…' });
   }
+  return entries;
 }
 
 function renderLists() {
-  renderPlanned($('hPlanned'), homeSport);
+  $('hPlanned').entries = plannedEntries(homeSport);
   renderFilters();
-  const lib = $('wLibrary');
-  lib.replaceChildren(workoutItem('none', 'No workout', 'Manual speed and incline control'));
-  if (libError) lib.appendChild(listNote(`Could not load the library: ${libError}`));
-  else if (!LIBRARY.length) lib.appendChild(listNote('Loading library…'));
+  const entries = [{ key: 'none', title: 'No workout', sub: 'Manual speed and incline control' }];
+  if (libError) entries.push({ note: `Could not load the library: ${libError}` });
+  else if (!LIBRARY.length) entries.push({ note: 'Loading library…' });
   const shown = LIBRARY.filter(libraryMatches);
   for (const w of shown) {
-    const item = workoutItem(`l:${w.id}`, w.featured ? `★ ${w.name} · ${w.minutes} min` : w.name, w.summary, w.hrControl);
-    lib.appendChild(item);
+    entries.push({ key: `l:${w.id}`, title: w.featured ? `★ ${w.name} · ${w.minutes} min` : w.name, sub: w.summary, hrControl: w.hrControl });
   }
-  if (LIBRARY.length && !shown.length) lib.appendChild(listNote('No workouts match those filters.'));
+  if (LIBRARY.length && !shown.length) entries.push({ note: 'No workouts match those filters.' });
+  $('wLibrary').entries = entries;
   $('wLibCount').textContent = LIBRARY.length ? `${shown.length} of ${LIBRARY.length}` : '';
   markSelected();
 }
 
 function markSelected() {
-  document.querySelectorAll('.witem').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.key === selectedKey)));
+  for (const list of document.querySelectorAll('bw-workout-list')) list.selected = selectedKey;
 }
 
 export function selectWorkout(key = selectedKey) {
@@ -317,6 +275,11 @@ $('hSport').onchange = () => {
   renderLists();
 };
 $('hReload').onclick = loadWorkouts;
+// A workout picked in any list opens the workout page; during a session the lists are locked
+document.addEventListener('bw-select', (e) => {
+  selectWorkout(e.detail.key);
+  showTab('workout');
+});
 $('wPosition').onchange = () => selectWorkout();
 $('wIncline').onchange = () => selectWorkout();
 $('wHrAdjust').onchange = () => selectWorkout();

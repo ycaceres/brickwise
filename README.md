@@ -37,7 +37,7 @@ The page has a vertical bar of icons on the left: **Home** and **Training librar
 
 1. Turn on the treadmill, attach the safety key and, on the **Train** tab, press the **Controllable** pill at the top and choose **Connect treadmill** (it shows up as `I_TL…`). Activation takes ~10 s.
 2. Optional: press the **HRM** pill (also on the Train tab) (any standard Bluetooth heart rate monitor).
-3. Pick the workout in **Home** or the **Training library** and, on its page, press **Go train**.
+3. Pick the workout in **Home** or the **Training library** and, on its page, press ▶ (top right, next to its name) to go to **Train**.
 4. Press **▶ (start)** and then **START on the console**. The workout begins when the belt moves.
 5. When done: the **upload to Intervals.icu** icon (needs the API key) or the **download** icon (CSV or TCX). Library workouts are uploaded unpaired.
 

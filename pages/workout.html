@@ -1,7 +1,10 @@
 <!-- Workout (no nav button: opened from a workout in Home or the library) -->
 <div id="tab-workout" class="tab hidden">
   <section class="card">
-    <div class="workout-title" id="wName">No workout: manual control</div>
+    <div class="workout-head">
+      <div class="workout-title" id="wName">No workout: manual control</div>
+      <button class="icon primary" id="btnGoTrain" aria-label="Go train" title="Go train"><bw-icon name="play"></bw-icon></button>
+    </div>
     <div class="workout-desc" id="wDesc"></div>
     <bw-chart id="wPreview" compact style="margin-top: 12px"></bw-chart>
     <div class="row" style="margin-top: 12px">
@@ -26,8 +29,5 @@
       </table>
     </div>
     <div class="note" id="wTotal" style="margin-top: 8px"></div>
-    <div class="row" style="margin-top: 12px">
-      <button class="primary" id="btnGoTrain">Go train</button>
-    </div>
   </section>
 </div>

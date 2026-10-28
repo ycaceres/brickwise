@@ -298,4 +298,6 @@ details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   .layout { grid-template-columns: 1fr; }
 }
 /* Workout page: the workout's name as the page title, on one line (long names end in …) */
-.workout-title { font-size: 18px; font-weight: 650; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Name on the left (cut with … when long), the play button on the right */
+.workout-head { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.workout-title { font-size: 18px; font-weight: 650; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

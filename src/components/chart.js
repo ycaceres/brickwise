@@ -1,12 +1,14 @@
 /**
  * <bw-chart compact help heading="Session chart">: the session chart
  * (ui/chart.js) in a component. With "heading" or "help" it gets a title row,
- * and "help" adds the "?" popover that explains the colors. .heading sets the
+ * and "help" adds the "?" popover that explains the colors (help="ride" for
+ * the bike workout chart). .heading sets the
  * title; .update(...) passes the data on to SessionChart.
  */
 import { SessionChart } from '../ui/chart.js';
 
-const HELP = `
+const HELP = {
+  run: `
       <h2>How to read the chart</h2>
       <ul>
         <li><i class="line" style="background: var(--series-speed)"></i><span>Actual <b>pace</b>, on the left scale (min/km).</span></li>
@@ -18,7 +20,17 @@ const HELP = `
         <li><i class="block cols"></i><span><b>Side columns:</b> pace zones (left) and HR zones (right), aligned at the same height. On top, the zone you are in right now.</span></li>
       </ul>
       <div class="zones"><span><i style="background: var(--zone-1)"></i>Z1 gray</span><span><i style="background: var(--zone-2)"></i>Z2 blue</span><span><i style="background: var(--zone-3)"></i>Z3 green</span><span><i style="background: var(--zone-4)"></i>Z4 yellow</span><span><i style="background: var(--zone-5)"></i>Z5 orange</span><span><i style="background: var(--zone-6)"></i>Z6 red</span><span><i style="background: var(--zone-7)"></i>Z7 violet</span></div>
-      <p class="note">Hover (or drag a finger) over the chart to see the values at each moment.</p>`;
+      <p class="note">Hover (or drag a finger) over the chart to see the values at each moment.</p>`,
+  ride: `
+      <h2>How to read the chart</h2>
+      <ul>
+        <li><i class="block"></i><span><b>Blocks:</b> the whole workout. Width = duration, height = target power on the left scale (W), color = power zone. Ramps slope; a step with a power range sits in the middle of it.</span></li>
+        <li><i class="dash"></i><span><b>Dashed red line:</b> the step's HR goal, on the right scale (bpm).</span></li>
+        <li><i class="block cols"></i><span><b>Side columns:</b> power zones (left) and HR zones (right), aligned at the same height.</span></li>
+      </ul>
+      <div class="zones"><span><i style="background: var(--zone-1)"></i>Z1 gray</span><span><i style="background: var(--zone-2)"></i>Z2 blue</span><span><i style="background: var(--zone-3)"></i>Z3 green</span><span><i style="background: var(--zone-4)"></i>Z4 yellow</span><span><i style="background: var(--zone-5)"></i>Z5 orange</span><span><i style="background: var(--zone-6)"></i>Z6 red</span><span><i style="background: var(--zone-7)"></i>Z7 violet</span></div>
+      <p class="note">Hover (or drag a finger) over the chart to see each step's watts and HR goal.</p>`,
+};
 
 let count = 0;
 
@@ -42,7 +54,7 @@ class BwChart extends HTMLElement {
         pop.id = id;
         pop.popover = 'auto';
         pop.className = 'help-pop';
-        pop.innerHTML = HELP;
+        pop.innerHTML = HELP[this.getAttribute('help')] ?? HELP.run;
         this.appendChild(pop);
       }
     }

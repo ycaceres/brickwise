@@ -258,7 +258,8 @@ export class SessionChart {
       const t = el('text', { x: MARGIN.left - 8, y: y + 4, class: 'viz-axis on-band', 'text-anchor': 'end' }, svg);
       t.textContent = formatPace(kmh);
     }
-    if (byIntensity) {
+    // Bike workouts have no speed by design: blocks show the power shape
+    if (byIntensity && !this.zones?.power) {
       const msg = el('text', { x: MARGIN.left + 8, y: top + 16, class: 'viz-empty' }, svg);
       msg.textContent = 'No threshold pace in Profile: the background only shows the workout shape';
     }
@@ -360,7 +361,7 @@ export class SessionChart {
       const u = el('text', { x: xRight, y: top - 6, class: 'viz-axis', 'text-anchor': 'end' }, svg);
       u.textContent = unit;
     };
-    head(pz, 'min/km', MARGIN.left - 4);
+    head(pz, z?.power ? '' : 'min/km', MARGIN.left - 4); // bike zones: no pace axis
     head(hz, 'bpm', width - 4);
   }
 

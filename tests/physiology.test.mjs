@@ -1,7 +1,7 @@
 // Zones, DFA α1 and ventilatory thresholds
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { paceZoneOf, hrTargetRange, hrZoneOf, zonesFromProfile, profileFromIntervals, resolveDoc } from '../src/physiology/zones.js';
+import { paceZoneOf, hrTargetRange, hrZoneOf, zonesFromProfile, profileFromIntervals, resolveDoc, rideFromIntervals, rideZones } from '../src/physiology/zones.js';
 import { cleanRr, dfaAlpha1, alpha1Window, alphaState } from '../src/physiology/hrv.js';
 import { analyzeRamp, flatKmh } from '../src/physiology/thresholds.js';
 import { flattenWorkout } from '../src/workouts/steps.js';
@@ -77,4 +77,24 @@ test('threshold test: ramp steps and VT1/VT2 from α1 vs HR', () => {
   assert.ok(r.r2 > 0.99 && r.vt2.kmh > r.vt1.kmh);
   assert.match(analyzeRamp(samples.map((s) => ({ ...s, alpha1: null })), 300, 1500).error, /chest strap/);
   assert.match(analyzeRamp(samples, 300, 500).error, /too early|Not enough/);
+});
+
+test('rideZones: power from the indoor FTP and HR in bpm from the Ride settings', () => {
+  const r = rideFromIntervals({
+    ftp: 250, indoor_ftp: 240, lthr: 165, max_hr: 182,
+    power_zones: [55, 75, 90, 105, 120, 150, 999],
+    power_zone_names: ['Active Recovery', 'Endurance', 'Tempo', 'Threshold', 'VO2 Max', 'Anaerobic', 'Neuromuscular'],
+    hr_zones: [137, 151, 158, 165, 169, 175, 182],
+  });
+  const z = rideZones(r);
+  assert.equal(z.ftp, 240);
+  assert.deepEqual(z.power.map((p) => p.hi), [132, 180, 216, 252, 288, 360, Infinity]);
+  assert.deepEqual([z.power[0].lo, z.power[1].lo, z.power[6].lo], [0, 133, 361]);
+  assert.equal(z.power[1].name, 'Endurance');
+  assert.deepEqual(z.hr.map((h) => h.hi), [137, 151, 158, 165, 169, 175, 182]);
+  assert.equal(z.hr[1].lo, 138);
+  // Without Ride settings there are no cycling zones; without FTP, no power zones
+  assert.equal(rideFromIntervals(null), null);
+  assert.equal(zonesFromProfile(profileFromIntervals(runSettings)).ride, null);
+  assert.deepEqual(rideZones(rideFromIntervals({ hr_zones: [140] })).power, []);
 });

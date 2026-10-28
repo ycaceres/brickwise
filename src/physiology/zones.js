@@ -8,6 +8,9 @@
  * Intervals.icu stores HR zones as each zone's top in bpm and pace zones as
  * the top in % of threshold speed (more % = faster; the last one is usually
  * 999). On load they are converted to % of LTHR.
+ *
+ * Cycling zones (`profile.ride`) come from the Ride sport-settings as they
+ * are: power zones in % of FTP and HR zones in bpm.
  */
 
 const MS_TO_KMH = 3.6;
@@ -16,11 +19,15 @@ const MS_TO_KMH = 3.6;
 export const DEFAULT_PACE_PCT = [77.5, 87.7, 94.3, 100, 103.4, 111.5, 999];
 export const DEFAULT_HR_PCT = [80, 89, 94, 100, 102, 106, 999];
 const DEFAULT_PACE_NAMES = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5a', 'Z5b', 'Z5c'];
+/** Intervals.icu's default power zones (Coggan), top of each in % of FTP. */
+export const DEFAULT_POWER_PCT = [55, 75, 90, 105, 120, 150, 999];
 
 /**
  * @typedef {{thresholdKmh: number|null, lthr: number|null, maxHr: number|null,
  *            pacePct: number[], hrPct: number[], paceNames?: string[], hrNames?: string[],
- *            source: 'intervals'|'manual'}} Profile
+ *            ride?: RideProfile|null, source: 'intervals'|'manual'}} Profile
+ * @typedef {{ftp: number|null, indoorFtp: number|null, lthr: number|null, maxHr: number|null,
+ *            powerPct: number[], powerNames: string[]|null, hrZones: number[], hrNames: string[]|null}} RideProfile
  */
 
 /** Profile from Intervals.icu running sport-settings. */
@@ -41,6 +48,45 @@ export function profileFromIntervals(s) {
     hrNames: s.hr_zone_names || null,
     source: 'intervals',
   };
+}
+
+/** Cycling part of the profile from the Ride sport-settings (null without them). */
+export function rideFromIntervals(s) {
+  if (!s) return null;
+  return {
+    ftp: s.ftp || null,
+    indoorFtp: s.indoor_ftp || null,
+    lthr: s.lthr || null,
+    maxHr: s.max_hr || null,
+    powerPct: s.power_zones?.length ? s.power_zones : DEFAULT_POWER_PCT,
+    powerNames: s.power_zone_names || null,
+    hrZones: s.hr_zones || [],
+    hrNames: s.hr_zone_names || null,
+  };
+}
+
+/**
+ * Cycling zones in watts and bpm. Power uses the indoor FTP when there is one
+ * (Brickwise rides on a trainer).
+ * @returns {{ftp, lthr, maxHr, power: Array<{z,name,lo,hi}>, hr: Array<{z,name,lo,hi}>} | null}
+ */
+export function rideZones(r) {
+  if (!r) return null;
+  const ftp = r.indoorFtp || r.ftp;
+  const powerTops = ftp ? r.powerPct.map((pct) => (pct >= 500 ? Infinity : Math.round((pct / 100) * ftp))) : [];
+  const power = powerTops.map((hi, i) => ({
+    z: i + 1,
+    name: r.powerNames?.[i] || `Z${i + 1}`,
+    lo: i ? powerTops[i - 1] + 1 : 0,
+    hi,
+  }));
+  const hr = r.hrZones.map((hi, i) => ({
+    z: i + 1,
+    name: r.hrNames?.[i] || `Z${i + 1}`,
+    lo: i ? r.hrZones[i - 1] + 1 : 0,
+    hi,
+  }));
+  return { ftp, lthr: r.lthr, maxHr: r.maxHr, power, hr };
 }
 
 /**
@@ -69,7 +115,7 @@ export function zonesFromProfile(p) {
         hi: pct >= 500 ? Infinity : (pct / 100) * t,
       }))
     : [];
-  return { hr, pace, lthr, maxHr, thresholdKmh: t };
+  return { hr, pace, lthr, maxHr, thresholdKmh: t, ride: rideZones(p.ride) };
 }
 
 /** Pace zone (1..n) a speed belongs to. */

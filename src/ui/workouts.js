@@ -1,5 +1,5 @@
 /**
- * Workouts tab: the runs planned in Intervals.icu for a day, the library
+ * Workouts tab: the runs and rides planned in Intervals.icu for a day, the library
  * with its filters, and the chosen workout (steps, totals and chart).
  */
 
@@ -11,11 +11,13 @@ import { resolveDoc } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
 import { SessionChart } from './chart.js';
 import { log } from './debug.js';
-import { zones } from './profile.js';
+import { zones, renderZones } from './profile.js';
 import { session } from '../session/runner.js';
 import { render, updateChart, updateControls, planTimeline } from './train.js';
 
 let workouts = null;       // planned in Intervals.icu (null = not loaded)
+
+const SPORT_ICONS = { run: ['🏃', 'Run'], ride: ['🚴', 'Ride'] };
 export let selected = null;       // { event, steps }
 export let selectedKey = 'none';  // 'none' | 'i:<index>' | 'l:<id>'
 
@@ -26,7 +28,8 @@ const today = () => {
 
 export async function loadWorkouts() {
   const day = $('wDate').value || today();
-  $('wPlanned').replaceChildren(listNote('Loading…'));
+  $('hDate').value = day;
+  for (const id of ['wPlanned', 'hPlanned']) $(id).replaceChildren(listNote('Loading…'));
   if (!intervals.getApiKey()) {
     workouts = [];
     setPill('pillIntervals', 'idle', 'Intervals.icu: no API key');
@@ -56,12 +59,21 @@ function listNote(text) {
   return div;
 }
 
-function workoutItem(key, title, sub, hrControl = false) {
+function workoutItem(key, title, sub, hrControl = false, sport = null) {
   const btn = document.createElement('button');
   btn.className = 'witem';
   btn.dataset.key = key;
   const strong = document.createElement('strong');
-  strong.textContent = title;
+  if (SPORT_ICONS[sport]) {
+    const [icon, label] = SPORT_ICONS[sport];
+    const tag = document.createElement('span');
+    tag.className = 'sport-icon';
+    tag.textContent = icon;
+    tag.title = label;
+    tag.setAttribute('aria-label', label);
+    strong.append(tag, ' ');
+  }
+  strong.append(title);
   if (hrControl) {
     const tag = document.createElement('em');
     tag.className = 'hr-tag';
@@ -77,11 +89,22 @@ function workoutItem(key, title, sub, hrControl = false) {
 }
 
 /**
+ * Zones a workout is planned against: the running ones, or for a bike workout
+ * the cycling ones (HR and power, no pace).
+ */
+export function zonesFor(event) {
+  if (event?.sport !== 'ride') return zones;
+  const r = zones?.ride;
+  return r ? { hr: r.hr, pace: [], power: r.power, ftp: r.ftp, lthr: r.lthr, maxHr: r.maxHr } : null;
+}
+
+/**
  * Whether HR can steer a workout: library workouts say so (hrControl), the
  * Intervals.icu ones are judged by their steps.
  */
 function hrControllable(w) {
   if (w.hrControl != null) return w.hrControl;
+  if (w.sport === 'ride') return false;
   return followsHr(flattenWorkout(resolveDoc(w.workout_doc, zones), { zones }));
 }
 
@@ -137,17 +160,23 @@ function renderFilters() {
   select('Level', 'level', [['all', 'All'], ...[1, 2, 3, 4, 5].map((n) => [n, String(n)])]);
 }
 
-function renderLists() {
-  const planned = $('wPlanned');
-  planned.replaceChildren();
-  if (workouts?.length) {
-    workouts.forEach((w, i) => {
-      const sec = docSeconds(w.workout_doc);
-      planned.appendChild(workoutItem(`i:${i}`, w.name || 'Workout', sec ? `~${formatDuration(sec)}` : '', hrControllable(w)));
-    });
-  } else {
-    planned.appendChild(listNote(workouts ? 'No runs planned that day.' : 'Loading…'));
+/** Planned workouts of the day into a list; Home filters them by sport. */
+function renderPlanned(box, sport = 'all') {
+  box.replaceChildren();
+  const shown = (workouts || []).map((w, i) => [w, i]).filter(([w]) => sport === 'all' || w.sport === sport);
+  for (const [w, i] of shown) {
+    const sec = docSeconds(w.workout_doc);
+    box.appendChild(workoutItem(`i:${i}`, w.name || 'Workout', sec ? `~${formatDuration(sec)}` : '', hrControllable(w), w.sport));
   }
+  if (!shown.length) {
+    const none = { all: 'No runs or rides planned that day.', run: 'No runs planned that day.', ride: 'No rides planned that day.' }[sport];
+    box.appendChild(listNote(workouts ? none : 'Loading…'));
+  }
+}
+
+function renderLists() {
+  renderPlanned($('wPlanned'));
+  renderPlanned($('hPlanned'), homeSport);
   renderFilters();
   const lib = $('wLibrary');
   lib.replaceChildren(workoutItem('none', 'No workout', 'Manual speed and incline control'));
@@ -179,13 +208,15 @@ export function selectWorkout(key = selectedKey) {
   }
   selectedKey = event ? key : 'none';
   if (event) {
-    const needsProfile = event.library && !zones?.thresholdKmh;
+    const ride = event.sport === 'ride';
+    const z = zonesFor(event);
+    const needsProfile = ride ? !z?.ftp : event.library && !zones?.thresholdKmh;
     const hrControl = hrControllable(event);
     const hrOn = hrControl && $('wHrAdjust').checked;
-    const steps = flattenWorkout(resolveDoc(event.workout_doc, zones), {
+    const steps = flattenWorkout(resolveDoc(event.workout_doc, z), {
       position: $('wPosition').value,
       defaultIncline: parseFloat($('wIncline').value) || 0,
-      zones,
+      zones: z,
       hrTargets: hrOn,
     });
     selected = { event, steps, needsProfile, hrControl, hrOn };
@@ -201,9 +232,29 @@ export function selectWorkout(key = selectedKey) {
   updatePreview();
 }
 
+const STEP_HEADS = {
+  run: ['#', 'Step', 'Dur.', 'km/h', 'Pace', '%'],
+  ride: ['#', 'Step', 'Dur.', 'W', 'HR'],
+};
+
+function renderStepHead(sport) {
+  const tr = document.createElement('tr');
+  STEP_HEADS[sport].forEach((text, i) => {
+    const th = document.createElement('th');
+    th.textContent = text;
+    if (i > 1) th.className = 'r';
+    tr.appendChild(th);
+  });
+  $('wStepsHead').replaceChildren(tr);
+}
+
 function renderWorkout() {
   const body = $('wSteps');
+  const ride = selected?.event.sport === 'ride';
   $('wHrAdjustRow').hidden = !selected?.hrControl;
+  $('wPosition').closest('label').hidden = $('wIncline').closest('label').hidden = ride;
+  renderZones($('wZones'), zonesFor(selected?.event));
+  renderStepHead(ride ? 'ride' : 'run');
   if (!selected) {
     body.innerHTML = '';
     $('wName').textContent = 'No workout: manual control';
@@ -212,9 +263,23 @@ function renderWorkout() {
     return;
   }
   $('wName').textContent = selected.event.name || 'Workout';
-  $('wDesc').textContent = (selected.needsProfile ? 'Threshold pace is missing in Profile: without it, steps have no speed.\n' : '') +
+  const missing = ride ? 'FTP is missing in Intervals.icu: without it, steps have no watts.\n' : 'Threshold pace is missing in Profile: without it, steps have no speed.\n';
+  $('wDesc').textContent = (selected.needsProfile ? missing : '') +
     (selected.event.description || '') +
     (selected.hrOn ? '\n♥ Long steps follow their HR zone (speed starts at the planned pace); short ones keep their pace.' : '');
+  if (ride) {
+    body.innerHTML = selected.steps.map((s, i) => {
+      const dur = s.duration ? formatDuration(s.duration) : s.distance ? `${(s.distance / 1000).toFixed(2)} km` : '—';
+      const w = s.power ? (s.power.lo === s.power.hi ? s.power.lo : `${s.power.lo}–${s.power.hi}`) : '—';
+      const hr = s.hr ? `${s.hr.lo}–${s.hr.hi}` : '—';
+      return `<tr data-i="${i}"><td>${i + 1}</td><td>${escapeHtml(s.label)}</td><td class="r num">${dur}</td>` +
+        `<td class="r num">${w}</td><td class="r num">${hr}</td></tr>`;
+    }).join('');
+    const sec = selected.steps.reduce((a, s) => a + (s.duration || 0), 0);
+    $('wTotal').textContent = `${selected.steps.length} steps · ~${formatDuration(sec)}`;
+    highlightSteps();
+    return;
+  }
   body.innerHTML = selected.steps.map((s, i) => {
     const dur = s.duration ? formatDuration(s.duration) : s.distance ? `${(s.distance / 1000).toFixed(2)} km` : '—';
     const spd = s.hasTarget ? (s.ramp ? `${s.speedStart}→${s.speedEnd}` : s.speedStart.toFixed(1)) : 'free';
@@ -238,9 +303,22 @@ export function highlightSteps() {
   });
 }
 
-$('wDate').value = today();
+$('wDate').value = $('hDate').value = today();
 $('wDate').onchange = loadWorkouts;
 $('btnReload').onclick = loadWorkouts;
+// Home: the same day (wDate keeps it) and a sport filter of its own
+let homeSport = loadText('homeSport') || 'all';
+$('hSport').value = homeSport;
+$('hSport').onchange = () => {
+  homeSport = $('hSport').value;
+  saveText('homeSport', homeSport);
+  renderLists();
+};
+$('hDate').onchange = () => {
+  $('wDate').value = $('hDate').value;
+  loadWorkouts();
+};
+$('hReload').onclick = loadWorkouts;
 $('wPosition').onchange = () => selectWorkout();
 $('wIncline').onchange = () => selectWorkout();
 $('wHrAdjust').onchange = () => selectWorkout();
@@ -248,7 +326,7 @@ $('wHrAdjust').onchange = () => selectWorkout();
 // The chosen workout's chart, on this tab
 const preview = new SessionChart($('wPreview'));
 export function updatePreview() {
-  preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones });
+  preview.update({ plan: planTimeline(true), samples: [], elapsed: 0, zones: zonesFor(selected?.event) });
 }
 
 /** Startup: restores the saved library choice and loads the library. */

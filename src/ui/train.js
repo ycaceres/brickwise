@@ -19,7 +19,7 @@ import { SessionChart } from './chart.js';
 import { log, renderConsole } from './debug.js';
 import { treadmill } from './devices.js';
 import { zones } from './profile.js';
-import { selected } from './workouts.js';
+import { selected, zonesFor } from './workouts.js';
 
 // ---------------------------------------------------------------------------
 // Chart
@@ -65,7 +65,7 @@ export function planTimeline(planOnly = false) {
 
 export function updateChart() {
   const event = session.state !== 'idle' ? session.event : selected?.event;
-  chart.update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones });
+  chart.update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones: zonesFor(event) });
   $('chartTitle').textContent = event?.name || 'Free session';
 }
 
@@ -111,7 +111,9 @@ $('btnFinish').onclick = () => {
 export function updateControls() {
   const connected = !!treadmill?.connected;
   const active = ['armed', 'running', 'paused'].includes(session.state);
-  $('btnStart').disabled = !connected || active;
+  // Rides need the bike trainer, which is not supported yet
+  const ride = selected?.event?.sport === 'ride';
+  $('btnStart').disabled = !connected || active || ride;
   const startLabel = selected ? 'Start workout' : 'Start free session';
   $('btnStart').title = startLabel;
   $('btnStart').setAttribute('aria-label', startLabel);
@@ -137,6 +139,9 @@ export function updateControls() {
   }
   if (session.state === 'idle' && selected?.needsProfile) {
     $('sessionNote').textContent = 'Threshold pace is missing in Profile: without it, this workout has no speeds.';
+  }
+  if (session.state === 'idle' && ride) {
+    $('sessionNote').textContent = 'This is a bike workout: it needs a bike trainer, which is not supported yet.';
   }
   if (connected && live.console.mode === MODE.MISSING_SAFETY_KEY) {
     $('sessionNote').textContent = 'Safety key missing: attach it to the console.';

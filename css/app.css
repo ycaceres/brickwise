@@ -231,8 +231,9 @@ tr.done td { color: var(--muted); }
 .stats div { display: grid; gap: 2px; }
 .stats span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .stats strong { font-size: 22px; font-weight: 650; }
-.stats small { font-size: 13px; color: var(--muted); font-weight: 400; }
-.ztable td:first-child { white-space: nowrap; }
+.stats small { font-size: 13px; color: var(--muted); font-weight: 400; white-space: nowrap; }
+.ztable td { white-space: nowrap; }
+.zsummary { margin-top: 8px; font-size: 13px; color: var(--muted); }
 .ztable i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; }
 .tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
 .tabs button { border: 0; background: transparent; min-height: 36px; padding: 6px 14px; color: var(--muted); display: inline-grid; place-items: center; }
@@ -242,10 +243,15 @@ tr.done td { color: var(--muted); }
 .wlist { display: grid; gap: 6px; margin-top: 10px; max-height: 70vh; overflow-y: auto; }
 .filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
 .filters select { width: 100%; }
+/* Home: day and sport side by side, reload at the end; full width on a phone */
+.home-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: end; }
+.home-filters input, .home-filters select { width: 100%; }
+button.link { border: 0; background: none; padding: 0; min-height: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .witem { display: grid; gap: 2px; text-align: left; font-weight: 400; padding: 10px 12px; background: var(--surface); }
 .witem strong { font-weight: 650; }
 .witem span { font-size: 13px; color: var(--muted); }
 .hr-tag { font-style: normal; font-size: 11px; font-weight: 600; color: var(--series-hr); border: 1px solid currentColor; border-radius: 999px; padding: 0 6px; margin-left: 4px; white-space: nowrap; vertical-align: 1px; }
+.witem .sport-icon { font-size: 15px; color: inherit; }
 [hidden] { display: none !important; }
 .witem[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); background: var(--surface-2); }
 .viz-baseline { stroke: var(--muted); stroke-width: 1; opacity: .6; }

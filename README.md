@@ -107,7 +107,7 @@ With a chest strap that sends RR intervals (time between beats; nearly all do: P
 
 ## Zones and HR adjustment
 
-On load, the running HR and pace zones are read from Intervals.icu (running sport-settings) and shown on the workout card.
+On load, the running HR and pace zones are read from Intervals.icu (running sport-settings) and shown on the workout card. The cycling zones (FTP, power and HR, from the Ride sport-settings) are shown in Profile.
 
 **Which workouts HR can steer.** HR responds 1–2 minutes late, so it only helps on long, steady steps. Those workouts get a **♥ HR** tag in the lists, and only they show the **Adjust speed by HR** checkbox:
 
@@ -170,7 +170,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/devices/treadmill/exp5i-protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
 | `src/devices/treadmill/ifit-messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
 | `src/devices/hr-strap.js` | Standard Bluetooth heart rate strap: HR, contact and RR intervals |
-| `src/physiology/zones.js` | Profile, HR and pace zones, HR ranges of each step and resolution of relative paces |
+| `src/physiology/zones.js` | Profile, HR and pace zones, cycling power and HR zones, HR ranges of each step and resolution of relative paces |
 | `src/physiology/hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `src/physiology/thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
 | `src/workouts/steps.js` | Turns the Intervals.icu `workout_doc` into speed steps |

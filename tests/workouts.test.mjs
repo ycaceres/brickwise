@@ -2,9 +2,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { flattenWorkout, followsHr, targetSpeedAt, formatPace, formatDuration } from '../src/workouts/steps.js';
-import { zonesFromProfile, profileFromIntervals, resolveDoc } from '../src/physiology/zones.js';
+import { zonesFromProfile, profileFromIntervals, resolveDoc, rideFromIntervals, rideZones } from '../src/physiology/zones.js';
 import { parseDur } from '../src/workouts/library.js';
 import { inclineStep } from '../src/session/hr-control.js';
+import { sportOf } from '../src/services/intervals.js';
 import { easyRun, runSettings, LIBRARY } from './fixtures.mjs';
 
 test('flattenWorkout expands repeats', () => {
@@ -186,4 +187,37 @@ test('Z2 walk by incline: HR target moved by the incline, speed fixed', () => {
   assert.equal(inclineStep(0), 0);
   assert.equal(inclineStep(-0.2), -0.5);
   assert.equal(inclineStep(0.5), 1);
+});
+
+test('sportOf: runs and rides from Intervals.icu, other sports skipped', () => {
+  assert.equal(sportOf('Run'), 'run');
+  assert.equal(sportOf('VirtualRun'), 'run');
+  assert.equal(sportOf('Ride'), 'ride');
+  assert.equal(sportOf('VirtualRide'), 'ride');
+  assert.equal(sportOf('Swim'), null);
+  assert.equal(sportOf('WeightTraining'), null);
+});
+
+test('flattenWorkout: bike steps get watts and a power zone from the cycling zones', () => {
+  const ride = rideZones(rideFromIntervals({ ftp: 200, hr_zones: [130, 145, 155, 165, 175, 185] }));
+  const z = { hr: ride.hr, pace: [], power: ride.power, ftp: ride.ftp };
+  const doc = { steps: [
+    { duration: 600, warmup: true, power: { start: 50, end: 65, units: '%ftp' } },
+    { reps: 2, steps: [
+      { duration: 300, power: { value: 4, units: 'power_zone' }, hr: { value: 4, units: 'hr_zone' } },
+      { duration: 120, power: { value: 120, units: 'w' } },
+    ] },
+  ] };
+  const steps = flattenWorkout(doc, { zones: z });
+  assert.equal(steps.length, 5);
+  assert.deepEqual(steps[0].power, { lo: 100, hi: 130 });
+  assert.equal(steps[0].zone, 2);   // 115 W: Z2 is 111–150 W
+  assert.deepEqual(steps[1].power, { lo: 181, hi: 210 });
+  assert.equal(steps[1].zone, 4);
+  assert.deepEqual(steps[1].hr, { lo: 156, hi: 165, mode: 'info' });
+  assert.equal(steps[2].zone, 2);
+  assert.match(steps[1].label, /Z4 power \(181–210 W\)/);
+  assert.ok(steps.every((s) => !s.hasTarget && s.intensity));
+  // Without cycling zones the zone still comes from the % FTP defaults
+  assert.equal(flattenWorkout(doc)[0].zone, 2);
 });

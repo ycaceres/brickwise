@@ -1,12 +1,13 @@
 /**
  * Profile tab: threshold pace, LTHR and max HR (from Intervals.icu or by
- * hand), the Intervals.icu account and the threshold test history.
+ * hand), the cycling zones (FTP, power and HR, from Intervals.icu), the
+ * Intervals.icu account and the threshold test history.
  */
 
 import { $ } from '../lib/dom.js';
 import { loadJson, saveJson, remove } from '../lib/storage.js';
 import { formatPace } from '../workouts/steps.js';
-import { zonesFromProfile, profileFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../physiology/zones.js';
+import { zonesFromProfile, profileFromIntervals, rideFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
 import { log } from './debug.js';
 import { selectWorkout, selectedKey, loadWorkouts } from './workouts.js';
@@ -22,14 +23,23 @@ export function setProfile(p, { save = true } = {}) {
   selectWorkout(selectedKey); // recomputes speeds and HR caps
 }
 
+// The account card lives in Profile (p…) and Home (h…), with the same ids after the prefix
+const USER_CARDS = ['p', 'h'];
+
+function setUserNote(text) {
+  for (const c of USER_CARDS) $(`${c}UserNote`).textContent = text;
+}
+
 export async function loadProfileFromIntervals() {
-  $('pUserNote').textContent = 'Loading zones from Intervals.icu…';
+  setUserNote('Loading zones from Intervals.icu…');
   try {
-    setProfile(profileFromIntervals(await intervals.getRunSettings()));
-    $('pUserNote').textContent = '';
+    const { run, ride } = await intervals.getSportSettings();
+    setProfile({ ...profileFromIntervals(run), ride: rideFromIntervals(ride) });
+    setUserNote('');
     log('info', `Intervals.icu profile: threshold ${formatPace(zones.thresholdKmh)}/km, LTHR ${zones.lthr}, max HR ${zones.maxHr}`);
+    log('info', zones.ride ? `Intervals.icu cycling: FTP ${zones.ride.ftp ?? '—'} W, LTHR ${zones.ride.lthr ?? '—'}, max HR ${zones.ride.maxHr ?? '—'}` : 'Intervals.icu: no cycling settings');
   } catch (err) {
-    $('pUserNote').textContent = `Could not read the zones: ${err.message}`;
+    setUserNote(`Could not read the zones: ${err.message}`);
     log('warn', `Intervals.icu zones: ${err.message}`);
   }
 }
@@ -67,8 +77,9 @@ function parsePace(text) {
 
 export function renderProfile() {
   const loggedIn = !!intervals.getApiKey();
-  $('pUser').classList.toggle('hidden', !loggedIn);
+  for (const c of USER_CARDS) $(`${c}User`).classList.toggle('hidden', !loggedIn);
   $('pLogin').classList.toggle('hidden', loggedIn);
+  $('hLogin').classList.toggle('hidden', loggedIn);
   $('pZonesCard').classList.toggle('hidden', !zones?.hr.length && !zones?.pace.length);
 
   // Logged out: the manual form, with the current data
@@ -82,47 +93,60 @@ export function renderProfile() {
   $('pNote').textContent = [src, ...derived].join(' · ');
 
   // Logged in: the account and its data
-  if (loggedIn) {
-    const name = athlete?.name || 'Intervals.icu';
-    $('pName').textContent = name;
-    $('pInitials').textContent = name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-    const img = $('pAvatar');
-    img.classList.toggle('hidden', !athlete?.photo);
-    if (athlete?.photo && img.src !== athlete.photo) {
-      img.onerror = () => img.classList.add('hidden');
-      img.src = athlete.photo;
-    }
-    $('pMeta').textContent = [athlete?.id, [athlete?.city, athlete?.country].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
-    const stats = [
-      ['Threshold pace', zones?.thresholdKmh ? formatPace(zones.thresholdKmh) : null, '/km'],
-      ['LTHR', zones?.lthr, 'bpm'],
-      ['Max HR', zones?.maxHr, 'bpm'],
-      ['Resting HR', athlete?.restingHr, 'bpm'],
-      ['Weight', athlete?.weight ? athlete.weight.toFixed(1) : null, 'kg'],
-    ];
-    $('pStats').replaceChildren(...stats.map(([label, value, unit]) => {
-      const div = document.createElement('div');
-      const l = document.createElement('span');
-      l.textContent = label;
-      const v = document.createElement('strong');
-      v.textContent = value ?? '—';
-      if (value != null) {
-        const u = document.createElement('small');
-        u.textContent = ` ${unit}`;
-        v.appendChild(u);
-      }
-      div.append(l, v);
-      return div;
-    }));
-  }
+  if (loggedIn) for (const c of USER_CARDS) renderUserCard(c);
 
   renderZoneTable();
-  renderZones($('wZones'));
+  renderRideZones();
   renderTests();
+}
+
+/** Account card (prefix 'p' in Profile, 'h' in Home): name, photo, place and wellness. */
+function renderUserCard(c) {
+  const name = athlete?.name || 'Intervals.icu';
+  $(`${c}Name`).textContent = name;
+  $(`${c}Initials`).textContent = name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+  const img = $(`${c}Avatar`);
+  img.classList.toggle('hidden', !athlete?.photo);
+  if (athlete?.photo && img.src !== athlete.photo) {
+    img.onerror = () => img.classList.add('hidden');
+    img.src = athlete.photo;
+  }
+  $(`${c}Meta`).textContent = [athlete?.id, [athlete?.city, athlete?.country].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
+  const weight = wellness?.weight?.value ?? athlete?.weight;
+  const sleepMin = wellness?.sleepSecs?.value ? Math.round(wellness.sleepSecs.value / 60) : null;
+  const stats = [
+    ['Weight', weight ? weight.toFixed(1) : null, 'kg', wellness?.weight?.date],
+    ['Sleep', sleepMin ? `${Math.floor(sleepMin / 60)}:${String(sleepMin % 60).padStart(2, '0')}` : null,
+      wellness?.sleepScore?.value != null ? `h · score ${wellness.sleepScore.value}` : 'h', wellness?.sleepSecs?.date],
+    ['Resting HR', wellness?.restingHr?.value ?? athlete?.restingHr, 'bpm', wellness?.restingHr?.date],
+    ['HRV', wellness?.hrv?.value != null ? Math.round(wellness.hrv.value) : null, 'ms', wellness?.hrv?.date],
+  ];
+  $(`${c}Stats`).replaceChildren(...stats.map(([label, value, unit, date]) => {
+    const div = document.createElement('div');
+    if (date) div.title = `Intervals.icu wellness, ${date}`;
+    const l = document.createElement('span');
+    l.textContent = label;
+    const v = document.createElement('strong');
+    v.textContent = value ?? '—';
+    if (value != null) {
+      const u = document.createElement('small');
+      u.textContent = ` ${unit}`;
+      v.appendChild(u);
+    }
+    div.append(l, v);
+    return div;
+  }));
+}
+
+/** "LTHR 168 bpm @ 6:10 min/km · max HR 185 bpm", skipping what is missing. */
+function zoneSummary(lthr, at, maxHr) {
+  const threshold = lthr ? `LTHR ${lthr} bpm${at ? ` @ ${at}` : ''}` : at ? `Threshold ${at}` : null;
+  return [threshold, maxHr ? `max HR ${maxHr} bpm` : null].filter(Boolean).join(' · ');
 }
 
 /** Profile zone table: HR and pace side by side. */
 function renderZoneTable() {
+  $('pRunSummary').textContent = zoneSummary(zones?.lthr, zones?.thresholdKmh ? `${formatPace(zones.thresholdKmh)} min/km` : null, zones?.maxHr);
   const rows = [];
   const n = Math.max(zones?.hr.length || 0, zones?.pace.length || 0);
   for (let i = 0; i < n; i++) {
@@ -145,9 +169,39 @@ function renderZoneTable() {
   $('pZones').replaceChildren(...rows);
 }
 
-function renderZones(box) {
+/** Profile: cycling zones, power and HR side by side. */
+function renderRideZones() {
+  const ride = zones?.ride;
+  $('pRideCard').classList.toggle('hidden', !ride?.power.length && !ride?.hr.length);
+  if (!ride) return;
+  const rows = [];
+  const n = Math.max(ride.power.length, ride.hr.length);
+  for (let i = 0; i < n; i++) {
+    const p = ride.power[i];
+    const h = ride.hr[i];
+    const tr = document.createElement('tr');
+    const name = document.createElement('td');
+    const sw = document.createElement('i');
+    sw.style.background = `var(--zone-${Math.min(7, i + 1)})`;
+    name.append(sw, `Z${i + 1}`);
+    name.title = p?.name || h?.name || '';
+    const hr = document.createElement('td');
+    hr.textContent = h ? (h.lo ? `${h.lo}–${h.hi}` : `≤ ${h.hi}`) : '—';
+    const power = document.createElement('td');
+    power.textContent = p ? (!p.lo ? `≤ ${p.hi}` : Number.isFinite(p.hi) ? `${p.lo}–${p.hi}` : `≥ ${p.lo}`) : '—';
+    tr.append(name, hr, power);
+    rows.push(tr);
+  }
+  $('pRideZones').replaceChildren(...rows);
+  $('pRideSummary').textContent = zoneSummary(ride.lthr, ride.ftp ? `${ride.ftp} W` : null, ride.maxHr);
+  const r = profile?.ride;
+  $('pRideNote').textContent = r?.indoorFtp && r.indoorFtp !== r.ftp ? `Power from the indoor FTP (${r.indoorFtp} W; outdoor ${r.ftp ?? '—'} W).` : '';
+}
+
+/** Compact zone list (Workouts tab): HR plus pace, or power for a bike workout's zones. */
+export function renderZones(box, z = zones) {
   box.replaceChildren();
-  if (!zones) return;
+  if (!z) return;
   const row = (title, items) => {
     if (!items.length) return;
     const div = document.createElement('div');
@@ -163,8 +217,9 @@ function renderZones(box) {
     }
     box.appendChild(div);
   };
-  row('HR', zones.hr.map((h) => [h.z, h.lo ? `${h.lo}–${h.hi}` : `≤${h.hi}`]));
-  row('Pace', zones.pace.map((p) => [p.z,
+  row('HR', z.hr.map((h) => [h.z, h.lo ? `${h.lo}–${h.hi}` : `≤${h.hi}`]));
+  row('Power', (z.power || []).map((p) => [p.z, !p.lo ? `≤${p.hi}` : Number.isFinite(p.hi) ? `${p.lo}–${p.hi}` : `≥${p.lo}`]));
+  row('Pace', z.pace.map((p) => [p.z,
     !p.lo ? `>${formatPace(p.hi)}` : Number.isFinite(p.hi) ? `${formatPace(p.hi)}–${formatPace(p.lo)}` : `<${formatPace(p.lo)}`]));
 }
 
@@ -179,6 +234,20 @@ export async function refreshAthlete() {
   return a;
 }
 
+// Wellness (weight, resting HR, HRV, sleep): refreshed on every visit
+let wellness = loadJson('wellness');
+const WELLNESS_DAYS = 7;
+
+export async function refreshWellness() {
+  const day = (offset) => {
+    const d = new Date(Date.now() - offset * 86400000);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  };
+  wellness = await intervals.getWellness(day(WELLNESS_DAYS - 1), day(0));
+  saveJson('wellness', wellness);
+  renderProfile();
+}
+
 $('pKeySave').onclick = async () => {
   const key = $('pKey').value.trim();
   if (!key) return;
@@ -189,6 +258,7 @@ $('pKeySave').onclick = async () => {
     $('pKey').value = '';
     renderKeyState();
     setAthlete(a);
+    refreshWellness().catch((err) => log('warn', `Intervals.icu wellness: ${err.message}`));
     log('info', `Intervals.icu: signed in as ${a.name}`);
     loadWorkouts();
     loadProfileFromIntervals(); // the account wins: replaces the profile, even a manual one
@@ -198,24 +268,31 @@ $('pKeySave').onclick = async () => {
   }
 };
 
-$('pRefresh').onclick = async () => {
+const refreshAll = async () => {
   try {
     await refreshAthlete();
+    await refreshWellness();
     await loadProfileFromIntervals();
     loadWorkouts();
   } catch (err) {
-    $('pUserNote').textContent = `Could not refresh: ${err.message}`;
+    setUserNote(`Could not refresh: ${err.message}`);
   }
 };
 
-$('pLogout').onclick = () => {
+const signOut = () => {
   intervals.setApiKey('');
   setAthlete(null);
+  wellness = null;
+  remove('wellness');
   // The data stays as a starting point for the manual profile
   if (profile) setProfile({ ...profile, source: 'manual' });
   log('info', 'Intervals.icu: signed out');
   loadWorkouts();
 };
+for (const c of USER_CARDS) {
+  $(`${c}Refresh`).onclick = refreshAll;
+  $(`${c}Logout`).onclick = signOut;
+}
 $('pSave').onclick = saveManualProfile;
 
 // Threshold test history (the tests are run and analyzed in the session)

@@ -7,7 +7,7 @@
  */
 
 import { LIMITS } from '../devices/treadmill/exp5i-protocol.js';
-import { paceZoneOf, hrTargetRange, hrZoneOf, DEFAULT_PACE_PCT } from '../physiology/zones.js';
+import { paceZoneOf, hrTargetRange, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_POWER_PCT } from '../physiology/zones.js';
 
 const MS_TO_KMH = 3.6;
 
@@ -44,6 +44,13 @@ function zonePct(z) {
  * profile: it draws the workout's shape even before steps have a speed.
  */
 function stepIntensity(step) {
+  const p = step.power;
+  if (p && (p.start ?? p.value) != null) {
+    const a = p.start ?? p.value;
+    const b = p.end ?? p.value;
+    if (p.units === '%ftp') return [a, b];
+    if (p.units === 'power_zone') return [powerZonePct(a), powerZonePct(b)];
+  }
   const t = step.pace || step.hr;
   if (!t) return null;
   const a = t.start ?? t.value;
@@ -55,6 +62,52 @@ function stepIntensity(step) {
   if (t.units === '%lthr') return [a, b];
   if (t.units === '%hr') return [a * 1.1, b * 1.1];
   return null;
+}
+
+/** Middle of a default power zone, in % of FTP. */
+function powerZonePct(z) {
+  const i = Math.min(DEFAULT_POWER_PCT.length, Math.max(1, Math.round(z))) - 1;
+  const lo = i ? DEFAULT_POWER_PCT[i - 1] : 40;
+  const hi = DEFAULT_POWER_PCT[i] >= 500 ? lo + 30 : DEFAULT_POWER_PCT[i];
+  return (lo + hi) / 2;
+}
+
+/**
+ * Power target of a bike step in watts { lo, hi }, from the cycling zones
+ * (zones.power, zones.ftp) or, without them, what Intervals.icu resolved.
+ */
+function powerRange(step, zones) {
+  const p = step.power;
+  if (!p) return null;
+  const a = p.start ?? p.value;
+  const b = p.end ?? p.value;
+  if (a != null) {
+    if (p.units === 'w') return { lo: Math.round(a), hi: Math.round(b) };
+    if (p.units === '%ftp' && zones?.ftp) return { lo: Math.round((a / 100) * zones.ftp), hi: Math.round((b / 100) * zones.ftp) };
+    if (p.units === 'power_zone' && zones?.power?.length) {
+      const zl = zones.power[Math.round(a) - 1];
+      const zh = zones.power[Math.round(b) - 1];
+      if (zl && zh) return { lo: zl.lo, hi: Number.isFinite(zh.hi) ? zh.hi : Math.round(zh.lo * 1.2) };
+    }
+  }
+  const r = step._power;
+  if (r && (r.start ?? r.value) != null) return { lo: Math.round(r.start ?? r.value), hi: Math.round(r.end ?? r.value) };
+  return null;
+}
+
+/** Power zone (1..n) of a wattage. */
+function powerZoneOf(zones, w) {
+  if (!zones?.power?.length || w == null) return null;
+  const z = zones.power.find((p) => w <= p.hi);
+  return z ? z.z : zones.power.length;
+}
+
+function describePower(power, watts) {
+  if (!power) return '';
+  const w = watts ? ` (${watts.lo === watts.hi ? watts.lo : `${watts.lo}–${watts.hi}`} W)` : '';
+  if (power.units === 'power_zone') return `Z${power.start != null ? `${power.start}–${power.end}` : power.value} power${w}`;
+  if (power.units === '%ftp') return `${power.start != null ? `${power.start}–${power.end}` : power.value}% FTP${w}`;
+  return watts ? `${watts.lo === watts.hi ? watts.lo : `${watts.lo}–${watts.hi}`} W` : '';
 }
 
 /** Incline written in the step text, e.g. "incline 2%", "2% incl", "inclinación 3". */
@@ -121,8 +174,20 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
       let hr = null;
       let hrLabel = '';
       let zone = null;
+      // Bike steps: power target in watts, colored by power zone
+      const power = powerRange(step, zones);
+      const powerLabel = describePower(step.power, power);
+      if (power) zone = powerZoneOf(zones, (power.lo + power.hi) / 2);
+      else if (step.power?.units === 'power_zone') zone = Math.round(step.power.start ?? step.power.value) || null;
+      else if (step.power?.units === '%ftp') {
+        const pct = Math.max(step.power.start ?? step.power.value, step.power.end ?? step.power.value);
+        zone = DEFAULT_POWER_PCT.findIndex((top) => pct <= top) + 1 || DEFAULT_POWER_PCT.length;
+      }
       const hrRange = hrTargetRange(zones, step.hr, step._hr);
-      if (hrRange) {
+      if (step.power) {
+        // HR on a bike step is only shown: no speed to steer
+        if (hrRange) hr = { ...hrRange, mode: 'info' };
+      } else if (hrRange) {
         // lockSpeed: HR is only the step's goal; speed is left alone
         const byIncline = step.hrBy === 'incline' && !step.lockSpeed;
         hr = { ...hrRange, mode: step.lockSpeed ? 'info' : 'target', ...(byIncline && { by: 'incline' }) };
@@ -154,7 +219,7 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
 
       const inclineText = parseIncline(step.text);
       const kind = step.warmup ? 'Warm-up' : step.cooldown ? 'Cooldown' : 'Work';
-      const target = hrLabel || describePace(step.pace) ||
+      const target = powerLabel || hrLabel || describePace(step.pace) ||
         (speedStart != null ? `pace ${formatPace(speedStart)}/km` : step.hr ? 'HR target' : 'free');
 
       out.push({
@@ -171,8 +236,10 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
         warmup: !!step.warmup,
         test: !!step.test,
         hr,
-        intensity: stepIntensity(step),
-        zone,   // pace zone (or HR zone for an HR target), to color the chart
+        power,  // bike steps: { lo, hi } W
+        // Watts without a % become % of FTP, so the chart can draw the shape
+        intensity: stepIntensity(step) ?? (power && zones?.ftp ? [(power.lo / zones.ftp) * 100, (power.hi / zones.ftp) * 100] : null),
+        zone,   // pace zone (HR zone for an HR target, power zone on a bike), to color the chart
       });
     });
   };

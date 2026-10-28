@@ -10,6 +10,14 @@
 const API = 'https://intervals.icu/api/v1/athlete/0';
 const KEY_STORAGE = 'brickwise.intervalsKey';
 const RUN_TYPES = new Set(['Run', 'VirtualRun', 'TrailRun']);
+const RIDE_TYPES = new Set(['Ride', 'VirtualRide', 'GravelRide', 'MountainBikeRide']);
+
+/** 'run' | 'ride' | null for an Intervals.icu activity type. */
+export function sportOf(type) {
+  if (RUN_TYPES.has(type)) return 'run';
+  if (RIDE_TYPES.has(type)) return 'ride';
+  return null;
+}
 
 export function getApiKey() {
   try { return localStorage.getItem(KEY_STORAGE) || ''; } catch { return ''; }
@@ -56,22 +64,49 @@ export async function getAthlete() {
   };
 }
 
-/** Planned runs between two dates (YYYY-MM-DD), with resolved steps. */
+/**
+ * Latest wellness values of the last days (Intervals.icu keeps one record per
+ * day; watches fill weight, resting HR, HRV and sleep at different times).
+ * Each field comes from the most recent day that has it.
+ */
+export async function getWellness(oldest, newest) {
+  const days = await request('/wellness', { query: { oldest, newest } });
+  const latest = (k) => {
+    const d = [...(days || [])].sort((a, b) => b.id.localeCompare(a.id)).find((x) => x[k] != null);
+    return d ? { value: d[k], date: d.id } : null;
+  };
+  return {
+    weight: latest('weight'),
+    restingHr: latest('restingHR'),
+    hrv: latest('hrv'),
+    sleepSecs: latest('sleepSecs'),
+    sleepScore: latest('sleepScore'),
+  };
+}
+
+/** Planned runs and rides between two dates (YYYY-MM-DD), with resolved steps. */
 export async function getWorkouts(oldest, newest) {
   const events = await request('/events', { query: { oldest, newest, category: 'WORKOUT', resolve: 'true' } });
   return (events || [])
-    .filter((e) => RUN_TYPES.has(e.type) && e.workout_doc?.steps?.length)
+    .filter((e) => sportOf(e.type) && e.workout_doc?.steps?.length)
     .map(({ id, name, start_date_local, type, description, workout_doc }) =>
-      ({ id, name, start_date_local, type, description, workout_doc }));
+      ({ id, name, start_date_local, type, sport: sportOf(type), description, workout_doc }));
 }
 
-/** Running HR and pace zones (Run sport-settings). */
-export async function getRunSettings() {
+const RUN_KEYS = ['lthr', 'max_hr', 'hr_zones', 'hr_zone_names', 'threshold_pace', 'pace_zones', 'pace_zone_names'];
+const RIDE_KEYS = ['ftp', 'indoor_ftp', 'power_zones', 'power_zone_names', 'lthr', 'max_hr', 'hr_zones', 'hr_zone_names'];
+
+/**
+ * Zones from the sport-settings: `run` (HR and pace, required) and `ride`
+ * (FTP, power and HR; null if the athlete has no cycling settings).
+ */
+export async function getSportSettings() {
   const settings = await request('/sport-settings');
-  const run = (settings || []).find((s) => (s.types || []).some((t) => RUN_TYPES.has(t)));
+  const find = (types) => (settings || []).find((s) => (s.types || []).some((t) => types.has(t)));
+  const pick = (s, keys) => (s ? Object.fromEntries(keys.map((k) => [k, s[k]])) : null);
+  const run = find(RUN_TYPES);
   if (!run) throw new Error('no running zones in Intervals.icu');
-  const keys = ['lthr', 'max_hr', 'hr_zones', 'hr_zone_names', 'threshold_pace', 'pace_zones', 'pace_zone_names'];
-  return Object.fromEntries(keys.map((k) => [k, run[k]]));
+  return { run: pick(run, RUN_KEYS), ride: pick(find(RIDE_TYPES), RIDE_KEYS) };
 }
 
 /** Uploads a TCX as an activity. `meta`: name, description, external_id, paired_event_id. */

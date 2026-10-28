@@ -11,6 +11,7 @@
   <header>
     <h1>Brickwise</h1>
     <nav class="tabs" role="tablist">
+      <button role="tab" id="nav-home" aria-selected="false" aria-label="Home" title="Home"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button>
       <button role="tab" id="nav-profile" aria-selected="false" aria-label="Profile" title="Profile"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></button>
       <button role="tab" id="nav-workouts" aria-selected="false" aria-label="Workouts" title="Workouts"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4.5" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg></button>
       <button role="tab" id="nav-train" aria-selected="true" aria-label="Train" title="Train"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="15.5" cy="4.5" r="2"/><path d="M14 8.5l-3 5.5M7.5 10.5l3-2.5h3.5l2.5 3.5M11 14l3.5 2.5-1 4.5M11 14l-2.5 4H5"/></svg></button>
@@ -29,6 +30,49 @@
     </div>
   </header>
 
+  <!-- ===================== Home ===================== -->
+  <!-- Mobile-first: the account, then the planned workouts. Some of it repeats
+       Profile and Workouts while the layout moves over. -->
+  <div id="tab-home" class="tab hidden">
+    <section class="card hidden" id="hUser">
+      <div class="user-head">
+        <span class="avatar" aria-hidden="true"><span id="hInitials"></span><img id="hAvatar" alt="" class="hidden"></span>
+        <div class="user-id">
+          <div class="user-name" id="hName">Intervals.icu</div>
+          <div class="note" id="hMeta"></div>
+        </div>
+        <div class="row">
+          <button class="icon" id="hRefresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></svg></button>
+          <button class="icon danger" id="hLogout" aria-label="Sign out" title="Sign out"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5H14"/><path d="M10 12h10M16.5 8.5L20 12l-3.5 3.5"/></svg></button>
+        </div>
+      </div>
+      <div class="stats num" id="hStats"></div>
+      <div class="note" id="hUserNote"></div>
+    </section>
+    <section class="card hidden" id="hLogin">
+      <h2>Intervals.icu</h2>
+      <p class="note">Sign in with your API key in <button class="link" id="hGoProfile">Profile</button> to see your account and planned workouts.</p>
+    </section>
+
+    <section class="card">
+      <h2>Planned workouts</h2>
+      <div class="home-filters">
+        <label class="field">Day
+          <input type="date" id="hDate">
+        </label>
+        <label class="field">Sport
+          <select id="hSport">
+            <option value="all">All</option>
+            <option value="run">🏃 Run</option>
+            <option value="ride">🚴 Ride</option>
+          </select>
+        </label>
+        <button class="icon" id="hReload" aria-label="Reload the day" title="Reload the day"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></svg></button>
+      </div>
+      <div class="wlist" id="hPlanned"></div>
+    </section>
+  </div>
+
   <!-- ===================== Profile ===================== -->
   <div id="tab-profile" class="tab hidden">
     <!-- With an API key: the Intervals.icu account -->
@@ -40,8 +84,8 @@
           <div class="note" id="pMeta"></div>
         </div>
         <div class="row">
-          <button id="pRefresh">Refresh</button>
-          <button id="pLogout" class="danger">Sign out</button>
+          <button class="icon" id="pRefresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v4.5H15"/></svg></button>
+          <button class="icon danger" id="pLogout" aria-label="Sign out" title="Sign out"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v12a1.5 1.5 0 0 0 1.5 1.5H14"/><path d="M10 12h10M16.5 8.5L20 12l-3.5 3.5"/></svg></button>
         </div>
       </div>
       <div class="stats num" id="pStats"></div>
@@ -81,11 +125,22 @@
     </div>
 
     <section class="card hidden" id="pZonesCard">
-      <h2>Zones</h2>
+      <h2>Running zones</h2>
       <table class="ztable num">
         <thead><tr><th>Zone</th><th>HR (bpm)</th><th>Pace (min/km)</th></tr></thead>
         <tbody id="pZones"></tbody>
       </table>
+      <div class="zsummary num" id="pRunSummary"></div>
+    </section>
+
+    <section class="card hidden" id="pRideCard">
+      <h2>Cycling zones</h2>
+      <table class="ztable num">
+        <thead><tr><th>Zone</th><th>HR (bpm)</th><th>Power (W)</th></tr></thead>
+        <tbody id="pRideZones"></tbody>
+      </table>
+      <div class="zsummary num" id="pRideSummary"></div>
+      <div class="note" id="pRideNote" style="margin-top: 4px"></div>
     </section>
 
     <section class="card hidden" id="pTestsCard">
@@ -147,7 +202,7 @@
         <div class="zones num" id="wZones"></div>
         <div class="steps-wrap" style="margin-top: 10px">
           <table>
-            <thead><tr><th>#</th><th>Step</th><th class="r">Dur.</th><th class="r">km/h</th><th class="r">Pace</th><th class="r">%</th></tr></thead>
+            <thead id="wStepsHead"><tr><th>#</th><th>Step</th><th class="r">Dur.</th><th class="r">km/h</th><th class="r">Pace</th><th class="r">%</th></tr></thead>
             <tbody id="wSteps"></tbody>
           </table>
         </div>

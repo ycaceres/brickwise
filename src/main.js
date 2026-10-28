@@ -6,7 +6,7 @@ import { log } from './ui/debug.js';
 import { tick } from './session/runner.js';
 import { updateChart, updateControls } from './ui/train.js';
 import { loadWorkouts, updatePreview, initWorkouts } from './ui/workouts.js';
-import { athlete, setProfile, loadProfileFromIntervals, renderProfile, refreshAthlete } from './ui/profile.js';
+import { athlete, setProfile, loadProfileFromIntervals, renderProfile, refreshAthlete, refreshWellness } from './ui/profile.js';
 
 const TICK_MS = 250; // how often the session advances and the screen refreshes
 
@@ -15,10 +15,10 @@ const TICK_MS = 250; // how often the session advances and the screen refreshes
 // ---------------------------------------------------------------------------
 // The Debug tab (console state and log) only shows with ?debug=true
 const DEBUG = new URLSearchParams(location.search).get('debug') === 'true';
-const TABS = DEBUG ? ['profile', 'workouts', 'train', 'debug'] : ['profile', 'workouts', 'train'];
+const TABS = ['home', 'profile', 'workouts', 'train', ...(DEBUG ? ['debug'] : [])];
 $('nav-debug').classList.toggle('hidden', !DEBUG);
 function showTab(name) {
-  if (!TABS.includes(name)) name = 'train';
+  if (!TABS.includes(name)) name = 'home';
   for (const t of TABS) {
     $(`tab-${t}`).classList.toggle('hidden', t !== name);
     $(`nav-${t}`).setAttribute('aria-selected', String(t === name));
@@ -31,6 +31,7 @@ function showTab(name) {
 for (const t of TABS) $(`nav-${t}`).onclick = () => showTab(t);
 $('btnGoTrain').onclick = () => showTab('train');
 $('pillIntervals').onclick = () => showTab('profile');
+$('hGoProfile').onclick = () => showTab('profile');
 
 // ---------------------------------------------------------------------------
 // Startup
@@ -40,10 +41,12 @@ $('pillIntervals').onclick = () => showTab('profile');
   const tab = loadText('tab');
   initWorkouts();
   if (saved?.pacePct) setProfile(saved, { save: false });
-  else if (intervals.getApiKey()) loadProfileFromIntervals();
+  // Without a stored profile, or one from before the cycling zones: ask Intervals.icu
+  if (intervals.getApiKey() && (!saved?.pacePct || (saved.source === 'intervals' && !('ride' in saved)))) loadProfileFromIntervals();
   renderProfile();
   if (intervals.getApiKey() && !athlete) refreshAthlete().catch((err) => log('warn', `Intervals.icu: ${err.message}`));
-  showTab(tab || 'train');
+  if (intervals.getApiKey()) refreshWellness().catch((err) => log('warn', `Intervals.icu wellness: ${err.message}`));
+  showTab(tab || 'home');
   every(TICK_MS, tick);
   updateControls();
   loadWorkouts();

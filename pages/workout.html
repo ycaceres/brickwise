@@ -1,0 +1,33 @@
+<!-- Workout (no nav button: opened from a workout in Home or the library) -->
+<div id="tab-workout" class="tab hidden">
+  <section class="card">
+    <div class="workout-title" id="wName">No workout: manual control</div>
+    <div class="workout-desc" id="wDesc"></div>
+    <bw-chart id="wPreview" compact style="margin-top: 12px"></bw-chart>
+    <div class="row" style="margin-top: 12px">
+      <label class="field">Pace within the zone
+        <select id="wPosition">
+          <option value="low">Low (slower)</option>
+          <option value="mid" selected>Mid</option>
+          <option value="high">High (faster)</option>
+        </select>
+      </label>
+      <label class="field">Base incline (%)
+        <input type="number" id="wIncline" min="0" max="10" step="0.5" value="1" style="width: 90px">
+      </label>
+      <label class="row note" id="wHrAdjustRow" style="align-self: end; min-height: 40px" title="Long steps follow their HR zone instead of the pace">
+        <input type="checkbox" id="wHrAdjust" checked style="min-height: auto"> Adjust speed by HR
+      </label>
+    </div>
+    <div class="steps-wrap" style="margin-top: 10px">
+      <table>
+        <thead id="wStepsHead"><tr><th>#</th><th>Step</th><th class="r">Dur.</th><th class="r">km/h</th><th class="r">Pace</th><th class="r">%</th></tr></thead>
+        <tbody id="wSteps"></tbody>
+      </table>
+    </div>
+    <div class="note" id="wTotal" style="margin-top: 8px"></div>
+    <div class="row" style="margin-top: 12px">
+      <button class="primary" id="btnGoTrain">Go train</button>
+    </div>
+  </section>
+</div>

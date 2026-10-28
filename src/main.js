@@ -4,6 +4,7 @@ import './components/zone-table.js';
 import './components/workout-list.js';
 import './components/chart.js';
 import { every } from './lib/timer.js';
+import { loadPages } from './lib/pages.js';
 import * as intervals from './services/intervals.js';
 import { loadJson, loadText } from './lib/storage.js';
 import { initDebug, log } from './ui/debug.js';
@@ -20,6 +21,14 @@ const TICK_MS = 250; // how often the session advances and the screen refreshes
 // ---------------------------------------------------------------------------
 // Startup
 // ---------------------------------------------------------------------------
+// Without the pages there is no app: the same notice as a module that fails to load
+try {
+  await loadPages();
+} catch (err) {
+  window.appLoadFailed?.();
+  throw err;
+}
+
 {
   const saved = loadJson('profile');
   const tab = loadText('tab');

@@ -1,4 +1,5 @@
 import './components/icon.js';
+import './components/user-card.js';
 import { every } from './lib/timer.js';
 import * as intervals from './services/intervals.js';
 import { $ } from './lib/dom.js';

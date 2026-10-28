@@ -44,21 +44,7 @@
   <!-- Mobile-first: the account, then the planned workouts. Some of it repeats
        Profile and Workouts while the layout moves over. -->
   <div id="tab-home" class="tab hidden">
-    <section class="card hidden" id="hUser">
-      <div class="user-head">
-        <span class="avatar" aria-hidden="true"><span id="hInitials"></span><img id="hAvatar" alt="" class="hidden"></span>
-        <div class="user-id">
-          <div class="user-name" id="hName">Intervals.icu</div>
-          <div class="note" id="hMeta"></div>
-        </div>
-        <div class="row">
-          <button class="icon" id="hRefresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><bw-icon name="refresh"></bw-icon></button>
-          <button class="icon danger" id="hLogout" aria-label="Sign out" title="Sign out"><bw-icon name="signout"></bw-icon></button>
-        </div>
-      </div>
-      <div class="stats num" id="hStats"></div>
-      <div class="note" id="hUserNote"></div>
-    </section>
+    <bw-user-card class="card hidden"></bw-user-card>
     <section class="card hidden" id="hLogin">
       <h2>Intervals.icu</h2>
       <p class="note">Sign in with your API key in <button class="link" id="hGoProfile">Profile</button> to see your account and planned workouts.</p>
@@ -108,21 +94,7 @@
   <!-- ===================== Profile ===================== -->
   <div id="tab-profile" class="tab hidden">
     <!-- With an API key: the Intervals.icu account -->
-    <section class="card hidden" id="pUser">
-      <div class="user-head">
-        <span class="avatar" aria-hidden="true"><span id="pInitials"></span><img id="pAvatar" alt="" class="hidden"></span>
-        <div class="user-id">
-          <div class="user-name" id="pName">Intervals.icu</div>
-          <div class="note" id="pMeta"></div>
-        </div>
-        <div class="row">
-          <button class="icon" id="pRefresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><bw-icon name="refresh"></bw-icon></button>
-          <button class="icon danger" id="pLogout" aria-label="Sign out" title="Sign out"><bw-icon name="signout"></bw-icon></button>
-        </div>
-      </div>
-      <div class="stats num" id="pStats"></div>
-      <div class="note" id="pUserNote"></div>
-    </section>
+    <bw-user-card class="card hidden"></bw-user-card>
 
     <!-- Without an API key: sign in with Intervals.icu or enter the data by hand -->
     <div class="layout" id="pLogin">

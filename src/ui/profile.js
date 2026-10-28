@@ -23,11 +23,11 @@ export function setProfile(p, { save = true } = {}) {
   selectWorkout(selectedKey); // recomputes speeds and HR caps
 }
 
-// The account card lives in Profile (p…) and Home (h…), with the same ids after the prefix
-const USER_CARDS = ['p', 'h'];
+// The account card, in Home and Profile
+const userCards = () => document.querySelectorAll('bw-user-card');
 
 function setUserNote(text) {
-  for (const c of USER_CARDS) $(`${c}UserNote`).textContent = text;
+  for (const card of userCards()) card.note = text;
 }
 
 export async function loadProfileFromIntervals() {
@@ -77,7 +77,7 @@ function parsePace(text) {
 
 export function renderProfile() {
   const loggedIn = !!intervals.getApiKey();
-  for (const c of USER_CARDS) $(`${c}User`).classList.toggle('hidden', !loggedIn);
+  for (const card of userCards()) card.classList.toggle('hidden', !loggedIn);
   $('pLogin').classList.toggle('hidden', loggedIn);
   $('hLogin').classList.toggle('hidden', loggedIn);
   $('pZonesCard').classList.toggle('hidden', !zones?.hr.length && !zones?.pace.length);
@@ -93,49 +93,11 @@ export function renderProfile() {
   $('pNote').textContent = [src, ...derived].join(' · ');
 
   // Logged in: the account and its data
-  if (loggedIn) for (const c of USER_CARDS) renderUserCard(c);
+  if (loggedIn) for (const card of userCards()) card.data = { athlete, wellness };
 
   renderZoneTable();
   renderRideZones();
   renderTests();
-}
-
-/** Account card (prefix 'p' in Profile, 'h' in Home): name, photo, place and wellness. */
-function renderUserCard(c) {
-  const name = athlete?.name || 'Intervals.icu';
-  $(`${c}Name`).textContent = name;
-  $(`${c}Initials`).textContent = name.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
-  const img = $(`${c}Avatar`);
-  img.classList.toggle('hidden', !athlete?.photo);
-  if (athlete?.photo && img.src !== athlete.photo) {
-    img.onerror = () => img.classList.add('hidden');
-    img.src = athlete.photo;
-  }
-  $(`${c}Meta`).textContent = [athlete?.id, [athlete?.city, athlete?.country].filter(Boolean).join(', ')].filter(Boolean).join(' · ');
-  const weight = wellness?.weight?.value ?? athlete?.weight;
-  const sleepMin = wellness?.sleepSecs?.value ? Math.round(wellness.sleepSecs.value / 60) : null;
-  const stats = [
-    ['Weight', weight ? weight.toFixed(1) : null, 'kg', wellness?.weight?.date],
-    ['Sleep', sleepMin ? `${Math.floor(sleepMin / 60)}:${String(sleepMin % 60).padStart(2, '0')}` : null,
-      wellness?.sleepScore?.value != null ? `h · score ${wellness.sleepScore.value}` : 'h', wellness?.sleepSecs?.date],
-    ['Resting HR', wellness?.restingHr?.value ?? athlete?.restingHr, 'bpm', wellness?.restingHr?.date],
-    ['HRV', wellness?.hrv?.value != null ? Math.round(wellness.hrv.value) : null, 'ms', wellness?.hrv?.date],
-  ];
-  $(`${c}Stats`).replaceChildren(...stats.map(([label, value, unit, date]) => {
-    const div = document.createElement('div');
-    if (date) div.title = `Intervals.icu wellness, ${date}`;
-    const l = document.createElement('span');
-    l.textContent = label;
-    const v = document.createElement('strong');
-    v.textContent = value ?? '—';
-    if (value != null) {
-      const u = document.createElement('small');
-      u.textContent = ` ${unit}`;
-      v.appendChild(u);
-    }
-    div.append(l, v);
-    return div;
-  }));
 }
 
 /** "LTHR 168 bpm @ 6:10 min/km · max HR 185 bpm", skipping what is missing. */
@@ -263,10 +225,8 @@ const signOut = () => {
   log('info', 'Intervals.icu: signed out');
   loadWorkouts();
 };
-for (const c of USER_CARDS) {
-  $(`${c}Refresh`).onclick = refreshAll;
-  $(`${c}Logout`).onclick = signOut;
-}
+document.addEventListener('bw-refresh', refreshAll);
+document.addEventListener('bw-signout', signOut);
 $('pSave').onclick = saveManualProfile;
 
 // Threshold test history (the tests are run and analyzed in the session)

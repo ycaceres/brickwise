@@ -4,7 +4,7 @@
  * wire them afterwards (their init functions).
  */
 
-export const PAGE_FILES = ['home', 'config', 'profile', 'workouts', 'workout', 'train', 'debug'];
+export const PAGE_FILES = ['home', 'config', 'profile', 'workouts', 'workout', 'train', 'ride', 'debug'];
 
 export async function loadPages(main = document.querySelector('main')) {
   const html = await Promise.all(PAGE_FILES.map(async (name) => {

@@ -7,6 +7,7 @@ const ICONS = {
   home: '<path d="M4 11l8-6.5 8 6.5"/><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>',
   library: '<rect x="5" y="4.5" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM8.5 11h7M8.5 14.5h7M8.5 18h4"/>',
   train: '<circle cx="15.5" cy="4.5" r="2"/><path d="M14 8.5l-3 5.5M7.5 10.5l3-2.5h3.5l2.5 3.5M11 14l3.5 2.5-1 4.5M11 14l-2.5 4H5"/>',
+  ride: '<circle cx="6" cy="16.5" r="3.5"/><circle cx="18" cy="16.5" r="3.5"/><circle cx="14.5" cy="4.5" r="1.5"/><path d="M6 16.5l3.5-6.5h5l3.5 6.5M9.5 10l3 6.5h-6.5M12 7.5l2.5 2.5"/>',
   debug: '<path d="M9 7.5a3 3 0 0 1 6 0"/><rect x="7" y="8.5" width="10" height="12" rx="5"/><path d="M12 10v10M3.5 13H7M17 13h3.5M4.5 8.5L7 10M19.5 8.5L17 10M4.5 19l2.7-1.8M19.5 19l-2.7-1.8"/>',
   settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>',

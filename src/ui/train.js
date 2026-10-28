@@ -53,7 +53,7 @@ export function planTimeline(planOnly = false) {
       }
     }
     out.push({
-      t0, t1, speedStart: step.speedStart, speedEnd: step.speedEnd, incline: step.incline,
+      t0, t1, speedStart: step.speedStart, speedEnd: step.speedEnd, power: step.power, ramp: step.ramp, incline: step.incline,
       zone: step.zone, hr: step.hr, intensity: step.intensity,
     });
     t = t1;
@@ -162,7 +162,7 @@ function activityName() {
 // ---------------------------------------------------------------------------
 /** Startup: the session buttons, the speed and incline buttons, and export. */
 export function initTrain() {
-  document.querySelectorAll('[data-speed]').forEach((btn) => {
+  $('tab-train').querySelectorAll('[data-speed]').forEach((btn) => {
     btn.onclick = () => {
       const delta = parseFloat(btn.dataset.speed);
       if (currentStep()?.hasTarget && session.state === 'running') {
@@ -178,7 +178,7 @@ export function initTrain() {
     };
   });
 
-  document.querySelectorAll('[data-incline]').forEach((btn) => {
+  $('tab-train').querySelectorAll('[data-incline]').forEach((btn) => {
     btn.onclick = () => treadmill?.setIncline(live.incline + parseFloat(btn.dataset.incline));
   });
 

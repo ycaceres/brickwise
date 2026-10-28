@@ -2,7 +2,8 @@
 export default {
   'nav.home': 'Home',
   'nav.workouts': 'Training library',
-  'nav.train': 'Train',
+  'nav.train': 'Run',
+  'nav.ride': 'Ride',
   'nav.debug': 'Debug',
   'nav.config': 'Configuration',
   'nav.profile': 'User profile',

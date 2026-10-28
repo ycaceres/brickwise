@@ -16,7 +16,8 @@
   </div>
   <!-- Between the groups: optional and contextual buttons -->
   <div class="nav-group nav-context">
-    <button role="tab" id="nav-train" data-i18n-label="nav.train" aria-selected="true" aria-label="Train" title="Train"><bw-icon name="train"></bw-icon></button>
+    <button role="tab" id="nav-train" data-i18n-label="nav.train" aria-selected="true" aria-label="Run" title="Run"><bw-icon name="train"></bw-icon></button>
+    <button role="tab" id="nav-ride" data-i18n-label="nav.ride" aria-selected="false" aria-label="Ride" title="Ride"><bw-icon name="ride"></bw-icon></button>
     <button role="tab" id="nav-debug" data-i18n-label="nav.debug" aria-selected="false" aria-label="Debug" title="Debug" class="hidden"><bw-icon name="debug"></bw-icon></button>
   </div>
   <div class="nav-group">
@@ -27,7 +28,7 @@
 <main>
   <header>
     <h1>Brickwise</h1>
-    <!-- Device pills: only on the Train tab -->
+    <!-- Device pills: only on the Run tab -->
     <div class="pills hidden" id="devicePills">
       <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect the controllable (treadmill or bike trainer)">Controllable</button>
       <button class="pill" id="pillHr" title="Connect a heart rate monitor (HRM)">HRM</button>

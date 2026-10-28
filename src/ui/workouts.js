@@ -15,6 +15,7 @@ import { zones } from './profile.js';
 import { session } from '../session/runner.js';
 import { render, updateChart, updateControls, planTimeline } from './train.js';
 import { showTab } from './tabs.js';
+import { updateRide } from './ride.js';
 
 let workouts = null;       // planned in Intervals.icu (null = not loaded)
 let plannedError = null;   // why they could not be loaded, shown in the lists
@@ -191,6 +192,7 @@ export function selectWorkout(key = selectedKey) {
   updateChart();
   updateControls();
   updatePreview();
+  updateRide();
 }
 
 const STEP_HEADS = {

@@ -7,12 +7,13 @@
 import { $ } from '../lib/dom.js';
 import { saveText } from '../lib/storage.js';
 import { updateChart } from './train.js';
-import { updatePreview } from './workouts.js';
+import { updatePreview, selected } from './workouts.js';
+import { updateRide } from './ride.js';
 import { session } from '../session/runner.js';
 
 // The Debug tab (console state and log) and Simulation mode only show with ?debug=true
 export const DEBUG = new URLSearchParams(location.search).get('debug') === 'true';
-export const NAV_TABS = ['home', 'workouts', 'train', 'config', 'profile', ...(DEBUG ? ['debug'] : [])];
+export const NAV_TABS = ['home', 'workouts', 'train', 'ride', 'config', 'profile', ...(DEBUG ? ['debug'] : [])];
 const PAGES = ['workout'];
 const ALL = [...NAV_TABS, ...PAGES];
 
@@ -24,6 +25,7 @@ export function showTab(name) {
   saveText('tab', name);
   // The charts measure their width when shown
   if (name === 'train') updateChart();
+  if (name === 'ride') updateRide();
   // Before a session, the safety reminder (not over a running one)
   const idle = !['armed', 'running', 'paused'].includes(session.state);
   const pop = $('safetyPop');
@@ -31,12 +33,15 @@ export function showTab(name) {
   if (name === 'workout') updatePreview();
 }
 
+/** Where a workout runs: Ride for bike workouts, Run for the rest (treadmill). */
+const sessionTab = (event) => (event?.sport === 'ride' ? 'ride' : 'train');
+
 /** Startup: the sidebar, the links between tabs and the safety reminder. */
 export function initTabs() {
   $('nav-debug').classList.toggle('hidden', !DEBUG);
   $('btnSim').classList.toggle('hidden', !DEBUG);
   for (const t of NAV_TABS) $(`nav-${t}`).onclick = () => showTab(t);
-  $('btnGoTrain').onclick = () => showTab('train');
+  $('btnGoTrain').onclick = () => showTab(sessionTab(selected?.event));
   $('hGoProfile').onclick = () => showTab('profile');
   $('safetyOk').onclick = () => $('safetyPop').hidePopover();
 }

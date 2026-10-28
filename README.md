@@ -24,7 +24,7 @@ npm start            # python3 tools/serve.py 8000; open http://localhost:8000
 
 **Intervals.icu:** in **Profile**, paste your API key (Intervals.icu → Settings → Developer Settings) and press **Sign in**. The page calls the Intervals.icu API directly, which accepts cross-origin requests. The key is stored only in that browser's `localStorage`: it is not in the code or on the host. If someone might have seen it, regenerate it in Intervals.icu and press **Sign out**. Without a key, the library, the manual profile and the TCX download still work.
 
-The page has a vertical bar of icons on the left: **Home** and **Training library** at the top, **Configuration** and **User profile** at the bottom, and between them contextual buttons (**Train**, **Debug**).
+The page has a vertical bar of icons on the left: **Home** and **Training library** at the top, **Configuration** and **User profile** at the bottom, and between them contextual buttons (**Run** for treadmill workouts, **Ride** for bike workouts, **Debug**). **Ride** only shows the selected bike workout (power and HR by zone); riding on a bike trainer is not supported yet.
 
 **Configuration** picks the color palette (System, Light, Dark, Monochrome, Vivid) and the language (English only for now). Both are kept in `localStorage` (`brickwise.theme`, `brickwise.lang`). The palette changes only the app chrome: chart and training zone colors are the same in every palette.
 
@@ -32,12 +32,12 @@ The page has a vertical bar of icons on the left: **Home** and **Training librar
 - **Workout page** (no button): opens when you pick a workout in Home or the library; the sidebar leads back.
 - **Profile (person):** works like a sign-in. Signed out, you paste your Intervals.icu API key and press **Sign in**, or enter threshold pace, LTHR and max HR by hand (without LTHR it is estimated as 91 % of max HR). Signed in, you see your Intervals.icu name, photo and city, your key data (threshold pace, LTHR, max HR, resting HR and weight), the zone table, **Refresh** and **Sign out**. Signing out deletes the key and keeps the data as a manual profile.
 - **Training library (clipboard):** the library (`data/library.json`), with three dropdowns to filter by duration (30, 45 or 60 min), type and level (1–5). Workouts are in % of threshold pace and zones, so they adapt to the profile; Intervals workouts also use the profile's threshold when their steps are in % or zones. On the workout page you choose the pace within the zone, the base incline and whether speed is adjusted by HR.
-- **Train (runner):** a bar with distance, time and HR, the buttons ▶ start, ⏭ skip step, ■ finish, download (CSV or TCX) and upload to Intervals.icu, and incline and pace with their + and − buttons (0.5 % and 0.5 km/h); below, a line with the session status and the chart.
+- **Run (runner):** a bar with distance, time and HR, the buttons ▶ start, ⏭ skip step, ■ finish, download (CSV or TCX) and upload to Intervals.icu, and incline and pace with their + and − buttons (0.5 % and 0.5 km/h); below, a line with the session status and the chart.
 - **Debug (bug):** only shows when the page is opened with `?debug=true`. It has the treadmill state and the communication log.
 
-1. Turn on the treadmill, attach the safety key and, on the **Train** tab, press the **Controllable** pill at the top and choose **Connect treadmill** (it shows up as `I_TL…`). Activation takes ~10 s.
-2. Optional: press the **HRM** pill (also on the Train tab) (any standard Bluetooth heart rate monitor).
-3. Pick the workout in **Home** or the **Training library** and, on its page, press ▶ (top right, next to its name) to go to **Train**.
+1. Turn on the treadmill, attach the safety key and, on the **Run** tab, press the **Controllable** pill at the top and choose **Connect treadmill** (it shows up as `I_TL…`). Activation takes ~10 s.
+2. Optional: press the **HRM** pill (also on the Run tab) (any standard Bluetooth heart rate monitor).
+3. Pick the workout in **Home** or the **Training library** and, on its page, press ▶ (top right, next to its name) to go to **Run** (or **Ride** for a bike workout).
 4. Press **▶ (start)** and then **START on the console**. The workout begins when the belt moves.
 5. When done: the **upload to Intervals.icu** icon (needs the API key) or the **download** icon (CSV or TCX). Library workouts are uploaded unpaired.
 
@@ -96,6 +96,7 @@ A single area, Auuki style. The **?** button explains the colors.
 - **In the background, the whole workout:** one block per step; width is duration, height is target speed and color is the zone. What is done gets dimmed and a vertical bar marks progress.
 - **On top, the actual data:** pace, HR and incline, growing as you run.
 - **Left axis:** pace in min/km. **Right axis:** HR in bpm. Both columns are shaded with each zone's color and, with zones in the profile, they line up: the HR scale is stretched piecewise so the top of each HR zone lands at the height of the top of the same pace zone. The current zone shows above each column.
+- **Bike workouts** (workout page and Ride): the left axis is power in W, shaded by power zone; block height is the target watts (ramps slope, steady steps sit in the middle of their range) and HR lines up with the power zones the same way.
 - **Zone colors:** Z1 gray, Z2 blue, Z3 green, Z4 yellow, Z5 orange, Z6 red, Z7 violet.
 - Dashed lines mark the plan: each step's HR cap (or goal) and the planned incline.
 - **Download** (icon next to ■): second-by-second CSV or TCX; enabled when the session ends.
@@ -160,7 +161,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `index.html` | The shell: sidebar, header with the device pills, footer and the startup scripts |
 | `pages/*.html` | One file per page (home, config, profile, workouts, workout, train, debug) |
 | `src/main.js`, `src/lib/pages.js` | Startup: loads every page in parallel, then calls each UI module's `init…()` and loads the data |
-| `src/components/` | Reusable custom elements (light DOM, so `css/app.css` and the palettes apply): `bw-icon`, `bw-user-card` (Home and Profile), `bw-zone-table` (running and cycling), `bw-workout-list` (Home and library), `bw-chart` (workout page and Train). Data goes in through properties; actions come out as bubbling events (`bw-select`, `bw-refresh`, `bw-signout`) |
+| `src/components/` | Reusable custom elements (light DOM, so `css/app.css` and the palettes apply): `bw-icon`, `bw-user-card` (Home and Profile), `bw-zone-table` (running and cycling), `bw-workout-list` (Home and library), `bw-chart` (workout page and Run). Data goes in through properties; actions come out as bubbling events (`bw-select`, `bw-refresh`, `bw-signout`) |
 | `src/ui/format.js` | UI text without the DOM (account stats, zone tables), tested |
 | `src/ui/tabs.js` | Which tab or page is shown |
 | `src/ui/config.js` | Configuration tab: color palette and language |
@@ -169,7 +170,8 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/ui/devices.js` | Treadmill and HR strap pills: connect, simulator, disconnect |
 | `src/ui/profile.js` | Profile tab: threshold pace, LTHR and max HR, the Intervals.icu account and the threshold test history |
 | `src/ui/workouts.js` | Planned workouts (Home), the training library and its filters, and the workout page with its preview |
-| `src/ui/train.js` | Train tab: live numbers, session buttons, chart, export and upload |
+| `src/ui/ride.js` | Ride tab: the selected bike workout's chart (power axis), view only |
+| `src/ui/train.js` | Run tab: live numbers, session buttons, chart, export and upload |
 | `src/ui/debug.js` | Debug tab: communication log and console state |
 | `src/ui/chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
 | `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test |

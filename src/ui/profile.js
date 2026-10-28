@@ -80,7 +80,6 @@ export function renderProfile() {
   for (const card of userCards()) card.classList.toggle('hidden', !loggedIn);
   $('pLogin').classList.toggle('hidden', loggedIn);
   $('hLogin').classList.toggle('hidden', loggedIn);
-  $('pZonesCard').classList.toggle('hidden', !zones?.hr.length && !zones?.pace.length);
 
   // Logged out: the manual form, with the current data
   $('pPace').value = zones?.thresholdKmh ? formatPace(zones.thresholdKmh) : '';
@@ -95,69 +94,18 @@ export function renderProfile() {
   // Logged in: the account and its data
   if (loggedIn) for (const card of userCards()) card.data = { athlete, wellness };
 
-  renderZoneTable();
-  renderRideZones();
+  renderZoneTables();
   renderTests();
 }
 
-/** "LTHR 168 bpm @ 6:10 min/km · max HR 185 bpm", skipping what is missing. */
-function zoneSummary(lthr, at, maxHr) {
-  const threshold = lthr ? `LTHR ${lthr} bpm${at ? ` @ ${at}` : ''}` : at ? `Threshold ${at}` : null;
-  return [threshold, maxHr ? `max HR ${maxHr} bpm` : null].filter(Boolean).join(' · ');
-}
-
-/** Profile zone table: HR and pace side by side. */
-function renderZoneTable() {
-  $('pRunSummary').textContent = zoneSummary(zones?.lthr, zones?.thresholdKmh ? `${formatPace(zones.thresholdKmh)} min/km` : null, zones?.maxHr);
-  const rows = [];
-  const n = Math.max(zones?.hr.length || 0, zones?.pace.length || 0);
-  for (let i = 0; i < n; i++) {
-    const h = zones.hr[i];
-    const p = zones.pace[i];
-    const tr = document.createElement('tr');
-    const name = document.createElement('td');
-    const sw = document.createElement('i');
-    sw.style.background = `var(--zone-${Math.min(7, i + 1)})`;
-    name.append(sw, `Z${i + 1}`);
-    const hr = document.createElement('td');
-    hr.textContent = h ? (h.lo ? `${h.lo}–${h.hi}` : `≤ ${h.hi}`) : '—';
-    const pace = document.createElement('td');
-    pace.textContent = p
-      ? (!p.lo ? `slower than ${formatPace(p.hi)}` : Number.isFinite(p.hi) ? `${formatPace(p.hi)}–${formatPace(p.lo)}` : `faster than ${formatPace(p.lo)}`)
-      : '—';
-    tr.append(name, hr, pace);
-    rows.push(tr);
-  }
-  $('pZones').replaceChildren(...rows);
-}
-
-/** Profile: cycling zones, power and HR side by side. */
-function renderRideZones() {
-  const ride = zones?.ride;
-  $('pRideCard').classList.toggle('hidden', !ride?.power.length && !ride?.hr.length);
-  if (!ride) return;
-  const rows = [];
-  const n = Math.max(ride.power.length, ride.hr.length);
-  for (let i = 0; i < n; i++) {
-    const p = ride.power[i];
-    const h = ride.hr[i];
-    const tr = document.createElement('tr');
-    const name = document.createElement('td');
-    const sw = document.createElement('i');
-    sw.style.background = `var(--zone-${Math.min(7, i + 1)})`;
-    name.append(sw, `Z${i + 1}`);
-    name.title = p?.name || h?.name || '';
-    const hr = document.createElement('td');
-    hr.textContent = h ? (h.lo ? `${h.lo}–${h.hi}` : `≤ ${h.hi}`) : '—';
-    const power = document.createElement('td');
-    power.textContent = p ? (!p.lo ? `≤ ${p.hi}` : Number.isFinite(p.hi) ? `${p.lo}–${p.hi}` : `≥ ${p.lo}`) : '—';
-    tr.append(name, hr, power);
-    rows.push(tr);
-  }
-  $('pRideZones').replaceChildren(...rows);
-  $('pRideSummary').textContent = zoneSummary(ride.lthr, ride.ftp ? `${ride.ftp} W` : null, ride.maxHr);
+/** Profile: running and cycling zone tables. */
+function renderZoneTables() {
+  $('pRunZones').data = { zones };
   const r = profile?.ride;
-  $('pRideNote').textContent = r?.indoorFtp && r.indoorFtp !== r.ftp ? `Power from the indoor FTP (${r.indoorFtp} W; outdoor ${r.ftp ?? '—'} W).` : '';
+  $('pRideZones').data = {
+    zones: zones?.ride,
+    note: r?.indoorFtp && r.indoorFtp !== r.ftp ? `Power from the indoor FTP (${r.indoorFtp} W; outdoor ${r.ftp ?? '—'} W).` : '',
+  };
 }
 
 function renderKeyState(text) {

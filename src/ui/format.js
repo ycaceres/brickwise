@@ -2,6 +2,7 @@
  * Text for the UI, without the DOM: what the components show, kept here so
  * the tests can check it.
  */
+import { formatPace } from '../workouts/steps.js';
 
 /** "Ana María López" → "AM" */
 export function initials(name) {
@@ -28,4 +29,38 @@ export function wellnessStats(wellness, athlete) {
     { label: 'Resting HR', value: wellness?.restingHr?.value ?? athlete?.restingHr ?? null, unit: 'bpm', date: wellness?.restingHr?.date },
     { label: 'HRV', value: wellness?.hrv?.value != null ? Math.round(wellness.hrv.value) : null, unit: 'ms', date: wellness?.hrv?.date },
   ];
+}
+
+/** "LTHR 168 bpm @ 6:10 min/km · max HR 185 bpm", skipping what is missing. */
+export function zoneSummary(lthr, at, maxHr) {
+  const threshold = lthr ? `LTHR ${lthr} bpm${at ? ` @ ${at}` : ''}` : at ? `Threshold ${at}` : null;
+  return [threshold, maxHr ? `max HR ${maxHr} bpm` : null].filter(Boolean).join(' · ');
+}
+
+const hrRange = (h) => (h ? (h.lo ? `${h.lo}–${h.hi}` : `≤ ${h.hi}`) : '—');
+const paceRange = (p) => (p
+  ? (!p.lo ? `slower than ${formatPace(p.hi)}` : Number.isFinite(p.hi) ? `${formatPace(p.hi)}–${formatPace(p.lo)}` : `faster than ${formatPace(p.lo)}`)
+  : '—');
+const powerRange = (p) => (p ? (!p.lo ? `≤ ${p.hi}` : Number.isFinite(p.hi) ? `${p.lo}–${p.hi}` : `≥ ${p.lo}`) : '—');
+
+/**
+ * A zone table for running (HR and pace) or cycling (HR and power):
+ * { head, rows: [{ zone, name, cells }], summary }. Without zones, no rows.
+ */
+export function zoneTable(sport, z) {
+  const ride = sport === 'ride';
+  const other = ride ? z?.power : z?.pace;
+  const n = Math.max(z?.hr?.length || 0, other?.length || 0);
+  const rows = [];
+  for (let i = 0; i < n; i++) {
+    const h = z.hr?.[i];
+    const o = other?.[i];
+    rows.push({ zone: i + 1, name: (ride && (o?.name || h?.name)) || '', cells: [hrRange(h), ride ? powerRange(o) : paceRange(o)] });
+  }
+  const at = ride ? (z?.ftp ? `${z.ftp} W` : null) : z?.thresholdKmh ? `${formatPace(z.thresholdKmh)} min/km` : null;
+  return {
+    head: ['Zone', 'HR (bpm)', ride ? 'Power (W)' : 'Pace (min/km)'],
+    rows,
+    summary: zoneSummary(z?.lthr, at, z?.maxHr),
+  };
 }

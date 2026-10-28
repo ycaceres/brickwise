@@ -128,24 +128,8 @@
       </section>
     </div>
 
-    <section class="card hidden" id="pZonesCard">
-      <h2>Running zones</h2>
-      <table class="ztable num">
-        <thead><tr><th>Zone</th><th>HR (bpm)</th><th>Pace (min/km)</th></tr></thead>
-        <tbody id="pZones"></tbody>
-      </table>
-      <div class="zsummary num" id="pRunSummary"></div>
-    </section>
-
-    <section class="card hidden" id="pRideCard">
-      <h2>Cycling zones</h2>
-      <table class="ztable num">
-        <thead><tr><th>Zone</th><th>HR (bpm)</th><th>Power (W)</th></tr></thead>
-        <tbody id="pRideZones"></tbody>
-      </table>
-      <div class="zsummary num" id="pRideSummary"></div>
-      <div class="note" id="pRideNote" style="margin-top: 4px"></div>
-    </section>
+    <bw-zone-table class="card hidden" id="pRunZones" sport="run" heading="Running zones"></bw-zone-table>
+    <bw-zone-table class="card hidden" id="pRideZones" sport="ride" heading="Cycling zones"></bw-zone-table>
 
     <section class="card hidden" id="pTestsCard">
       <h2>Threshold tests (<span style="text-transform: none">α1</span>)</h2>

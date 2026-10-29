@@ -180,6 +180,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/ui/session-chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
 | `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test. No DOM or UI imports: it reports through events (`change`, `tick`, `log`, `note`, `beep`, `active`, `test`) and `tick(now)` takes the clock, so it runs in Node tests |
 | `src/session/test-history.js` | Threshold test history (newest first, 20 kept) and how a result reads |
+| `src/session/policies.js` | How each sport drives its device: a run drives the treadmill (speed, incline, belt), a ride the smart trainer (power, pedaling) |
 | `src/session/hr-control.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
 | `src/session/live.js` | Live device readings: speed, incline, HR, console state, RR intervals and α1 |
 | `src/session/wake-lock.js` | Keeps the screen on during a session |

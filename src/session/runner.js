@@ -13,8 +13,9 @@ import { targetSpeedAt } from '../workouts/steps.js';
 import { VT1, VT2 } from '../physiology/hrv.js';
 import { analyzeRamp } from '../physiology/thresholds.js';
 import { hrDecision, hrSlope, inclineStep, alphaGuardApplies, SLOPE_WINDOW_S, AEROBIC_AIM } from './hr-control.js';
-import { live, rrState, rrActive, updateAlpha, STALE_MS } from './live.js';
+import { live, rrState, rrActive, updateAlpha } from './live.js';
 import { addTest, testText } from './test-history.js';
+import { policyFor, isStale, powerAt, POLICIES } from './policies.js';
 import * as app from '../state.js';
 
 /**
@@ -33,12 +34,13 @@ const beep = (freq, seconds) => events.emit('beep', { freq, seconds });
 const changed = () => events.emit('change');
 
 const ACTIVE = ['armed', 'running', 'paused'];
-const device = () => app.state.devices.treadmill;
+// The session's sport decides the device it drives (session/policies.js)
+const policy = () => session.policy ?? POLICIES.run;
+const device = () => app.state.devices[policy().kind];
 const limits = () => device()?.limits ?? {};
 export const isActive = () => ACTIVE.includes(session.state);
 
-const MOVING_KMH = 0.5;      // above this the belt is moving
-const AUTO_PAUSE_MS = 2000;  // belt stopped this long → pause
+const AUTO_PAUSE_MS = 2000;  // belt (or pedals) stopped this long → pause
 
 // Speed adjustment by HR (steps carry the HR range of their zones)
 const HR_GRACE_S = 45;       // at the start of a step HR takes a while to respond
@@ -85,7 +87,7 @@ export function resetSession() {
   Object.assign(session, {
     state: 'idle', steps: [], stepIdx: 0, stepElapsed: 0, stepDist: 0, totalElapsed: 0, totalDist: 0,
     adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrOn: false, hrLastAdjust: null, hrLastRise: null, inclineAdjust: 0, testStart: null, testEnd: null, testLowSince: null, testMarks: {}, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], lastSampleAt: 0, startedAt: null, event: null, lastBeep: null,
-    stepStarts: [], uploaded: false,
+    stepStarts: [], uploaded: false, policy: null, targetPower: null,
   });
 }
 
@@ -118,15 +120,39 @@ export function applyStep(i) {
   if (step?.test) session.testStart ??= session.totalElapsed;
   else if (session.testStart != null) session.testEnd ??= session.totalElapsed;
   if (!step) {
-    finish('Workout complete. Belt paused: finish or resume from the console.');
-    app.state.devices.treadmill?.pause();
+    finish(policy().words.done);
+    stopDevice();
     return;
   }
   log('info', `Step ${i + 1}/${session.steps.length}: ${step.label}`);
   beep(i === 0 ? 660 : 880, 0.25);
-  pushIncline();
-  pushTarget(true);
+  sendStep(true);
   changed();
+}
+
+/** Sends the current step's targets: speed and incline on a treadmill, power on a trainer. */
+function sendStep(force = false) {
+  if (policy().kind === 'trainer') return pushPower(force);
+  pushIncline();
+  pushTarget(force);
+}
+
+/** Pauses the belt or releases the trainer. */
+function stopDevice() {
+  const d = device();
+  if (policy().kind === 'trainer') d?.stop?.();
+  else d?.pause();
+}
+
+/** Sends the ride step's watts (ramps follow the progress) when they change. */
+function pushPower(force = false) {
+  const step = currentStep();
+  const w = powerAt(step, stepProgress(step));
+  if (w == null) return;
+  if (force || w !== session.targetPower) {
+    session.targetPower = w;
+    device()?.setTarget({ power: w });
+  }
 }
 
 /** Sends the step's incline plus what HR moved it (steps that follow HR by incline). */
@@ -154,6 +180,7 @@ export function start() {
   session.steps = app.state.selection ? app.state.selection.steps : [];
   session.event = app.state.selection ? app.state.selection.event : null;
   session.hrOn = !!app.state.selection?.hrOn;
+  session.policy = policyFor(session.event);
   session.state = 'armed';
   events.emit('active', true);
   changed();
@@ -188,9 +215,10 @@ export function tick(now = Date.now()) {
   // Up to 5 s: with the tab hidden ticks may spread out without losing distance
   const dt = Math.min(5, (now - (tick.last || now)) / 1000);
   tick.last = now;
-  // Without recent treadmill data no distance is counted (and the session pauses)
-  if (!app.state.devices.treadmill || now - app.state.devices.treadmill.state.updatedAt > STALE_MS) live.speed = 0;
-  const moving = live.speed >= MOVING_KMH;
+  // Without recent data from the device no distance is counted (and the session pauses)
+  const pol = policy();
+  if (isStale(device(), now)) pol.resetStale();
+  const moving = pol.moving();
   const restarted = moving && !tick.wasMoving;
   tick.wasMoving = moving;
 
@@ -198,21 +226,18 @@ export function tick(now = Date.now()) {
     session.state = 'running';
     session.startedAt = now;
     rrState.pending = []; // beats from before the start do not belong to the first sample
-    log('info', 'Belt moving: session started');
+    log('info', pol.words.started);
     if (session.steps.length) applyStep(0);
     changed();
   } else if (session.state === 'running') {
     // The belt stopped and restarted before the auto-pause: the console
     // restarts at its own speed, so the target is resent
-    if (restarted) {
-      const step = currentStep();
-      if (step) { pushIncline(); pushTarget(true); }
-    }
+    if (restarted && currentStep()) sendStep(true);
     if (!moving) {
       session.stopSince ??= now;
       if (now - session.stopSince > AUTO_PAUSE_MS) {
         session.state = 'paused';
-        log('warn', 'Belt stopped: session paused');
+        log('warn', pol.words.stopped);
         changed();
       }
     } else {
@@ -222,14 +247,13 @@ export function tick(now = Date.now()) {
     session.state = 'running';
     session.stopSince = null;
     rrState.pending = [];
-    log('info', 'Belt moving: session resumed');
-    const step = currentStep();
-    if (step) { pushIncline(); pushTarget(true); }
+    log('info', pol.words.resumed);
+    if (currentStep()) sendStep(true);
     changed();
   }
 
   if (session.state === 'running') {
-    const meters = (live.speed / 3.6) * dt;
+    const meters = (pol.speed() / 3.6) * dt;
     session.totalElapsed += dt;
     session.totalDist += meters;
     session.stepElapsed += dt;
@@ -239,7 +263,7 @@ export function tick(now = Date.now()) {
       session.lastSampleAt = now;
       const sample = {
         t: now, elapsed: session.totalElapsed, distance: session.totalDist,
-        speed: live.speed, incline: live.incline, hr: live.hr, target: session.target,
+        ...pol.sample(), hr: live.hr, target: pol.kind === 'trainer' ? session.targetPower : session.target,
       };
       // α1 only with RR: null = no value yet or bad signal
       if (rrActive()) {
@@ -269,8 +293,8 @@ export function tick(now = Date.now()) {
         log('info', `HR ${live.hr} reached the top of Z1 (${app.state.zones.hr[0].hi}): warm-up done`);
         applyStep(session.stepIdx + 1);
       } else {
-        adjustForHr(step);
-        if (step.ramp) pushTarget();
+        if (pol.hrSteerable) adjustForHr(step);
+        if (step.ramp) sendStep();
       }
     }
   }
@@ -402,8 +426,8 @@ function adjustForHr(step) {
 // START on the console resumes it.
 let unloadPausedAt = 0;
 export function pauseOnClose() {
-  if (!isActive() || !app.state.devices.treadmill?.connected) return;
+  if (!isActive() || !device()?.connected) return;
   if (Date.now() - unloadPausedAt < 1000) return;
   unloadPausedAt = Date.now();
-  app.state.devices.treadmill.pauseNow();
+  device().pauseNow();
 }

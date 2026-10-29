@@ -85,3 +85,57 @@ test('runner: the plan keeps its speed; what is sent is clamped to the treadmill
   assert.equal(sent.find((c) => c.incline != null).incline, 10);
   finish('test over');
 });
+
+test('policies: the sport picks the device and how moving is read', async () => {
+  const { policyFor, powerAt } = await import('../src/session/policies.js');
+  assert.equal(policyFor({ sport: 'ride' }).kind, 'trainer');
+  assert.equal(policyFor({ sport: 'run' }).kind, 'treadmill');
+  assert.equal(policyFor(null).kind, 'treadmill');
+  assert.equal(powerAt({ power: { lo: 100, hi: 150 }, ramp: true }, 0.5), 125);
+  assert.equal(powerAt({ power: { lo: 190, hi: 210 } }, 0.9), 200);
+  assert.equal(powerAt({ speedStart: 9 }, 0.5), null);
+});
+
+test('runner: a ride drives the trainer with the step watts and pauses when pedaling stops', async () => {
+  const { session, start, tick } = await import('../src/session/runner.js');
+  const { setDevice, setSelection } = await import('../src/state.js');
+  const { live } = await import('../src/session/live.js');
+  const sent = [];
+  const trainer = {
+    connected: true, state: { updatedAt: 0 },
+    limits: { powerMin: 0, powerMax: 1500 },
+    setTarget: ({ power }) => sent.push(power),
+    stop: () => sent.push('stop'),
+  };
+  setDevice('trainer', trainer);
+  const steps = [
+    { label: 'Ramp', duration: 4, ramp: true, power: { lo: 100, hi: 150 }, hasTarget: false, incline: 1, hr: null },
+    { label: 'Steady', duration: 8, power: { lo: 190, hi: 210 }, hasTarget: false, incline: 1, hr: null },
+  ];
+  setSelection({ key: 'i:0', event: { name: 'Ride', sport: 'ride' }, steps, hrOn: false });
+  start();
+  assert.equal(session.state, 'armed');
+
+  let now = 100_000;
+  const at = (t, cadence = 90) => { trainer.state.updatedAt = t; live.trainer = { cadence, speed: 30, power: 150 }; tick(t); };
+  at(now - 1000, 0);                                // not pedaling yet: still armed (and the clock starts here)
+  assert.equal(session.state, 'armed');
+  at(now);
+  assert.equal(session.state, 'running');
+  assert.equal(sent[0], 100);                       // ramp start
+  for (let i = 0; i < 3; i++) at((now += 1000));
+  assert.deepEqual(sent.slice(1, 4), [113, 125, 138], `ramp ${sent}`);
+  assert.equal(session.stepIdx, 1);
+  assert.equal(sent.at(-1), 200);                   // steady step at the middle of 190–210
+  // Pedaling stops for more than 2 s: paused; back: resumed and the watts resent
+  at((now += 1000), 0); at((now += 1000), 0); at((now += 1500), 0);
+  assert.equal(session.state, 'paused');
+  const n = sent.length;
+  at((now += 1000));
+  assert.equal(session.state, 'running');
+  assert.equal(sent[n], 200);
+  assert.ok(session.samples.at(-1).cadence === 90 && 'power' in session.samples.at(-1));
+  for (let i = 0; i < 6; i++) at((now += 1000));
+  assert.equal(session.state, 'done');
+  assert.equal(sent.at(-1), 'stop');
+});

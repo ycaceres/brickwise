@@ -7,4 +7,5 @@ export const DEFAULT_LANGUAGE = 'en';
 
 export const LANGUAGES = [
   { code: 'en', name: 'English', native: 'English', dir: 'ltr', load: () => import('./en.js') },
+  { code: 'es', name: 'Spanish', native: 'Español', dir: 'ltr', load: () => import('./es.js') },
 ];

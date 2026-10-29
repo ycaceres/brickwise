@@ -265,7 +265,7 @@ tr.done td { color: var(--muted); }
 .stats div { display: grid; gap: 2px; }
 .stats span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .stats strong { font-size: 22px; font-weight: 650; }
-.stats small { font-size: 13px; color: var(--muted); font-weight: 400; white-space: nowrap; }
+.stats small { font-size: 13px; color: var(--muted); font-weight: 400; }
 .ztable td { white-space: nowrap; }
 .zsummary { margin-top: 8px; font-size: 13px; color: var(--muted); }
 .ztable i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; }

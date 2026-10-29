@@ -105,3 +105,7 @@ test('i18n: the browser language picks a supported one', async () => {
   const { SETTINGS } = await import('../src/lib/settings.js');
   assert.equal(SETTINGS.lang.fallback, 'system');
 });
+
+test('i18n: the translations are complete', async () => {
+  for (const [code, dict] of await dictionaries()) assert.deepEqual(missingKeys(dict), [], `${code} misses keys`);
+});

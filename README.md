@@ -26,7 +26,7 @@ npm start            # python3 tools/serve.py 8000; open http://localhost:8000
 
 The page has a vertical bar of icons on the left: **Home** and **Training library** at the top, **Configuration** and **User profile** at the bottom, and between them contextual buttons (**Run** for treadmill workouts, **Ride** for bike workouts, **Debug**). **Ride** only shows the selected bike workout (power and HR by zone); riding on a bike trainer is not supported yet.
 
-**Configuration** picks the color palette (System, Light, Dark, Monochrome, Vivid) and the language (English only for now). Both are kept in `localStorage` (`brickwise.theme`, `brickwise.lang`). The palette changes only the app chrome: chart and training zone colors are the same in every palette.
+**Configuration** picks the color palette (System, Light, Dark, Monochrome, Vivid) and the language (System — the browser's —, English or Spanish). Both are kept in `localStorage` (`brickwise.theme`, `brickwise.lang`). The palette changes only the app chrome: chart and training zone colors are the same in every palette.
 
 - **Home (house):** your Intervals.icu account (name, city, weight, sleep, resting HR, HRV) and the runs and rides planned for a day, filtered by sport.
 - **Workout page** (no button): opens when you pick a workout in Home or the library; the sidebar leads back.

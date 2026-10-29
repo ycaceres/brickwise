@@ -35,3 +35,21 @@ English (`en.js`) is the source and the fallback: every key exists there. Other 
 ## Tone
 
 Short, plain and direct, like the English: imperative for actions ("Connect treadmill"), no exclamation marks, the same term for the same thing everywhere (workout, step, zone, threshold).
+
+## Spanish (`es.js`)
+
+Neutral Spanish with Latin American terms.
+
+| English | Español |
+|---|---|
+| treadmill | caminadora |
+| smart trainer | rodillo inteligente |
+| workout / step / zone | entrenamiento / paso / zona |
+| threshold pace | ritmo umbral |
+| HR / max HR / resting HR | FC / FC máx. / FC en reposo |
+| warm-up / cooldown | calentamiento / vuelta a la calma |
+| belt / safety key | banda / llave de seguridad |
+| sign in / sign out | iniciar sesión / cerrar sesión |
+| Run / Ride (tabs) | Correr / Bici |
+
+Pill states avoid gender ("en línea", "sin conexión") because the same word follows "Caminadora" and "Rodillo".

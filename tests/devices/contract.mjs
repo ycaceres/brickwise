@@ -60,3 +60,24 @@ export function checkTreadmill(d) {
   assert.equal(dev.requested.incline, d.limits.inclineMax);
   assert.doesNotThrow(() => dev.pause());
 }
+
+/** Smart trainers: the common interface, modes and targets clamped to the limits (no connection needed). */
+export function checkTrainer(d) {
+  const dev = d.create({});
+  assert.deepEqual(dev.limits, d.limits, `${d.id}: limits from the descriptor`);
+  assert.equal(dev.capabilities.erg, true, `${d.id}: ERG capability`);
+  for (const m of ['setMode', 'setTarget', 'setResistance', 'setSimulation', 'stop', 'diagnostics']) assert.equal(typeof dev[m], 'function', `${d.id}: ${m}`);
+  dev.rampSeconds = 0.01;
+  dev.rampMs = 5;
+  dev.setTarget({ power: d.limits.powerMax + 500 });
+  assert.equal(dev.requested.power, d.limits.powerMax);
+  assert.equal(dev.mode, 'erg');
+  dev.setResistance(250);
+  assert.equal(dev.requested.resistance, d.limits.resistanceMax ?? 100);
+  assert.equal(dev.mode, 'resistance');
+  dev.setSimulation({ grade: 99 });
+  assert.equal(dev.requested.simulation.grade, d.limits.gradeMax);
+  dev.stop();
+  assert.equal(dev.mode, 'idle');
+  assert.ok(Array.isArray(dev.diagnostics()));
+}

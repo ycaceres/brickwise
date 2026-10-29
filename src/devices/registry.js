@@ -5,10 +5,11 @@
  */
 import exp5i from './treadmill/nordictrack-exp5i/index.js';
 import simulatedTreadmill from './treadmill/simulated/index.js';
+import simulatedTrainer from './trainer/simulated/index.js';
 import hrStrap from './sensors/hr-strap/index.js';
 
 /** @type {import('./types.js').DriverDescriptor[]} */
-export const DRIVERS = [exp5i, simulatedTreadmill, hrStrap];
+export const DRIVERS = [exp5i, simulatedTreadmill, simulatedTrainer, hrStrap];
 
 export const driversFor = (kind, { debug = false } = {}) => DRIVERS.filter((d) => d.kind === kind && (debug || !d.debugOnly));
 

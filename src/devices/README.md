@@ -10,7 +10,9 @@ src/devices/
   treadmill/
     nordictrack-exp5i/     driver.js, protocol.js, messages.js, index.js
     simulated/             driver.js, index.js (debug only)
-  trainer/                 smart trainers (#23)
+  trainer/
+    trainer.js             Trainer base class (modes, ERG ramp, clamping)
+    simulated/             driver.js, index.js (debug only)
   sensors/
     hr-strap/              driver.js, index.js
 ```
@@ -55,4 +57,10 @@ Every reading published with `onData(state)` carries these normalized fields nex
 
 `diagnostics()` returns extra `[label, value]` rows for the Debug page (the EXP 5i shows its iFit mode and where the console HR comes from).
 
-Smart trainers get the same treatment with a `Trainer` base class (#23).
+## Smart trainers
+
+Trainer drivers extend `Trainer` (`trainer/trainer.js`). The app calls `setMode(mode)`, `setTarget({ power })` (ERG), `setResistance(pct)`, `setSimulation({ grade, windSpeed, crr, cw })` and `stop()`; the base class clamps to `limits` and, in ERG, spreads a power change over `ERG_RAMP_S` (2.5 s, see `ergRamp`) so a big jump does not stall the rider. A driver implements the hooks `_sendPower(w)`, `_sendResistance(pct)`, `_sendSimulation(params)`, `_sendStop()` and `_applyMode(mode)`, plus `connect`, `disconnect` and `connected`, and calls `onControlLost()` if another app takes over.
+
+Readings are published as `TrainerState` (`types.js`): `power`, `cadence`, `speed`, `distance`, `elapsed`, `mode`, `controlled`, `hr`, `updatedAt`.
+
+The simulated trainer (`trainer/simulated/`, debug only) is the reference implementation; `simulate({ pedaling })` starts or stops the simulated rider. The FTMS trainer (#7) goes in `trainer/ftms/` (`protocol.js` with unit tests + `driver.js`), Tacx FE-C (#9) in `trainer/tacx-fec/`.

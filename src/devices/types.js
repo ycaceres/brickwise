@@ -43,6 +43,7 @@
  * @property {(state: object) => void} [onData]   new readings (normalized fields: see #13)
  * @property {(info: object) => void} [onInfo]    model, firmware, serial…
  * @property {(kind: string, text: string) => void} [onLog]
+ * @property {() => void} [onControlLost]       trainers: another app took control
  *
  * @typedef {object} TreadmillState   What treadmill drivers publish with onData (plus their own fields).
  * @property {number} speed            actual km/h
@@ -53,6 +54,14 @@
  * @property {string[]} [alerts]       e.g. 'safety-key-missing'
  * @property {number | null} [hr] @property {'console' | null} [hrSource]
  * @property {number} updatedAt        ms
+ *
+ * @typedef {object} TrainerState   What smart trainer drivers publish with onData (plus their own fields).
+ * @property {number} power  W @property {number} cadence  rpm @property {number} speed  km/h
+ * @property {number} distance  m @property {number} elapsed  s
+ * @property {'erg' | 'resistance' | 'simulation' | 'idle'} mode
+ * @property {boolean} controlled   this app holds control of the trainer
+ * @property {number | null} [hr] @property {string | null} [hrSource]
+ * @property {number} updatedAt
  *
  * @typedef {object} Device
  * @property {(opts?: { device?: object }) => Promise<void>} connect   opts.device: a BluetoothDevice already chosen

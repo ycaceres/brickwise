@@ -5,7 +5,7 @@
  */
 
 import { $ } from '../lib/dom.js';
-import { saveText } from '../lib/storage.js';
+import * as settings from '../lib/settings.js';
 import { updateChart } from './run.js';
 import { updatePreview, selected } from './workouts.js';
 import { updateRide } from './ride.js';
@@ -26,7 +26,7 @@ export function showTab(name) {
   for (const t of ALL) $(`tab-${t}`).classList.toggle('hidden', t !== name);
   for (const t of NAV_TABS) $(`nav-${t}`).setAttribute('aria-selected', String(t === name));
   $('devicePills').classList.toggle('hidden', name !== 'run');
-  saveText('tab', name);
+  settings.set('tab', name);
   // The charts measure their width when shown
   if (name === 'run') updateChart();
   if (name === 'ride') updateRide();

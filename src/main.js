@@ -6,7 +6,7 @@ import './components/chart.js';
 import { every } from './lib/timer.js';
 import { loadPages } from './lib/pages.js';
 import * as intervals from './services/intervals.js';
-import { loadJson, loadText } from './lib/storage.js';
+import * as settings from './lib/settings.js';
 import { initDebug, log } from './ui/debug.js';
 import { initDevices } from './ui/devices.js';
 import { tick } from './session/runner.js';
@@ -30,8 +30,8 @@ try {
 }
 
 {
-  const saved = loadJson('profile');
-  const tab = loadText('tab');
+  const saved = settings.get('profile');
+  const tab = settings.get('tab');
   // Wiring first, then the data
   initTabs();
   initDebug();
@@ -50,5 +50,5 @@ try {
   every(TICK_MS, tick);
   updateControls();
   loadWorkouts();
-  try { sessionStorage.removeItem('brickwise.loadRetry'); } catch { /* optional */ }
+  settings.remove('loadRetry');
 }

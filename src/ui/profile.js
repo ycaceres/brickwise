@@ -5,7 +5,7 @@
  */
 
 import { $ } from '../lib/dom.js';
-import { loadJson, saveJson, remove } from '../lib/storage.js';
+import * as settings from '../lib/settings.js';
 import { formatPace } from '../workouts/steps.js';
 import { zonesFromProfile, profileFromIntervals, rideFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
@@ -18,7 +18,7 @@ export let zones = null;    // zones computed from the profile
 export function setProfile(p, { save = true } = {}) {
   profile = p;
   zones = zonesFromProfile(p);
-  if (save) saveJson('profile', p);
+  if (save) settings.set('profile', p);
   renderProfile();
   selectWorkout(selectedKey); // recomputes speeds and HR caps
 }
@@ -45,12 +45,12 @@ export async function loadProfileFromIntervals() {
 }
 
 // Intervals.icu account (name, photo…), stored so it is not fetched on every visit
-export let athlete = loadJson('athlete');
+export let athlete = settings.get('athlete');
 
 function setAthlete(a) {
   athlete = a;
-  if (a) saveJson('athlete', a);
-  else remove('athlete');
+  if (a) settings.set('athlete', a);
+  else settings.remove('athlete');
   renderProfile();
 }
 
@@ -119,7 +119,7 @@ export async function refreshAthlete() {
 }
 
 // Wellness (weight, resting HR, HRV, sleep): refreshed on every visit
-let wellness = loadJson('wellness');
+let wellness = settings.get('wellness');
 const WELLNESS_DAYS = 7;
 
 export async function refreshWellness() {
@@ -128,7 +128,7 @@ export async function refreshWellness() {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   };
   wellness = await intervals.getWellness(day(WELLNESS_DAYS - 1), day(0));
-  saveJson('wellness', wellness);
+  settings.set('wellness', wellness);
   renderProfile();
 }
 
@@ -148,7 +148,7 @@ const signOut = () => {
   intervals.setApiKey('');
   setAthlete(null);
   wellness = null;
-  remove('wellness');
+  settings.remove('wellness');
   // The data stays as a starting point for the manual profile
   if (profile) setProfile({ ...profile, source: 'manual' });
   log('info', 'Intervals.icu: signed out');
@@ -157,7 +157,7 @@ const signOut = () => {
 
 // Threshold test history (the tests are run and analyzed in the session)
 export function loadTests() {
-  return loadJson('tests', []);
+  return settings.get('tests');
 }
 
 

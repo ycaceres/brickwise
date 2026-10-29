@@ -4,7 +4,7 @@
  * inline script in index.html before the page paints, to avoid a flash.
  */
 import { $ } from '../lib/dom.js';
-import { loadText, saveText } from '../lib/storage.js';
+import * as settings from '../lib/settings.js';
 import { LANGUAGES, DEFAULT_LANGUAGE, setLanguage } from '../i18n/index.js';
 
 export const THEMES = ['system', 'light', 'dark', 'monochrome', 'vivid'];
@@ -20,8 +20,8 @@ export function initConfig() {
   const theme = $('cfgTheme');
   const lang = $('cfgLang');
   for (const [code, { name }] of Object.entries(LANGUAGES)) lang.add(new Option(name, code));
-  theme.value = applyTheme(loadText('theme') ?? 'system');
-  lang.value = setLanguage(loadText('lang') ?? DEFAULT_LANGUAGE);
-  theme.onchange = () => saveText('theme', applyTheme(theme.value));
-  lang.onchange = () => saveText('lang', setLanguage(lang.value));
+  theme.value = applyTheme(settings.get('theme'));
+  lang.value = setLanguage(settings.get('lang') ?? DEFAULT_LANGUAGE);
+  theme.onchange = () => settings.set('theme', applyTheme(theme.value));
+  lang.onchange = () => settings.set('lang', setLanguage(lang.value));
 }

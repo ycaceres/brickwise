@@ -192,9 +192,22 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/export/tcx.js`, `src/export/csv.js` | Build the session TCX and CSV |
 | `src/services/intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `src/lib/timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
-| `src/lib/dom.js`, `src/lib/storage.js`, `src/lib/sound.js` | DOM helpers, settings in `localStorage` (`brickwise.*`) and beeps |
+| `src/lib/settings.js`, `src/lib/storage.js` | Every stored setting in one list (see below) and the raw `localStorage` access behind it |
+| `src/lib/dom.js`, `src/lib/sound.js` | DOM helpers and beeps |
 | `tools/serve.py` | Static server for local development (not deployed) |
 | `tests/` | Hardware-free tests by area (`*.test.mjs`, shared data in `fixtures.mjs`): `npm test` |
+
+## Stored settings
+
+Everything the app keeps in the browser is listed in `src/lib/settings.js` and saved with the `brickwise.` prefix (nothing is sent anywhere except the API key to Intervals.icu):
+
+| Setting | What |
+|---|---|
+| `profile`, `athlete`, `wellness`, `tests` | Threshold pace / LTHR / max HR and cycling settings, the Intervals.icu account, latest wellness, threshold test history |
+| `tab`, `workout`, `libFilter`, `homeSport` | Last tab, last library workout, library filters, Home sport filter |
+| `theme`, `lang` | Color palette and language |
+| `intervalsKey` | The Intervals.icu API key (**secret**: never logged or shown) |
+| `loadRetry` | Retries when app files fail to download (this visit only) |
 
 ## Protocol origin
 

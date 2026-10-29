@@ -7,8 +7,9 @@
  * the key's owner, so their ID is not needed.
  */
 
+import * as settings from '../lib/settings.js';
+
 const API = 'https://intervals.icu/api/v1/athlete/0';
-const KEY_STORAGE = 'brickwise.intervalsKey';
 const RUN_TYPES = new Set(['Run', 'VirtualRun', 'TrailRun']);
 const RIDE_TYPES = new Set(['Ride', 'VirtualRide', 'GravelRide', 'MountainBikeRide']);
 
@@ -20,14 +21,13 @@ export function sportOf(type) {
 }
 
 export function getApiKey() {
-  try { return localStorage.getItem(KEY_STORAGE) || ''; } catch { return ''; }
+  return settings.get('intervalsKey') || '';
 }
 
 export function setApiKey(key) {
-  try {
-    if (key) localStorage.setItem(KEY_STORAGE, key);
-    else localStorage.removeItem(KEY_STORAGE);
-  } catch { /* no storage: the key lasts only for this visit */ }
+  // Without storage the key lasts only for this visit (memoryKey)
+  if (key) settings.set('intervalsKey', key);
+  else settings.remove('intervalsKey');
   memoryKey = key;
 }
 

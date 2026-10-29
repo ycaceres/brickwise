@@ -5,7 +5,7 @@
  */
 
 import { $ } from '../lib/dom.js';
-import { saveJson } from '../lib/storage.js';
+import * as settings from '../lib/settings.js';
 import { beep } from '../lib/sound.js';
 import { LIMITS } from '../devices/treadmill/exp5i-protocol.js';
 import { targetSpeedAt } from '../workouts/steps.js';
@@ -308,7 +308,7 @@ function saveTestResult() {
     return;
   }
   const tests = [{ date: new Date().toISOString(), ...result, peakHr }, ...loadTests()].slice(0, TESTS_KEPT);
-  saveJson('tests', tests);
+  settings.set('tests', tests);
   const text = testText(result);
   log('info', `Threshold test: ${text} (r² ${result.r2}, ${result.points} points)`);
   $('sessionNote').textContent += ` Threshold test: ${text}. See Profile.`;

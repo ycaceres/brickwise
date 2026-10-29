@@ -5,7 +5,7 @@
  */
 
 import { $, escapeHtml } from '../lib/dom.js';
-import { loadJson, saveJson, loadText, saveText } from '../lib/storage.js';
+import * as settings from '../lib/settings.js';
 import { flattenWorkout, followsHr, formatPace, formatDuration } from '../workouts/steps.js';
 import { loadLibrary } from '../workouts/library.js';
 import { resolveDoc } from '../physiology/zones.js';
@@ -83,7 +83,7 @@ let LIBRARY = [];
 let libTypes = [];
 let libDurations = [30, 45, 60];
 let libError = null;
-const libFilter = { minutes: 45, type: 'all', level: 'all', ...loadJson('libFilter', {}) };
+const libFilter = { minutes: 45, type: 'all', level: 'all', ...settings.get('libFilter') };
 
 /** Nearest list duration (featured workouts may last 36 min, for example). */
 const durationBucket = (min) => libDurations.reduce((a, b) => (Math.abs(b - min) < Math.abs(a - min) ? b : a), libDurations[0]);
@@ -113,7 +113,7 @@ function renderFilters() {
     sel.onchange = () => {
       const [value] = options.find(([v]) => String(v) === sel.value);
       libFilter[key] = value;
-      saveJson('libFilter', libFilter);
+      settings.set('libFilter', libFilter);
       renderLists();
     };
     wrap.appendChild(sel);
@@ -185,7 +185,7 @@ export function selectWorkout(key = selectedKey) {
   } else {
     selected = null;
   }
-  saveText('workout', selectedKey.startsWith('l:') ? selectedKey : '');
+  settings.set('workout', selectedKey.startsWith('l:') ? selectedKey : '');
   markSelected();
   renderWorkout();
   render();
@@ -278,11 +278,11 @@ export function initWorkouts() {
   // Home: the day and a sport filter
   $('hDate').value = today();
   $('hDate').onchange = loadWorkouts;
-  homeSport = loadText('homeSport') || 'all';
+  homeSport = settings.get('homeSport') || 'all';
   $('hSport').value = homeSport;
   $('hSport').onchange = () => {
     homeSport = $('hSport').value;
-    saveText('homeSport', homeSport);
+    settings.set('homeSport', homeSport);
     renderLists();
   };
   $('hReload').onclick = loadWorkouts;
@@ -295,7 +295,7 @@ export function initWorkouts() {
   $('wIncline').onchange = () => selectWorkout();
   $('wHrAdjust').onchange = () => selectWorkout();
 
-  const w = loadText('workout');
+  const w = settings.get('workout');
   if (w?.startsWith('l:')) selectedKey = w; // confirmed once the library loads
   renderLists();
   loadLibrary().then((lib) => {

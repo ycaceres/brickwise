@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Brickwise</title>
   <link rel="stylesheet" href="css/app.css">
-  <!-- Saved color palette before the first paint (src/ui/config.js keeps it in sync) -->
+  <!-- Saved color palette before the first paint (setting "theme" in src/lib/settings.js; src/ui/config.js keeps it in sync) -->
   <script>try { const t = localStorage.getItem('brickwise.theme'); if (t && t !== 'system') document.documentElement.dataset.theme = t; } catch { /* optional */ }</script>
 </head>
 <body>
@@ -47,7 +47,7 @@
 
 <script>
   // The app used to be called Treadwise: its saved settings move to the new
-  // keys once, before the modules read them.
+  // keys once, before the modules read them (keys listed in src/lib/settings.js).
   try {
     for (const store of [localStorage, sessionStorage]) {
       for (const old of Object.keys(store).filter((k) => k.startsWith('treadwise.'))) {
@@ -59,7 +59,8 @@
   } catch { /* storage blocked: nothing to move */ }
 
   // If any module fails to download (dropped connection), the whole app does
-  // not start. It retries twice and, if it keeps failing, shows a notice.
+  // not start. It retries twice and, if it keeps failing, shows a notice
+  // (setting "loadRetry" in src/lib/settings.js, cleared once the app starts).
   function appLoadFailed() {
     let tries = 0;
     try { tries = Number(sessionStorage.getItem('brickwise.loadRetry') || 0); } catch { tries = 2; }

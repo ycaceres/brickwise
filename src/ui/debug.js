@@ -4,7 +4,7 @@
  */
 
 import { $, download } from '../lib/dom.js';
-import { formatDuration } from '../workouts/steps.js';
+import { stateRows } from './format.js';
 import { live, STALE_MS } from '../session/live.js';
 import { updateControls } from './run.js';
 import * as app from '../state.js';
@@ -31,31 +31,47 @@ export function initDebug() {
   $('btnLogDownload').onclick = () => download(`brickwise-log-${Date.now()}.txt`, logLines.join('\n'), 'text/plain');
 }
 
-// What the console reports
-let lastMode;
+// What the connected devices report
+let lastAlerts;
 export function renderConsole() {
-  const c = live.console;
-  const dev = app.state.devices.controllable;
-  const fresh = dev && Date.now() - (dev.state.updatedAt || 0) < STALE_MS;
-  // Driver-specific rows (iFit mode, console HR source…)
-  const diag = Object.fromEntries(fresh ? dev.diagnostics?.() ?? [] : []);
-  const modeEl = $('cMode');
-  modeEl.textContent = diag.Mode ?? '—';
-  modeEl.dataset.belt = fresh ? c.belt ?? '' : '';
-  modeEl.dataset.alert = fresh && c.alerts?.length ? 'true' : '';
-  const mode = fresh ? `${c.belt}|${c.alerts?.join(',')}` : undefined;
-  if (mode !== lastMode) {
-    lastMode = mode;
-    updateControls(); // the safety key notice depends on the alerts
+  const blocks = [];
+  for (const kind of ['treadmill', 'trainer']) {
+    const dev = app.state.devices[kind];
+    if (!dev?.connected) continue;
+    const st = kind === 'treadmill' ? live.console : live.trainer ?? {};
+    const fresh = Date.now() - (dev.state?.updatedAt || 0) < STALE_MS;
+    const rows = [...stateRows(kind, st), ...(dev.diagnostics?.() ?? [])];
+    const box = document.createElement('div');
+    box.className = 'dev-block';
+    const h = document.createElement('h3');
+    h.textContent = dev.descriptor?.name ?? kind;
+    const grid = document.createElement('div');
+    grid.className = 'console-grid num';
+    for (const [label, text] of rows) {
+      const cell = document.createElement('div');
+      const l = document.createElement('span');
+      l.textContent = label;
+      const v = document.createElement('strong');
+      v.textContent = fresh && text != null ? String(text) : '—';
+      if (label === 'Belt' || (kind === 'trainer' && label === 'Mode')) {
+        v.className = 'mode';
+        v.dataset.belt = fresh ? st.belt ?? (st.controlled ? 'running' : 'stopped') : '';
+        v.dataset.alert = fresh && st.alerts?.length ? 'true' : '';
+      }
+      cell.append(l, v);
+      grid.appendChild(cell);
+    }
+    box.append(h, grid);
+    blocks.push(box);
   }
-  const set = (id, text) => { $(id).textContent = fresh && text != null ? text : '—'; };
-  set('cSpeed', c.speed != null ? `${c.speed.toFixed(1)} km/h${c.speedSource === 'requested' ? ' (no actual reading)' : ''}` : null);
-  set('cTarget', c.targetSpeed != null ? `${c.targetSpeed.toFixed(1)} km/h` : null);
-  set('cIncline', c.incline != null ? `${c.incline.toFixed(1)} %` : null);
-  set('cDist', c.distance != null ? `${(c.distance / 1000).toFixed(2)} km` : null);
-  set('cTime', c.time != null ? formatDuration(c.time) : null);
-  set('cCal', c.calories != null ? `${Math.round(c.calories)} kcal` : null);
-  set('cPulse', diag['Console HR'] ?? null);
+  if (blocks.length) $('devTables').replaceChildren(...blocks);
+  else $('devTables').replaceChildren(Object.assign(document.createElement('p'), { className: 'note', textContent: 'No device connected.' }));
+  // The safety key notice depends on the alerts
+  const alerts = (live.console.alerts || []).join(',');
+  if (alerts !== lastAlerts) {
+    lastAlerts = alerts;
+    updateControls();
+  }
 }
 
 export function renderInfo() {

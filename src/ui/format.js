@@ -2,7 +2,7 @@
  * Text for the UI, without the DOM: what the components show, kept here so
  * the tests can check it.
  */
-import { formatPace } from '../workouts/steps.js';
+import { formatPace, formatDuration } from '../workouts/steps.js';
 
 /** "Ana María López" → "AM" */
 export function initials(name) {
@@ -63,4 +63,33 @@ export function zoneTable(sport, z) {
     rows,
     summary: zoneSummary(z?.lthr, at, z?.maxHr),
   };
+}
+
+const km = (m) => (m != null ? `${(m / 1000).toFixed(2)} km` : null);
+
+/**
+ * Debug rows [label, text] for a device's normalized state (types.js
+ * TreadmillState / TrainerState); missing values are null.
+ */
+export function stateRows(kind, s = {}) {
+  if (kind === 'trainer') {
+    return [
+      ['Mode', s.mode ?? null],
+      ['Power', s.power != null ? `${Math.round(s.power)} W` : null],
+      ['Cadence', s.cadence != null ? `${Math.round(s.cadence)} rpm` : null],
+      ['Speed', s.speed != null ? `${s.speed.toFixed(1)} km/h` : null],
+      ['Distance', km(s.distance)],
+      ['Time', s.elapsed != null ? formatDuration(s.elapsed) : null],
+      ['Control', s.controlled ? 'this app' : s.mode ? 'none' : null],
+    ];
+  }
+  return [
+    ['Belt', s.belt ?? null],
+    ['Actual speed', s.speed != null ? `${s.speed.toFixed(1)} km/h${s.speedSource === 'requested' ? ' (no actual reading)' : ''}` : null],
+    ['Requested speed', s.targetSpeed != null ? `${s.targetSpeed.toFixed(1)} km/h` : null],
+    ['Incline', s.incline != null ? `${s.incline.toFixed(1)} %` : null],
+    ['Distance', km(s.distance)],
+    ['Time', s.time != null ? formatDuration(s.time) : null],
+    ['Calories', s.calories != null ? `${Math.round(s.calories)} kcal` : null],
+  ];
 }

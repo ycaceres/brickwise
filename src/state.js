@@ -13,7 +13,7 @@ export const state = {
   profile: null,     // see physiology/zones.js
   zones: null,       // computed from the profile
   selection: null,   // { key, event, steps, needsProfile, hrControl, hrOn }; null = manual control
-  devices: { controllable: null, hr: null, sensors: [] },
+  devices: { treadmill: null, trainer: null, hr: null, sensors: [] },
   athlete: null,     // Intervals.icu account
   wellness: null,    // latest weight, sleep, resting HR, HRV
   planned: null,     // the day's Intervals.icu workouts (null = not loaded)
@@ -36,7 +36,7 @@ export function setSelection(sel) {
   emit('selection', sel);
 }
 
-/** kind: 'controllable' (treadmill or trainer) or 'hr'. */
+/** kind: 'treadmill', 'trainer' or 'hr' (one device of each). */
 export function setDevice(kind, device) {
   state.devices[kind] = device;
   emit('device', { kind, device });

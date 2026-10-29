@@ -25,7 +25,7 @@ test('runner: a short workout runs from the belt start to the end', async () => 
     },
     pause: () => sent.push(['pause']),
   };
-  setDevice('controllable', device);
+  setDevice('treadmill', device);
   const step = (label, kmh, duration) => ({ label, duration, hasTarget: true, speedStart: kmh, speedEnd: kmh, incline: 1, hr: null });
   setSelection({ key: 'l:test', event: { name: 'Test' }, steps: [step('A', 8, 3), step('B', 9, 3)], hrOn: false });
 
@@ -76,7 +76,7 @@ test('runner: the plan keeps its speed; what is sent is clamped to the treadmill
     setTarget: ({ speed, incline }) => sent.push({ speed, incline: incline != null ? Math.min(10, incline) : undefined }),
     pause() {},
   };
-  setDevice('controllable', device);
+  setDevice('treadmill', device);
   setSelection({ key: 'l:fast', event: { name: 'Fast' }, steps, hrOn: false });
   start();
   device.state.updatedAt = 50_000; live.speed = 10; tick(50_000);

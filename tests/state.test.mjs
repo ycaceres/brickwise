@@ -30,10 +30,10 @@ test('state: selection and devices notify with their value', () => {
   on('selection', (s) => seen.push(['selection', s?.key ?? null]));
   on('device', (d) => seen.push(['device', d.kind, d.device?.id ?? null]));
   setSelection({ key: 'l:z2-45-1', event: {}, steps: [] });
-  setDevice('controllable', { id: 'sim' });
+  setDevice('treadmill', { id: 'sim' });
   setSelection(null);
-  assert.deepEqual(seen, [['selection', 'l:z2-45-1'], ['device', 'controllable', 'sim'], ['selection', null]]);
-  assert.equal(state.devices.controllable.id, 'sim');
+  assert.deepEqual(seen, [['selection', 'l:z2-45-1'], ['device', 'treadmill', 'sim'], ['selection', null]]);
+  assert.equal(state.devices.treadmill.id, 'sim');
   assert.equal(state.selection, null);
 });
 

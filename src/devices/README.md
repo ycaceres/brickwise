@@ -32,7 +32,7 @@ src/devices/
      create: (events) => new BrandModelTreadmill(events),
    };
    ```
-3. **Register it:** one import and one entry in `DRIVERS` in `registry.js`.
+3. **Register it:** one import and one entry in `DRIVERS` in `registry.js`. It then appears in the device menus by itself (`ui/device-menu.js`): "Connect treadmill" / "Connect smart trainer" uses the driver directly when it is the only one of its kind, or one Bluetooth chooser for all of them plus `detect()` when there are several; debug-only drivers are listed as simulators with `?debug=true`, and a `simulate(...)` method adds their controls to the menu. The Run and Ride controls follow `capabilities` (e.g. no incline buttons without `incline`).
 4. **Events:** call `onStatus('connecting' | 'initializing' | 'ready' | 'disconnected' | 'error', detail)`, `onData(state)` with every reading (always set `state.updatedAt = Date.now()`), `onInfo(info)` and `onLog(kind, text)`.
 5. **Connect:** `connect({ device })` may receive a Bluetooth device already chosen by the app (one chooser for every driver of a kind); without it, the driver calls `navigator.bluetooth.requestDevice` with its own `match`. Use `ble/gatt.js` (`connectGatt`, `subscribe`) and `ble/write-queue.js` (`createWriteQueue`) instead of re-implementing them.
 6. **Safety:** `pause()` stops the belt (or releases the trainer); `pauseNow()` must be synchronous and safe when not connected (it runs while the page closes).

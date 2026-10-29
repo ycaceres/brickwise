@@ -58,6 +58,11 @@ export class SimulatedTreadmill extends Treadmill {
     this.pause();
   }
 
+  /** Debug control (the device menu): { belt: 'toggle' } presses START/STOP on the console. */
+  simulate({ belt } = {}) {
+    if (belt === 'toggle') this.toggleBelt();
+  }
+
   /** Same as pressing START/STOP on the console. */
   toggleBelt() {
     this.belt = !this.belt;

@@ -55,8 +55,7 @@ export class SimulatedTrainer extends Trainer {
   }
 
   diagnostics() {
-    const s = this.state;
-    return [['Mode', s.mode], ['Target W', this.requested.power ?? '—'], ['Cadence', `${Math.round(s.cadence)} rpm`]];
+    return [['Target', this.requested.power != null ? `${this.requested.power} W` : '—'], ['Rider', this.pedaling ? 'pedaling' : 'stopped']];
   }
 
   _applyMode(mode) { this.onLog('tx', `mode ${mode} (sim)`); }

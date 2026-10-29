@@ -4,4 +4,34 @@
     <bw-chart id="rideChart" compact help="ride" heading="Ride"></bw-chart>
     <p class="note" id="rideNote" style="margin-top: 8px"></p>
   </section>
+
+  <!-- The connected smart trainer: live numbers and manual targets (no session yet) -->
+  <section class="dash card hidden" id="rideTrainer" aria-label="Smart trainer">
+    <div class="dash-half">
+      <div class="dash-vals num">
+        <span class="dv" title="Power"><b id="rtPower">--</b><small>W</small></span>
+        <span class="dv" title="Cadence"><b id="rtCadence">--</b><small>rpm</small></span>
+        <span class="dv" title="Speed"><b id="rtSpeed">--</b><small>km/h</small></span>
+      </div>
+    </div>
+    <div class="dash-half dash-split">
+      <div class="dash-ctl" id="rtErg">
+        <span class="dv" title="ERG target"><b id="rtTarget">--</b><small>W target</small></span>
+        <span class="dash-sub num">ERG</span>
+        <div class="pm">
+          <button data-power="5" aria-label="Raise the target 5 W" title="+5 W">+</button>
+          <button data-power="-5" aria-label="Lower the target 5 W" title="−5 W">−</button>
+        </div>
+      </div>
+      <div class="dash-ctl" id="rtResistance">
+        <span class="dv" title="Resistance"><b id="rtLevel">--</b><small>%</small></span>
+        <span class="dash-sub num">Resistance</span>
+        <div class="pm">
+          <button data-resistance="5" aria-label="Raise resistance 5 %" title="+5 %">+</button>
+          <button data-resistance="-5" aria-label="Lower resistance 5 %" title="−5 %">−</button>
+        </div>
+      </div>
+    </div>
+    <div class="dash-note note" id="rideTrainerNote">Manual control: workouts on the trainer come later.</div>
+  </section>
 </div>

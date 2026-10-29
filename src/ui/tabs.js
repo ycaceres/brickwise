@@ -26,7 +26,9 @@ export function showTab(name) {
   if (!ALL.includes(name)) name = 'home';
   for (const t of ALL) $(`tab-${t}`).classList.toggle('hidden', t !== name);
   for (const t of NAV_TABS) $(`nav-${t}`).setAttribute('aria-selected', String(t === name));
-  $('devicePills').classList.toggle('hidden', name !== 'run');
+  $('devicePills').classList.toggle('hidden', name !== 'run' && name !== 'ride');
+  $('pillTreadmill').classList.toggle('hidden', name !== 'run');
+  $('pillTrainer').classList.toggle('hidden', name !== 'ride');
   settings.set('tab', name);
   // The charts measure their width when shown
   if (name === 'run') updateChart();
@@ -44,7 +46,6 @@ const sessionTab = (event) => (event?.sport === 'ride' ? 'ride' : 'run');
 /** Startup: the sidebar, the links between tabs and the safety reminder. */
 export function initTabs() {
   $('nav-debug').classList.toggle('hidden', !DEBUG);
-  $('btnSim').classList.toggle('hidden', !DEBUG);
   for (const t of NAV_TABS) $(`nav-${t}`).onclick = () => showTab(t);
   $('btnGoWorkout').onclick = () => showTab(sessionTab(app.state.selection?.event));
   $('hGoProfile').onclick = () => showTab('profile');

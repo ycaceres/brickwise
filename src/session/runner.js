@@ -33,7 +33,7 @@ const beep = (freq, seconds) => events.emit('beep', { freq, seconds });
 const changed = () => events.emit('change');
 
 const ACTIVE = ['armed', 'running', 'paused'];
-const device = () => app.state.devices.controllable;
+const device = () => app.state.devices.treadmill;
 const limits = () => device()?.limits ?? {};
 export const isActive = () => ACTIVE.includes(session.state);
 
@@ -119,7 +119,7 @@ export function applyStep(i) {
   else if (session.testStart != null) session.testEnd ??= session.totalElapsed;
   if (!step) {
     finish('Workout complete. Belt paused: finish or resume from the console.');
-    app.state.devices.controllable?.pause();
+    app.state.devices.treadmill?.pause();
     return;
   }
   log('info', `Step ${i + 1}/${session.steps.length}: ${step.label}`);
@@ -189,7 +189,7 @@ export function tick(now = Date.now()) {
   const dt = Math.min(5, (now - (tick.last || now)) / 1000);
   tick.last = now;
   // Without recent treadmill data no distance is counted (and the session pauses)
-  if (!app.state.devices.controllable || now - app.state.devices.controllable.state.updatedAt > STALE_MS) live.speed = 0;
+  if (!app.state.devices.treadmill || now - app.state.devices.treadmill.state.updatedAt > STALE_MS) live.speed = 0;
   const moving = live.speed >= MOVING_KMH;
   const restarted = moving && !tick.wasMoving;
   tick.wasMoving = moving;
@@ -402,8 +402,8 @@ function adjustForHr(step) {
 // START on the console resumes it.
 let unloadPausedAt = 0;
 export function pauseOnClose() {
-  if (!isActive() || !app.state.devices.controllable?.connected) return;
+  if (!isActive() || !app.state.devices.treadmill?.connected) return;
   if (Date.now() - unloadPausedAt < 1000) return;
   unloadPausedAt = Date.now();
-  app.state.devices.controllable.pauseNow();
+  app.state.devices.treadmill.pauseNow();
 }

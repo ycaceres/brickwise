@@ -70,7 +70,9 @@ export function updateChart() {
 // ---------------------------------------------------------------------------
 
 export function updateControls() {
-  const connected = !!app.state.devices.controllable?.connected;
+  const dev = app.state.devices.treadmill;
+  const connected = !!dev?.connected;
+  const caps = dev?.capabilities ?? {};
   const active = ['armed', 'running', 'paused'].includes(session.state);
   // Rides need the bike trainer, which is not supported yet
   const ride = app.state.selection?.event?.sport === 'ride';
@@ -87,10 +89,12 @@ export function updateControls() {
   $('wPosition').disabled = $('wIncline').disabled = $('wHrAdjust').disabled = active;
   for (const list of document.querySelectorAll('bw-workout-list')) list.disabled = active;
   document.querySelectorAll('[data-speed],[data-incline]').forEach((b) => { b.disabled = !connected; });
+  // Controls the connected treadmill has (incline buttons only if it can tilt)
+  $('mInclineCtl').classList.toggle('hidden', connected && caps.incline === false);
 
   const notes = {
-    idle: connected ? 'Pick a workout (or none) and press Start.' : 'Connect a controllable to begin.',
-    armed: 'Press START on the console. The workout begins as soon as the belt moves.',
+    idle: connected ? 'Pick a workout (or none) and press Start.' : 'Connect a treadmill to begin.',
+    armed: caps.remoteStart ? 'The workout begins as soon as the belt moves.' : 'Press START on the console. The workout begins as soon as the belt moves.',
     running: session.steps.length ? 'Workout in progress.' : 'Free session in progress.',
     paused: 'Paused: the belt is stopped. Press START on the console to continue.',
   };
@@ -204,7 +208,7 @@ export function initRun() {
         // Base: the requested speed the console reports (includes changes made on it)
         const reported = live.console.targetSpeed;
         const base = reported > 0 ? reported : session.target ?? live.speed;
-        const dev = app.state.devices.controllable;
+        const dev = app.state.devices.treadmill;
         if (!dev) return;
         session.target = dev.clampSpeed(base + delta);
         dev.setTarget({ speed: session.target });
@@ -213,7 +217,7 @@ export function initRun() {
   });
 
   $('tab-run').querySelectorAll('[data-incline]').forEach((btn) => {
-    btn.onclick = () => app.state.devices.controllable?.setTarget({ incline: live.incline + parseFloat(btn.dataset.incline) });
+    btn.onclick = () => app.state.devices.treadmill?.setTarget({ incline: live.incline + parseFloat(btn.dataset.incline) });
   });
 
   $('btnStart').onclick = start;
@@ -223,7 +227,7 @@ export function initRun() {
   $('btnFinish').onclick = () => {
     if (session.state === 'armed') { cancel(); return; }
     finish('Session ended. Belt paused: finish or resume from the console.');
-    app.state.devices.controllable?.pause();
+    app.state.devices.treadmill?.pause();
   };
 
   $('btnCsv').onclick = () => {

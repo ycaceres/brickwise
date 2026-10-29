@@ -1,17 +1,9 @@
 <!-- Debug (only with ?debug=true): controllable state and log -->
 <div id="tab-debug" class="tab hidden">
   <section class="card">
-    <h2>Controllable state</h2>
-    <div class="console-grid num">
-      <div><span>Mode</span><strong id="cMode" class="mode">—</strong></div>
-      <div><span>Actual speed</span><strong id="cSpeed">—</strong></div>
-      <div><span>Requested speed</span><strong id="cTarget">—</strong></div>
-      <div><span>Incline</span><strong id="cIncline">—</strong></div>
-      <div><span>Distance (console)</span><strong id="cDist">—</strong></div>
-      <div><span>Time (console)</span><strong id="cTime">—</strong></div>
-      <div><span>Calories</span><strong id="cCal">—</strong></div>
-      <div><span>Console HR</span><strong id="cPulse">—</strong></div>
-    </div>
+    <h2>Devices</h2>
+    <!-- One block per connected treadmill / trainer: normalized readings, then the driver's own rows -->
+    <div id="devTables"><p class="note">No device connected.</p></div>
     <div class="note" id="cInfo" style="margin-top: 10px">No equipment info yet.</div>
   </section>
   <section class="card">

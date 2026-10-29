@@ -28,17 +28,14 @@
 <main>
   <header>
     <h1>Brickwise</h1>
-    <!-- Device pills: only on the Run tab -->
+    <!-- Device pills: the treadmill on Run, the smart trainer on Ride, the HRM on both; menus drawn from the driver registry -->
     <div class="pills hidden" id="devicePills">
-      <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect the controllable (treadmill or bike trainer)">Controllable</button>
+      <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect a treadmill">Treadmill</button>
+      <button class="pill" id="pillTrainer" popovertarget="menuTrainer" title="Connect or disconnect a smart trainer">Trainer</button>
       <button class="pill" id="pillHr" title="Connect a heart rate monitor (HRM)">HRM</button>
     </div>
-    <div popover id="menuTreadmill" class="menu">
-      <button class="primary" id="btnConnect">Connect treadmill</button>
-      <button id="btnSim" class="hidden">Simulation mode</button>
-      <button id="btnSimBelt" class="hidden">Console Start/Stop (sim)</button>
-      <button id="btnDisconnect" class="danger" disabled>Disconnect</button>
-    </div>
+    <div popover id="menuTreadmill" class="menu"></div>
+    <div popover id="menuTrainer" class="menu"></div>
   </header>
 
   <!-- The pages (pages/*.html) go here, loaded by src/lib/pages.js -->

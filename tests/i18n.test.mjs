@@ -128,3 +128,21 @@ test('i18n: French and Spanish plurals and typography', async () => {
     delete globalThis.document;
   }
 });
+
+test('i18n: overlapping language switches end on the last one asked', async () => {
+  const { setLanguage, getLanguage, LANGUAGES } = await import('../src/i18n/index.js');
+  globalThis.document = { documentElement: {}, querySelectorAll: () => [], dispatchEvent() {} };
+  const slow = { code: 'zz', name: 'Slow', native: 'Slow', dir: 'ltr', load: () => new Promise((r) => setTimeout(() => r({ default: {} }), 30)) };
+  LANGUAGES.push(slow);
+  try {
+    const first = setLanguage('zz');   // still downloading…
+    await setLanguage('en');           // …when the user picks English
+    await first;
+    assert.equal(getLanguage(), 'en');
+    assert.equal(document.documentElement.lang, 'en');
+  } finally {
+    LANGUAGES.splice(LANGUAGES.indexOf(slow), 1);
+    await setLanguage('en');
+    delete globalThis.document;
+  }
+});

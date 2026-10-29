@@ -52,9 +52,14 @@ export function translate(root = document) {
 }
 
 /** Loads a language (or English, if unknown), applies it to the page and tells the code. */
+let requests = 0;
+
 export async function setLanguage(code, root = document) {
   const lang = LANGUAGES.find((l) => l.code === code) ?? LANGUAGES.find((l) => l.code === DEFAULT_LANGUAGE);
+  // Switches can overlap while a dictionary downloads: only the last one asked applies
+  const request = ++requests;
   loaded[lang.code] ??= (await lang.load()).default;
+  if (request !== requests) return current;
   current = lang.code;
   messages = loaded[lang.code];
   document.documentElement.lang = lang.code;

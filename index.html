@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Brickwise</title>
   <link rel="stylesheet" href="css/app.css">
-  <!-- Saved color palette before the first paint (src/ui/config.js keeps it in sync) -->
+  <!-- Saved color palette before the first paint (setting "theme" in src/lib/settings.js; src/ui/config.js keeps it in sync) -->
   <script>try { const t = localStorage.getItem('brickwise.theme'); if (t && t !== 'system') document.documentElement.dataset.theme = t; } catch { /* optional */ }</script>
 </head>
 <body>
@@ -16,7 +16,7 @@
   </div>
   <!-- Between the groups: optional and contextual buttons -->
   <div class="nav-group nav-context">
-    <button role="tab" id="nav-train" data-i18n-label="nav.train" aria-selected="true" aria-label="Run" title="Run"><bw-icon name="train"></bw-icon></button>
+    <button role="tab" id="nav-run" data-i18n-label="nav.run" aria-selected="true" aria-label="Run" title="Run"><bw-icon name="run"></bw-icon></button>
     <button role="tab" id="nav-ride" data-i18n-label="nav.ride" aria-selected="false" aria-label="Ride" title="Ride"><bw-icon name="ride"></bw-icon></button>
     <button role="tab" id="nav-debug" data-i18n-label="nav.debug" aria-selected="false" aria-label="Debug" title="Debug" class="hidden"><bw-icon name="debug"></bw-icon></button>
   </div>
@@ -28,26 +28,23 @@
 <main>
   <header>
     <h1>Brickwise</h1>
-    <!-- Device pills: only on the Run tab -->
+    <!-- Device pills: the treadmill on Run, the smart trainer on Ride, the HRM on both; menus drawn from the driver registry -->
     <div class="pills hidden" id="devicePills">
-      <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect the controllable (treadmill or bike trainer)">Controllable</button>
-      <button class="pill" id="pillHr" title="Connect a heart rate monitor (HRM)">HRM</button>
+      <button class="pill" id="pillTreadmill" popovertarget="menuTreadmill" title="Connect or disconnect a treadmill" data-i18n-title="header.treadmillHelp">Treadmill</button>
+      <button class="pill" id="pillTrainer" popovertarget="menuTrainer" title="Connect or disconnect a smart trainer" data-i18n-title="header.trainerHelp">Trainer</button>
+      <button class="pill" id="pillHr" title="Connect a heart rate monitor (HRM)" data-i18n-title="header.hrmHelp">HRM</button>
     </div>
-    <div popover id="menuTreadmill" class="menu">
-      <button class="primary" id="btnConnect">Connect treadmill</button>
-      <button id="btnSim" class="hidden">Simulation mode</button>
-      <button id="btnSimBelt" class="hidden">Console Start/Stop (sim)</button>
-      <button id="btnDisconnect" class="danger" disabled>Disconnect</button>
-    </div>
+    <div popover id="menuTreadmill" class="menu"></div>
+    <div popover id="menuTrainer" class="menu"></div>
   </header>
 
   <!-- The pages (pages/*.html) go here, loaded by src/lib/pages.js -->
-  <footer class="note footer">Brickwise is an independent project, not affiliated with or endorsed by any equipment manufacturer. All trademarks belong to their respective owners.</footer>
+  <footer class="note footer" data-i18n="footer.disclaimer">Brickwise is an independent project, not affiliated with or endorsed by any equipment manufacturer. All trademarks belong to their respective owners.</footer>
 </main>
 
 <script>
   // The app used to be called Treadwise: its saved settings move to the new
-  // keys once, before the modules read them.
+  // keys once, before the modules read them (keys listed in src/lib/settings.js).
   try {
     for (const store of [localStorage, sessionStorage]) {
       for (const old of Object.keys(store).filter((k) => k.startsWith('treadwise.'))) {
@@ -59,7 +56,8 @@
   } catch { /* storage blocked: nothing to move */ }
 
   // If any module fails to download (dropped connection), the whole app does
-  // not start. It retries twice and, if it keeps failing, shows a notice.
+  // not start. It retries twice and, if it keeps failing, shows a notice
+  // (setting "loadRetry" in src/lib/settings.js, cleared once the app starts).
   function appLoadFailed() {
     let tries = 0;
     try { tries = Number(sessionStorage.getItem('brickwise.loadRetry') || 0); } catch { tries = 2; }

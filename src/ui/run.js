@@ -1,24 +1,23 @@
 /**
- * Train tab: the live numbers (pace, incline, distance, time, HR, α1), the
+ * Run tab: the live numbers (pace, incline, distance, time, HR, α1), the
  * session buttons, the chart, and export or upload when the session ends.
  */
 
 import { $, download } from '../lib/dom.js';
 import { formatPace, formatDuration } from '../workouts/steps.js';
-import { LIMITS } from '../devices/treadmill/exp5i-protocol.js';
-import { MODE } from '../devices/treadmill/ifit-messages.js';
 import { hrZoneOf } from '../physiology/zones.js';
-import { alphaState, ALPHA_LABELS } from '../physiology/hrv.js';
+import { alphaState } from '../physiology/hrv.js';
 import { buildTcx } from '../export/tcx.js';
 import { samplesToCsv } from '../export/csv.js';
 import * as intervals from '../services/intervals.js';
 import { live, rrState, rrActive } from '../session/live.js';
-import { session, resetSession, currentStep, applyStep, pushTarget, start, finish } from '../session/runner.js';
-import { wakeError, releaseWakeLock } from '../session/wake-lock.js';
+import { session, events as sessionEvents, isActive, currentStep, applyStep, pushTarget, start, finish, cancel, pauseOnClose } from '../session/runner.js';
+import { wakeError, requestWakeLock, releaseWakeLock, initWakeLock } from '../session/wake-lock.js';
+import { beep } from '../lib/sound.js';
+import { highlightSteps } from './workout.js';
 import { log, renderConsole } from './debug.js';
-import { treadmill } from './devices.js';
-import { zones } from './profile.js';
-import { selected, zonesFor } from './workouts.js';
+import * as app from '../state.js';
+import { t } from '../i18n/index.js';
 
 // ---------------------------------------------------------------------------
 // Chart
@@ -38,7 +37,7 @@ function plannedSeconds(step) {
  */
 export function planTimeline(planOnly = false) {
   const active = !planOnly && session.state !== 'idle';
-  const steps = active ? session.steps : selected?.steps || [];
+  const steps = active ? session.steps : app.state.selection?.steps || [];
   const out = [];
   let t = 0;
   steps.forEach((step, i) => {
@@ -62,9 +61,9 @@ export function planTimeline(planOnly = false) {
 }
 
 export function updateChart() {
-  const event = session.state !== 'idle' ? session.event : selected?.event;
-  $('chart').update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones: zonesFor(event) });
-  $('chart').heading = event?.name || 'Free session';
+  const event = session.state !== 'idle' ? session.event : app.state.selection?.event;
+  $('chart').update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones: app.zonesFor(event) });
+  $('chart').heading = event?.name || t('run.freeSession');
 }
 
 // ---------------------------------------------------------------------------
@@ -72,12 +71,14 @@ export function updateChart() {
 // ---------------------------------------------------------------------------
 
 export function updateControls() {
-  const connected = !!treadmill?.connected;
+  const dev = app.state.devices.treadmill;
+  const connected = !!dev?.connected;
+  const caps = dev?.capabilities ?? {};
   const active = ['armed', 'running', 'paused'].includes(session.state);
   // Rides need the bike trainer, which is not supported yet
-  const ride = selected?.event?.sport === 'ride';
+  const ride = app.state.selection?.event?.sport === 'ride';
   $('btnStart').disabled = !connected || active || ride;
-  const startLabel = selected ? 'Start workout' : 'Start free session';
+  const startLabel = app.state.selection ? t('run.startWorkout') : t('run.startFreeSession');
   $('btnStart').title = startLabel;
   $('btnStart').setAttribute('aria-label', startLabel);
   $('btnSkip').disabled = !(session.steps.length && (session.state === 'running' || session.state === 'paused'));
@@ -85,29 +86,32 @@ export function updateControls() {
   const finished = session.state === 'done' && session.samples.length > 0;
   $('btnExport').disabled = !finished;
   $('btnUpload').disabled = !(finished && session.samples.length > 10 && intervals.getApiKey() && !session.uploaded);
-  $('btnUpload').title = intervals.getApiKey() ? 'Upload to Intervals.icu (when finished)' : 'Upload to Intervals.icu: sign in with your API key in Profile';
+  $('btnUpload').title = intervals.getApiKey() ? t('run.uploadWhenFinished') : t('run.uploadSignIn');
+  $('btnUpload').setAttribute('aria-label', t('run.upload'));
   $('wPosition').disabled = $('wIncline').disabled = $('wHrAdjust').disabled = active;
   for (const list of document.querySelectorAll('bw-workout-list')) list.disabled = active;
   document.querySelectorAll('[data-speed],[data-incline]').forEach((b) => { b.disabled = !connected; });
+  // Controls the connected treadmill has (incline buttons only if it can tilt)
+  $('mInclineCtl').classList.toggle('hidden', connected && caps.incline === false);
 
   const notes = {
-    idle: connected ? 'Pick a workout (or none) and press Start.' : 'Connect a controllable to begin.',
-    armed: 'Press START on the console. The workout begins as soon as the belt moves.',
-    running: session.steps.length ? 'Workout in progress.' : 'Free session in progress.',
-    paused: 'Paused: the belt is stopped. Press START on the console to continue.',
+    idle: connected ? t('run.note.pick') : t('run.note.connect'),
+    armed: caps.remoteStart ? t('run.note.armedRemote') : t('run.note.armed'),
+    running: session.steps.length ? t('run.note.running') : t('run.note.runningFree'),
+    paused: t('run.note.paused'),
   };
   if (notes[session.state]) $('sessionNote').textContent = notes[session.state];
   if (wakeError && ['armed', 'running', 'paused'].includes(session.state)) {
     $('sessionNote').textContent += ` ${wakeError}`;
   }
-  if (session.state === 'idle' && selected?.needsProfile) {
-    $('sessionNote').textContent = 'Threshold pace is missing in Profile: without it, this workout has no speeds.';
+  if (session.state === 'idle' && app.state.selection?.needsProfile) {
+    $('sessionNote').textContent = t('run.note.noThreshold');
   }
   if (session.state === 'idle' && ride) {
-    $('sessionNote').textContent = 'This is a bike workout: it needs a bike trainer, which is not supported yet.';
+    $('sessionNote').textContent = t('run.note.bikeWorkout');
   }
-  if (connected && live.console.mode === MODE.MISSING_SAFETY_KEY) {
-    $('sessionNote').textContent = 'Safety key missing: attach it to the console.';
+  if (connected && live.console.alerts?.includes('safety-key-missing')) {
+    $('sessionNote').textContent = t('run.note.safetyKey');
   }
 }
 
@@ -119,16 +123,16 @@ export function render() {
   const offTarget = session.target != null && session.state === 'running' && Math.abs(live.speed - session.target) > 0.15;
   $('mPace').classList.toggle('off-target', offTarget);
   $('mSpeedSub').textContent = `${live.speed.toFixed(1)} km/h` +
-    (session.target != null ? ` · target ${formatPace(session.target)}` : '');
+    (session.target != null ? ` · ${t('run.target', { value: formatPace(session.target) })}` : '');
   $('mIncline').textContent = live.incline.toFixed(1);
   const planned = ['running', 'paused'].includes(session.state) ? currentStep()?.incline : null;
-  $('mInclineSub').textContent = planned != null ? `target ${planned} %` : '\u00a0';
+  $('mInclineSub').textContent = planned != null ? t('run.target', { value: `${planned} %` }) : '\u00a0';
   $('mDist').textContent = (session.totalDist / 1000).toFixed(2);
   $('mTime').textContent = formatDuration(session.totalElapsed);
-  const hz = hrZoneOf(zones, live.hr);
+  const hz = hrZoneOf(app.state.zones, live.hr);
   $('mHr').textContent = live.hr || '--';
   $('mHrSub').textContent = `bpm${hz ? ` · Z${hz}` : ''}`;
-  $('mHr').parentElement.title = `Heart rate${live.hrSource === 'console' ? ' (from the console)' : live.hrSource === 'strap' ? ' (from the strap)' : ''}`;
+  $('mHr').parentElement.title = live.hrSource === 'console' ? t('run.hrFromConsole') : live.hrSource === 'strap' ? t('run.hrFromStrap') : live.hrSource === 'trainer' ? t('run.hrFromTrainer') : t('run.heartRate');
   renderAlpha();
   renderConsole();
 }
@@ -142,12 +146,12 @@ function renderAlpha() {
   const state = alphaState(a?.alpha1);
   box.dataset.state = state || 'none';
   $('mAlpha').textContent = a?.alpha1 != null ? a.alpha1.toFixed(2) : '--';
-  $('mAlphaSub').textContent = a?.alpha1 != null ? `α1 · ${ALPHA_LABELS[state]}`
-    : rrState.contact === false ? 'α1 · no contact'
-      : a?.reason === 'noisy signal' ? `α1 · noisy signal (${Math.round(a.artifactPct)} %)`
-        : 'α1 · computing…';
-  box.title = 'DFA α1 over the last 2 min: > 0.75 aerobic, 0.5–0.75 transition, < 0.5 above the anaerobic threshold' +
-    (a ? ` · ${a.beats} beats, ${a.artifactPct.toFixed(1)} % artifacts` : '');
+  $('mAlphaSub').textContent = a?.alpha1 != null ? `α1 · ${t(`alpha.${state}`)}`
+    : rrState.contact === false ? `α1 · ${t('alpha.noContact')}`
+      : a?.reason === 'noisy signal' ? `α1 · ${t('alpha.noisy', { pct: Math.round(a.artifactPct) })}`
+        : `α1 · ${t('alpha.computing')}`;
+  box.title = t('alpha.help') +
+    (a ? ` · ${t('alpha.beats', { n: a.beats, pct: a.artifactPct.toFixed(1) })}` : '');
 }
 
 // ---------------------------------------------------------------------------
@@ -161,8 +165,43 @@ function activityName() {
 // Startup
 // ---------------------------------------------------------------------------
 /** Startup: the session buttons, the speed and incline buttons, and export. */
-export function initTrain() {
-  $('tab-train').querySelectorAll('[data-speed]').forEach((btn) => {
+export function initRun() {
+  // What the session reports
+  let lastChart = 0;
+  sessionEvents.on('change', () => {
+    updateControls();
+    updateChart();
+    highlightSteps();
+  });
+  sessionEvents.on('tick', (now) => {
+    render();
+    if (session.state === 'running' && now - lastChart >= 1000) {
+      lastChart = now;
+      updateChart();
+    }
+  });
+  sessionEvents.on('note', ({ text, append }) => {
+    if (append) $('sessionNote').textContent += text;
+    else $('sessionNote').textContent = text;
+  });
+  sessionEvents.on('beep', ({ freq, seconds }) => beep(freq, seconds));
+  document.addEventListener('bw-language', () => { updateControls(); render(); updateChart(); });
+  sessionEvents.on('active', (on) => (on ? requestWakeLock() : releaseWakeLock()));
+  initWakeLock({ onChange: updateControls, log });
+  // Closing or reloading the page during a workout pauses the belt (see session/runner.js)
+  window.addEventListener('beforeunload', (e) => {
+    if (!isActive()) return;
+    pauseOnClose();
+    e.preventDefault();
+  });
+  window.addEventListener('pagehide', pauseOnClose);
+
+  app.on('selection', () => {
+    render();
+    updateChart();
+    updateControls();
+  });
+  $('tab-run').querySelectorAll('[data-speed]').forEach((btn) => {
     btn.onclick = () => {
       const delta = parseFloat(btn.dataset.speed);
       if (currentStep()?.hasTarget && session.state === 'running') {
@@ -172,14 +211,16 @@ export function initTrain() {
         // Base: the requested speed the console reports (includes changes made on it)
         const reported = live.console.targetSpeed;
         const base = reported > 0 ? reported : session.target ?? live.speed;
-        session.target = Math.round(Math.min(LIMITS.speedMax, Math.max(LIMITS.speedMin, base + delta)) * 10) / 10;
-        treadmill?.setSpeed(session.target);
+        const dev = app.state.devices.treadmill;
+        if (!dev) return;
+        session.target = dev.clampSpeed(base + delta);
+        dev.setTarget({ speed: session.target });
       }
     };
   });
 
-  $('tab-train').querySelectorAll('[data-incline]').forEach((btn) => {
-    btn.onclick = () => treadmill?.setIncline(live.incline + parseFloat(btn.dataset.incline));
+  $('tab-run').querySelectorAll('[data-incline]').forEach((btn) => {
+    btn.onclick = () => app.state.devices.treadmill?.setTarget({ incline: live.incline + parseFloat(btn.dataset.incline) });
   });
 
   $('btnStart').onclick = start;
@@ -187,9 +228,9 @@ export function initTrain() {
     if (session.state === 'running' || session.state === 'paused') applyStep(session.stepIdx + 1);
   };
   $('btnFinish').onclick = () => {
-    if (session.state === 'armed') { resetSession(); releaseWakeLock(); updateControls(); return; }
-    finish('Session ended. Belt paused: finish or resume from the console.');
-    treadmill?.pause();
+    if (session.state === 'armed') { cancel(); return; }
+    finish(t('run.note.ended'));
+    app.state.devices.treadmill?.pause();
   };
 
   $('btnCsv').onclick = () => {
@@ -215,7 +256,7 @@ export function initTrain() {
     const btn = $('btnUpload');
     const note = $('sessionNote');
     btn.disabled = true;
-    note.textContent = 'Uploading to Intervals.icu…';
+    note.textContent = t('run.uploading');
     try {
       const tcx = buildTcx(session.samples, { name: activityName() });
       const meta = {
@@ -227,16 +268,16 @@ export function initTrain() {
       const data = await intervals.uploadTcx(tcx, meta);
       const id = data.id || data.activities?.[0]?.id;
       session.uploaded = true;
-      note.textContent = 'Activity uploaded. ';
+      note.textContent = `${t('run.uploaded')} `;
       if (id) {
         const a = Object.assign(document.createElement('a'), {
-          href: `https://intervals.icu/activities/${encodeURIComponent(id)}`, target: '_blank', rel: 'noopener', textContent: 'View on Intervals.icu',
+          href: `https://intervals.icu/activities/${encodeURIComponent(id)}`, target: '_blank', rel: 'noopener', textContent: t('run.viewOnIntervals'),
         });
         note.appendChild(a);
       }
       log('info', `Activity uploaded to Intervals.icu ${id || ''}`);
     } catch (err) {
-      note.textContent = `Upload failed: ${err.message}`;
+      note.textContent = t('run.uploadFailed', { error: err.message });
       log('error', `Upload: ${err.message}`);
       btn.disabled = false;
     }

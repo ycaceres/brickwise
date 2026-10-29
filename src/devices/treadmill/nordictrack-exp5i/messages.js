@@ -347,3 +347,31 @@ export function toStatus(values) {
   if ('PausedTime' in values) s.pausedTime = values.PausedTime;
   return s;
 }
+
+/**
+ * Normalized fields every treadmill driver publishes, added to the console's
+ * own: belt ('running' | 'paused' | 'stopped'), alerts (e.g.
+ * 'safety-key-missing') and the console HR.
+ */
+export function normalize(status) {
+  const out = { ...status };
+  if (status.mode != null) {
+    out.belt = status.mode === MODE.ACTIVE ? 'running' : status.mode === MODE.PAUSE ? 'paused' : 'stopped';
+    out.alerts = status.mode === MODE.MISSING_SAFETY_KEY ? ['safety-key-missing'] : [];
+  }
+  if ('pulse' in status) {
+    const bpm = status.pulse?.bpm;
+    out.hr = bpm > 0 ? bpm : null;
+    out.hrSource = bpm > 0 ? 'console' : null;
+  }
+  return out;
+}
+
+/** Debug rows: the console mode and where its HR comes from. */
+export function diagnosticsOf(state) {
+  const p = state.pulse;
+  return [
+    ['Mode', state.mode != null ? MODES[state.mode] || `mode ${state.mode}` : '—'],
+    ['Console HR', p ? (p.bpm > 0 ? `${p.bpm} bpm · ${PULSE_SOURCES[p.source] || `source ${p.source}`}` : 'no pulse') : '—'],
+  ];
+}

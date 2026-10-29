@@ -4,6 +4,7 @@
  * .note = text; the buttons fire bw-refresh and bw-signout (they bubble).
  */
 import { initials, athleteMeta, wellnessStats } from '../ui/format.js';
+import { t, translate } from '../i18n/index.js';
 
 const TEMPLATE = `
   <div class="user-head">
@@ -13,8 +14,8 @@ const TEMPLATE = `
       <div class="note" data-part="meta"></div>
     </div>
     <div class="row">
-      <button class="icon" data-action="bw-refresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><bw-icon name="refresh"></bw-icon></button>
-      <button class="icon danger" data-action="bw-signout" aria-label="Sign out" title="Sign out"><bw-icon name="signout"></bw-icon></button>
+      <button class="icon" data-action="bw-refresh" data-i18n-label="profile.refresh" aria-label="Refresh from Intervals.icu" title="Refresh from Intervals.icu"><bw-icon name="refresh"></bw-icon></button>
+      <button class="icon danger" data-action="bw-signout" data-i18n-label="profile.signOut" aria-label="Sign out" title="Sign out"><bw-icon name="signout"></bw-icon></button>
     </div>
   </div>
   <div class="stats num" data-part="stats"></div>
@@ -27,6 +28,8 @@ class BwUserCard extends HTMLElement {
   connectedCallback() {
     if (this.firstElementChild) return;
     this.innerHTML = TEMPLATE;
+    translate(this);
+    document.addEventListener('bw-language', () => { translate(this); this.#render(); });
     for (const btn of this.querySelectorAll('[data-action]')) {
       btn.onclick = () => this.dispatchEvent(new CustomEvent(btn.dataset.action, { bubbles: true }));
     }
@@ -63,7 +66,7 @@ class BwUserCard extends HTMLElement {
     this.#part('note').textContent = this.#note;
     this.#part('stats').replaceChildren(...wellnessStats(wellness, athlete).map(({ label, value, unit, date }) => {
       const div = document.createElement('div');
-      if (date) div.title = `Intervals.icu wellness, ${date}`;
+      if (date) div.title = t('stats.wellnessDate', { date });
       const l = document.createElement('span');
       l.textContent = label;
       const v = document.createElement('strong');

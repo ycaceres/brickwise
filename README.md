@@ -26,7 +26,7 @@ npm start            # python3 tools/serve.py 8000; open http://localhost:8000
 
 The page has a vertical bar of icons on the left: **Home** and **Training library** at the top, **Configuration** and **User profile** at the bottom, and between them contextual buttons (**Run** for treadmill workouts, **Ride** for bike workouts, **Debug**). **Ride** only shows the selected bike workout (power and HR by zone); riding on a bike trainer is not supported yet.
 
-**Configuration** picks the color palette (System, Light, Dark, Monochrome, Vivid) and the language (English only for now). Both are kept in `localStorage` (`brickwise.theme`, `brickwise.lang`). The palette changes only the app chrome: chart and training zone colors are the same in every palette.
+**Configuration** picks the color palette (System, Light, Dark, Monochrome, Vivid) and the language (System — the browser's —, English, Spanish or French). Both are kept in `localStorage` (`brickwise.theme`, `brickwise.lang`). The palette changes only the app chrome: chart and training zone colors are the same in every palette.
 
 - **Home (house):** your Intervals.icu account (name, city, weight, sleep, resting HR, HRV) and the runs and rides planned for a day, filtered by sport.
 - **Workout page** (no button): opens when you pick a workout in Home or the library; the sidebar leads back.
@@ -35,13 +35,13 @@ The page has a vertical bar of icons on the left: **Home** and **Training librar
 - **Run (runner):** a bar with distance, time and HR, the buttons ▶ start, ⏭ skip step, ■ finish, download (CSV or TCX) and upload to Intervals.icu, and incline and pace with their + and − buttons (0.5 % and 0.5 km/h); below, a line with the session status and the chart.
 - **Debug (bug):** only shows when the page is opened with `?debug=true`. It has the treadmill state and the communication log.
 
-1. Turn on the treadmill, attach the safety key and, on the **Run** tab, press the **Controllable** pill at the top and choose **Connect treadmill** (it shows up as `I_TL…`). Activation takes ~10 s.
+1. Turn on the treadmill, attach the safety key and, on the **Run** tab, press the **Treadmill** pill at the top and choose **Connect treadmill** (it shows up as `I_TL…`). Activation takes ~10 s.
 2. Optional: press the **HRM** pill (also on the Run tab) (any standard Bluetooth heart rate monitor).
 3. Pick the workout in **Home** or the **Training library** and, on its page, press ▶ (top right, next to its name) to go to **Run** (or **Ride** for a bike workout).
 4. Press **▶ (start)** and then **START on the console**. The workout begins when the belt moves.
 5. When done: the **upload to Intervals.icu** icon (needs the API key) or the **download** icon (CSV or TCX). Library workouts are uploaded unpaired.
 
-**Simulation mode** (in the Controllable pill menu, only with `?debug=true`) tests everything without the treadmill (including a simulated HR if no strap is connected).
+**Simulators** (in the Treadmill and Trainer pill menus, only with `?debug=true`) test everything without hardware (including a simulated HR if no strap is connected). The Trainer pill (Ride tab) connects a smart trainer for manual ERG or resistance control; riding workouts on it comes later.
 
 ## Library (`data/library.json`)
 
@@ -125,13 +125,13 @@ On load, the running HR and pace zones are read from Intervals.icu (running spor
 
 How speed follows HR:
 
-HR is projected 30 s ahead with its slope over the last 20 s, so speed changes while HR is still heading somewhere instead of after it got there. Corrections are proportional: 0.1 km/h per bpm off target, between 0.1 and 0.5 km/h (`src/session/hr-control.js`).
+While HR climbs it is projected 30 s ahead with its slope over the last 30 s, so speed drops while HR is still heading up instead of after it got there. A falling HR is not projected, so a short dip does not ask for more speed. Corrections are proportional: 0.1 km/h per bpm off target, between 0.1 and 0.5 km/h when slowing down and at most 0.2 km/h when speeding up, because HR answers a rise 1–2 min later (`src/session/hr-control.js`). Tuning history and the sessions behind it: GitHub project *Adaptative*, starting with [#10](https://github.com/ycaceres/brickwise/issues/10).
 
-- **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR is heading above that cap, speed drops, up to 2 km/h in total. Once HR is 5 bpm below the cap and no longer rising, the removed speed returns.
-- **Steps with an HR target:** the starting speed comes from the matching pace zone. Then speed moves to keep HR in the **middle** of the range (±3 bpm), not at its top (at most +1.5 km/h and −2 km/h).
-- **α1 guard on aerobic steps (Z1–Z2):** with a chest strap, if α1 stays below 0.75 for 60 s, the effort is above the aerobic threshold even when HR is still in its zone, so speed drops 0.2 km/h and is never raised while it lasts. α1 is only trusted after the first 2 minutes and with a clean signal.
+- **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR is heading above that cap, speed drops, up to 2 km/h in total. Once HR is 5 bpm below the cap and no longer rising, the removed speed returns, 0.2 km/h at a time.
+- **Steps with an HR target:** the starting speed comes from the matching pace zone. Then speed moves to keep HR in the **middle** of the range (±3 bpm), not at its top (at most +1.5 km/h and −2 km/h). In Z1–Z2 it aims lower, at 40 % of the range (Z2 135–150 → 141), because VT1 tends to sit near the middle of Z2. Speed never rises while HR is still climbing.
+- **α1 guard on aerobic steps (Z1–Z2, not the warm-up, HR above Z1):** with a chest strap, if α1 stays below 0.75 for 60 s, the effort is above the aerobic threshold even when HR is still in its zone, so speed drops 0.2 km/h and is never raised while it lasts. α1 is only trusted after the first 2 minutes and with a clean signal; early in exercise and at easy effort it is not in steady state and reads low.
 - **Warm-up ramps end early** when the next step is aerobic (Z1–Z2): once HR has been at or above the top of Z1 for 5 s, the warm-up is over. Before harder steps the whole warm-up is kept.
-- The same correction must be asked for 10 s in a row, and at least 25 s pass between adjustments. Nothing is adjusted in the first 45 s of each step (2.5 min on HR-zone steps from Z3 up), because HR takes time to respond. Every adjustment is logged with its reason.
+- The same correction must be asked for 10 s in a row, and at least 25 s pass between adjustments (60 s between two rises). Nothing is adjusted in the first 45 s of each step (2.5 min on HR-zone steps from Z3 up), because HR takes time to respond. Every adjustment is logged with its reason.
 
 ## Threshold test (α1)
 
@@ -159,42 +159,79 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | File | What it does |
 |---|---|
 | `index.html` | The shell: sidebar, header with the device pills, footer and the startup scripts |
-| `pages/*.html` | One file per page (home, config, profile, workouts, workout, train, debug) |
+| `pages/*.html` | One file per page (home, config, profile, workouts, workout, run, ride, debug) |
 | `src/main.js`, `src/lib/pages.js` | Startup: loads every page in parallel, then calls each UI module's `init…()` and loads the data |
 | `src/components/` | Reusable custom elements (light DOM, so `css/app.css` and the palettes apply): `bw-icon`, `bw-user-card` (Home and Profile), `bw-zone-table` (running and cycling), `bw-workout-list` (Home and library), `bw-chart` (workout page and Run). Data goes in through properties; actions come out as bubbling events (`bw-select`, `bw-refresh`, `bw-signout`) |
-| `src/ui/format.js` | UI text without the DOM (account stats, zone tables), tested |
+| `src/ui/format.js` | UI text without the DOM (account stats, zone tables): pure functions, tested in Node |
+| `src/state.js` | App-wide state (profile and zones, the workout picked, connected devices, account) with change events; no DOM |
 | `src/ui/tabs.js` | Which tab or page is shown |
 | `src/ui/config.js` | Configuration tab: color palette and language |
-| `src/i18n/index.js`, `src/i18n/en.js` | Interface text by language (`t()`, `data-i18n` attributes); a missing key falls back to English |
+| `src/i18n/index.js`, `src/i18n/languages.js`, `src/i18n/en.js` | Interface text by language: `t()` with placeholders and plurals, `data-i18n` attributes, languages loaded on demand, English as fallback; see [`src/i18n/README.md`](src/i18n/README.md) to add one |
+| `src/i18n/format.js` | Numbers and dates in the interface language |
 | `css/app.css` | Page styles |
 | `src/ui/devices.js` | Treadmill and HR strap pills: connect, simulator, disconnect |
 | `src/ui/profile.js` | Profile tab: threshold pace, LTHR and max HR, the Intervals.icu account and the threshold test history |
-| `src/ui/workouts.js` | Planned workouts (Home), the training library and its filters, and the workout page with its preview |
+| `src/ui/home.js` | Home: the day's planned workouts, date and sport filter |
+| `src/ui/library.js` | Training library and its filters |
+| `src/ui/selection.js` | The workout picked: turns it into steps for the current zones and options, remembers library picks |
+| `src/ui/workout.js` | Workout page: options, steps table, totals and preview |
 | `src/ui/ride.js` | Ride tab: the selected bike workout's chart (power axis), view only |
-| `src/ui/train.js` | Run tab: live numbers, session buttons, chart, export and upload |
+| `src/ui/run.js` | Run tab: live numbers, session buttons, chart, export and upload |
 | `src/ui/debug.js` | Debug tab: communication log and console state |
-| `src/ui/chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
-| `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test |
+| `src/ui/session-chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
+| `src/ui/chart-axes.js` | The chart's left axis, one object per kind (pace for runs, power for bike workouts): zones, domain, block heights, ticks, unit, tooltip |
+| `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test. No DOM or UI imports: it reports through events (`change`, `tick`, `log`, `note`, `beep`, `active`, `test`) and `tick(now)` takes the clock, so it runs in Node tests |
+| `src/session/test-history.js` | Threshold test history (newest first, 20 kept) and how a result reads |
+| `src/session/policies.js` | How each sport drives its device: a run drives the treadmill (speed, incline, belt), a ride the smart trainer (power, pedaling) |
 | `src/session/hr-control.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
 | `src/session/live.js` | Live device readings: speed, incline, HR, console state, RR intervals and α1 |
 | `src/session/wake-lock.js` | Keeps the screen on during a session |
-| `src/devices/treadmill/exp5i.js` | Web Bluetooth connection to the treadmill (write queue, retries) |
-| `src/devices/treadmill/simulated.js` | Treadmill simulator with the same interface (and simulated RR) |
-| `src/devices/treadmill/exp5i-protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
-| `src/devices/treadmill/ifit-messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
-| `src/devices/hr-strap.js` | Standard Bluetooth heart rate strap: HR, contact and RR intervals |
+| `src/devices/registry.js`, `src/devices/types.js` | Every device driver by kind (treadmill, trainer, HR…) and the contract they follow; see [`src/devices/README.md`](src/devices/README.md) to add one |
+| `src/devices/treadmill/nordictrack-exp5i/driver.js` | Web Bluetooth connection to the EXP 5i (write queue, retries) |
+| `src/devices/treadmill/nordictrack-exp5i/protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
+| `src/devices/treadmill/nordictrack-exp5i/messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
+| `src/devices/treadmill/ftms/` | Generic driver for treadmills with the standard Bluetooth FTMS service (protocol + driver, unit tested; **not yet tested on a real treadmill**) |
+| `src/devices/treadmill/simulated/driver.js` | Treadmill simulator with the same interface (and simulated RR), a driver like any other (debug only) |
+| `src/devices/sensors/hr-strap/driver.js` | Standard Bluetooth heart rate strap: HR, contact and RR intervals |
+| `src/devices/ble/` | Shared Web Bluetooth helpers for new drivers: GATT connect with timeout, notifications, write queue with retries |
 | `src/physiology/zones.js` | Profile, HR and pace zones, cycling power and HR zones, HR ranges of each step and resolution of relative paces |
 | `src/physiology/hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `src/physiology/thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
-| `src/workouts/steps.js` | Turns the Intervals.icu `workout_doc` into speed steps |
+| `src/workouts/steps.js` | Turns the Intervals.icu `workout_doc` into steps (shared walk: repeats, labels, durations, incline); targets are the plan as written, the session clamps what it sends to the treadmill |
+| `src/workouts/run.js`, `src/workouts/ride.js` | Per-sport step targets: speed and HR caps/targets for running, watts and power zones for cycling |
+| `src/workouts/format.js` | Pace and duration formatting |
+| `src/workouts/info.js` | A workout's approximate length and whether HR can steer it |
 | `src/workouts/library.js` | Turns `data/library.json` into workouts for every duration and level |
 | `data/library.json` | The workout library (data; edited by hand) |
 | `src/export/tcx.js`, `src/export/csv.js` | Build the session TCX and CSV |
 | `src/services/intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `src/lib/timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
-| `src/lib/dom.js`, `src/lib/storage.js`, `src/lib/sound.js` | DOM helpers, settings in `localStorage` (`brickwise.*`) and beeps |
+| `src/lib/settings.js`, `src/lib/storage.js` | Every stored setting in one list (see below) and the raw `localStorage` access behind it |
+| `src/lib/events.js` | Tiny event emitter used by the app state and the session |
+| `src/lib/dom.js`, `src/lib/sound.js` | DOM helpers and beeps |
 | `tools/serve.py` | Static server for local development (not deployed) |
 | `tests/` | Hardware-free tests by area (`*.test.mjs`, shared data in `fixtures.mjs`): `npm test` |
+
+## Supported treadmills
+
+| Treadmill | Driver | Status |
+|---|---|---|
+| NordicTrack EXP 5i (iFit Bluetooth) | `nordictrack-exp5i` | Tested on the real treadmill |
+| Treadmills with Bluetooth FTMS (Fitness Machine Service) | `ftms-treadmill` (generic) | Written from the specification and tested against a simulated Bluetooth device; not yet on a real treadmill |
+
+**Connect treadmill** opens one Bluetooth chooser for all of them; the treadmill is recognized by its name (iFit `I_…`) and any other one is tried with FTMS. In every case the belt starts from the console (safety key).
+
+## Stored settings
+
+Everything the app keeps in the browser is listed in `src/lib/settings.js` and saved with the `brickwise.` prefix (nothing is sent anywhere except the API key to Intervals.icu):
+
+| Setting | What |
+|---|---|
+| `profile`, `athlete`, `wellness`, `tests` | Threshold pace / LTHR / max HR and cycling settings, the Intervals.icu account, latest wellness, threshold test history |
+| `tab`, `workout`, `libFilter`, `homeSport` | Last tab, last library workout, library filters, Home sport filter |
+| `theme`, `lang` | Color palette and language |
+| `intervalsKey` | The Intervals.icu API key (**secret**: never logged or shown) |
+| `loadRetry` | Retries when app files fail to download (this visit only) |
 
 ## Protocol origin
 
@@ -214,7 +251,7 @@ Everything comes from qdomyos-zwift's `nordictrack_treadmill_exp_5i` profile ([s
 
 ## Troubleshooting
 
-Open the page with `?debug=true` (for example https://ycaceres.github.io/brickwise/?debug=true) and go to the **Debug** tab. Look at **Controllable state** first. The **mode** tells you whether the console is running, paused or missing the key, and the equipment info confirms that activation got a response.
+Open the page with `?debug=true` (for example https://ycaceres.github.io/brickwise/?debug=true) and go to the **Debug** tab. Look at **Devices** first. The treadmill's **belt** and **mode** tell you whether the console is running, paused or missing the key, and the equipment info confirms that activation got a response.
 
 Then open **Communication log**, tick **Show TX/RX packets** and use **Download log**. The log includes:
 - every decoded response (`= {…}` lines);
@@ -231,7 +268,7 @@ Open-source projects consulted while building Brickwise:
 | Repository | What it contributed |
 |---|---|
 | [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift) | The EXP 5i activation sequence, polling cycle and speed/incline packets (`nordictrack_treadmill_exp_5i` profile), captured from a real unit |
-| [ianchi/ifit](https://github.com/ianchi/ifit) ([PyPI](https://pypi.org/project/ifit/)) | The iFit message format, characteristics table and response decoding used in `src/devices/treadmill/ifit-messages.js`; its `ifit discover-activation` command captures a unit's activation code |
+| [ianchi/ifit](https://github.com/ianchi/ifit) ([PyPI](https://pypi.org/project/ifit/)) | The iFit message format, characteristics table and response decoding used in `src/devices/treadmill/nordictrack-exp5i/messages.js`; its `ifit discover-activation` command captures a unit's activation code |
 | [dawsontoth/zwifit](https://github.com/dawsontoth/zwifit) | An earlier iFit treadmill bridge, reviewed to understand the BLE protocol |
 | [cagnulein/QZCompanionNordictrackTreadmill](https://github.com/cagnulein/QZCompanionNordictrackTreadmill) | Companion app for NordicTrack treadmills, reviewed for alternative connection methods |
 | [nategreco/uBike](https://github.com/nategreco/uBike) | Console replacement firmware for NordicTrack equipment, reviewed for the low-level protocol |

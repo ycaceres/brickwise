@@ -50,3 +50,12 @@ test('format: zone tables for running and cycling', () => {
 
   assert.deepEqual(zoneTable('run', null).rows, []);
 });
+
+test('format: device rows for Debug, treadmill and trainer', async () => {
+  const { stateRows } = await import('../src/ui/format.js');
+  const t = Object.fromEntries(stateRows('treadmill', { belt: 'running', speed: 8, speedSource: 'requested', targetSpeed: 8.5, incline: 1, distance: 1234, time: 75, calories: 12.4 }));
+  assert.deepEqual(t, { Belt: 'running', 'Actual speed': '8.0 km/h (no actual reading)', 'Requested speed': '8.5 km/h', Incline: '1.0 %', Distance: '1.23 km', Time: '1:15', Calories: '12 kcal' });
+  const r = Object.fromEntries(stateRows('trainer', { mode: 'erg', power: 201.4, cadence: 89.6, speed: 29.94, distance: 500, elapsed: 61, controlled: true }));
+  assert.deepEqual(r, { Mode: 'erg', Power: '201 W', Cadence: '90 rpm', Speed: '29.9 km/h', Distance: '0.50 km', Time: '1:01', Control: 'this app' });
+  assert.ok(stateRows('trainer', {}).every(([, v]) => v === null));
+});

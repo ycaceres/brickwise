@@ -30,7 +30,8 @@ test('flattenWorkout: base incline and incline from text', () => {
     { duration: 60, _pace: { value: 2.5 } },
     { duration: 60, text: 'inclinación 12', _pace: { value: 2.5 } },
   ] };
-  assert.deepEqual(flattenWorkout(doc, { defaultIncline: 1 }).map((s) => s.incline), [3, 2, 1, 10]);
+  // The plan keeps what the workout says (12 %); the treadmill's limits apply when it is sent
+  assert.deepEqual(flattenWorkout(doc, { defaultIncline: 1 }).map((s) => s.incline), [3, 2, 1, 12]);
 });
 
 test('flattenWorkout: ramps, distance and steps without a target', () => {
@@ -87,7 +88,7 @@ test('resolveDoc: % of threshold with the profile and the full library', () => {
   for (const w of LIBRARY) {
     const steps = flattenWorkout(resolveDoc(w.workout_doc, zones), { zones });
     assert.ok(steps.length > 2, w.id);
-    assert.ok(steps.every((s) => s.hasTarget && s.speedStart >= 0.8 && s.speedStart <= 16), w.id);
+    assert.ok(steps.every((s) => s.hasTarget && s.speedStart > 0 && s.speedStart < 20), w.id); // plan speeds, no device range
   }
   const hills = flattenWorkout(resolveDoc(LIBRARY.find((w) => w.id === 'hills-45-2').workout_doc, zones), { zones });
   assert.deepEqual([...new Set(hills.map((s) => s.incline))].sort(), [0, 1, 5]);

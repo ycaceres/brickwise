@@ -4,6 +4,7 @@
  * .data = { zones, note }; it hides itself while there are no zones.
  */
 import { zoneTable } from '../ui/format.js';
+import { t } from '../i18n/index.js';
 
 class BwZoneTable extends HTMLElement {
   #data = {};
@@ -17,14 +18,21 @@ class BwZoneTable extends HTMLElement {
         <tbody data-part="rows"></tbody>
       </table>
       <div class="zsummary num" data-part="summary"></div>
-      <div class="note" data-part="note" style="margin-top: 4px"></div>`;
-    this.#part('heading').textContent = this.getAttribute('heading') ?? '';
+      <div class="note mt-4" data-part="note"></div>`;
+    this.#heading();
+    document.addEventListener('bw-language', () => { this.#heading(); this.#render(); });
     this.#render();
   }
 
   set data(d) {
     this.#data = d ?? {};
     this.#render();
+  }
+
+  /** heading="key" (a translation key) or plain text. */
+  #heading() {
+    const h = this.getAttribute('heading') ?? '';
+    this.#part('heading').textContent = h.includes('.') ? t(h) : h;
   }
 
   #part(name) {

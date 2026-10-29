@@ -5,22 +5,22 @@
  */
 
 import { $ } from '../lib/dom.js';
-import { loadJson, saveJson, remove } from '../lib/storage.js';
+import * as settings from '../lib/settings.js';
+import { formatDate } from '../i18n/format.js';
+import * as app from '../state.js';
 import { formatPace } from '../workouts/steps.js';
-import { zonesFromProfile, profileFromIntervals, rideFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../physiology/zones.js';
+import { profileFromIntervals, rideFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
 import { log } from './debug.js';
-import { selectWorkout, selectedKey, loadWorkouts } from './workouts.js';
-
-let profile = null;  // see physiology/zones.js
-export let zones = null;    // zones computed from the profile
+import { loadWorkouts } from './home.js';
+import { loadTests, vtText } from '../session/test-history.js';
+import { events as sessionEvents } from '../session/runner.js';
+import { t } from '../i18n/index.js';
 
 export function setProfile(p, { save = true } = {}) {
-  profile = p;
-  zones = zonesFromProfile(p);
-  if (save) saveJson('profile', p);
+  app.setProfile(p);
+  if (save) settings.set('profile', p);
   renderProfile();
-  selectWorkout(selectedKey); // recomputes speeds and HR caps
 }
 
 // The account card, in Home and Profile
@@ -31,26 +31,26 @@ function setUserNote(text) {
 }
 
 export async function loadProfileFromIntervals() {
-  setUserNote('Loading zones from Intervals.icu…');
+  setUserNote(t('profile.loadingZones'));
   try {
     const { run, ride } = await intervals.getSportSettings();
     setProfile({ ...profileFromIntervals(run), ride: rideFromIntervals(ride) });
     setUserNote('');
-    log('info', `Intervals.icu profile: threshold ${formatPace(zones.thresholdKmh)}/km, LTHR ${zones.lthr}, max HR ${zones.maxHr}`);
-    log('info', zones.ride ? `Intervals.icu cycling: FTP ${zones.ride.ftp ?? '—'} W, LTHR ${zones.ride.lthr ?? '—'}, max HR ${zones.ride.maxHr ?? '—'}` : 'Intervals.icu: no cycling settings');
+    log('info', `Intervals.icu profile: threshold ${formatPace(app.state.zones.thresholdKmh)}/km, LTHR ${app.state.zones.lthr}, max HR ${app.state.zones.maxHr}`);
+    log('info', app.state.zones.ride ? `Intervals.icu cycling: FTP ${app.state.zones.ride.ftp ?? '—'} W, LTHR ${app.state.zones.ride.lthr ?? '—'}, max HR ${app.state.zones.ride.maxHr ?? '—'}` : 'Intervals.icu: no cycling settings');
   } catch (err) {
-    setUserNote(`Could not read the zones: ${err.message}`);
+    setUserNote(t('profile.zonesFailed', { error: err.message }));
     log('warn', `Intervals.icu zones: ${err.message}`);
   }
 }
 
 // Intervals.icu account (name, photo…), stored so it is not fetched on every visit
-export let athlete = loadJson('athlete');
+app.setAthlete(settings.get('athlete'));
 
 function setAthlete(a) {
-  athlete = a;
-  if (a) saveJson('athlete', a);
-  else remove('athlete');
+  app.setAthlete(a);
+  if (a) settings.set('athlete', a);
+  else settings.remove('athlete');
   renderProfile();
 }
 
@@ -59,10 +59,10 @@ function saveManualProfile() {
   const lthr = parseInt($('pLthr').value, 10) || null;
   const maxHr = parseInt($('pMaxHr').value, 10) || null;
   if ($('pPace').value && !kmh) {
-    $('pNote').textContent = 'Enter threshold pace as mm:ss, for example 6:10.';
+    $('pNote').textContent = t('profile.paceFormat');
     return;
   }
-  const base = profile || { pacePct: DEFAULT_PACE_PCT, hrPct: DEFAULT_HR_PCT };
+  const base = app.state.profile || { pacePct: DEFAULT_PACE_PCT, hrPct: DEFAULT_HR_PCT };
   setProfile({ ...base, thresholdKmh: kmh, lthr, maxHr, source: 'manual' });
   log('info', `Manual profile: threshold ${kmh ? `${formatPace(kmh)}/km` : '—'}, LTHR ${lthr ?? '—'}, max HR ${maxHr ?? '—'}`);
 }
@@ -82,17 +82,17 @@ export function renderProfile() {
   $('hLogin').classList.toggle('hidden', loggedIn);
 
   // Logged out: the manual form, with the current data
-  $('pPace').value = zones?.thresholdKmh ? formatPace(zones.thresholdKmh) : '';
-  $('pLthr').value = profile?.lthr ?? '';
-  $('pMaxHr').value = profile?.maxHr ?? '';
-  const src = { intervals: 'Data from Intervals.icu', manual: 'Data entered by hand' }[profile?.source] || 'No data yet';
+  $('pPace').value = app.state.zones?.thresholdKmh ? formatPace(app.state.zones.thresholdKmh) : '';
+  $('pLthr').value = app.state.profile?.lthr ?? '';
+  $('pMaxHr').value = app.state.profile?.maxHr ?? '';
+  const src = { intervals: t('profile.fromIntervals'), manual: t('profile.byHand') }[app.state.profile?.source] || t('profile.noData');
   const derived = [];
-  if (profile && !profile.lthr && zones?.lthr) derived.push(`Estimated LTHR ${zones.lthr} (91 % of max HR)`);
-  if (profile && !profile.maxHr && zones?.maxHr) derived.push(`Estimated max HR ${zones.maxHr}`);
+  if (app.state.profile && !app.state.profile.lthr && app.state.zones?.lthr) derived.push(t('profile.estimatedLthr', { value: app.state.zones.lthr }));
+  if (app.state.profile && !app.state.profile.maxHr && app.state.zones?.maxHr) derived.push(t('profile.estimatedMaxHr', { value: app.state.zones.maxHr }));
   $('pNote').textContent = [src, ...derived].join(' · ');
 
   // Logged in: the account and its data
-  if (loggedIn) for (const card of userCards()) card.data = { athlete, wellness };
+  if (loggedIn) for (const card of userCards()) card.data = { athlete: app.state.athlete, wellness: app.state.wellness };
 
   renderZoneTables();
   renderTests();
@@ -100,11 +100,11 @@ export function renderProfile() {
 
 /** Profile: running and cycling zone tables. */
 function renderZoneTables() {
-  $('pRunZones').data = { zones };
-  const r = profile?.ride;
+  $('pRunZones').data = { zones: app.state.zones };
+  const r = app.state.profile?.ride;
   $('pRideZones').data = {
-    zones: zones?.ride,
-    note: r?.indoorFtp && r.indoorFtp !== r.ftp ? `Power from the indoor FTP (${r.indoorFtp} W; outdoor ${r.ftp ?? '—'} W).` : '',
+    zones: app.state.zones?.ride,
+    note: r?.indoorFtp && r.indoorFtp !== r.ftp ? t('profile.indoorFtp', { indoor: r.indoorFtp, outdoor: r.ftp ?? '—' }) : '',
   };
 }
 
@@ -119,7 +119,7 @@ export async function refreshAthlete() {
 }
 
 // Wellness (weight, resting HR, HRV, sleep): refreshed on every visit
-let wellness = loadJson('wellness');
+app.setWellness(settings.get('wellness'));
 const WELLNESS_DAYS = 7;
 
 export async function refreshWellness() {
@@ -127,8 +127,8 @@ export async function refreshWellness() {
     const d = new Date(Date.now() - offset * 86400000);
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   };
-  wellness = await intervals.getWellness(day(WELLNESS_DAYS - 1), day(0));
-  saveJson('wellness', wellness);
+  app.setWellness(await intervals.getWellness(day(WELLNESS_DAYS - 1), day(0)));
+  settings.set('wellness', app.state.wellness);
   renderProfile();
 }
 
@@ -140,38 +140,28 @@ const refreshAll = async () => {
     await loadProfileFromIntervals();
     loadWorkouts();
   } catch (err) {
-    setUserNote(`Could not refresh: ${err.message}`);
+    setUserNote(t('profile.refreshFailed', { error: err.message }));
   }
 };
 
 const signOut = () => {
   intervals.setApiKey('');
   setAthlete(null);
-  wellness = null;
-  remove('wellness');
+  app.setWellness(null);
+  settings.remove('wellness');
   // The data stays as a starting point for the manual profile
-  if (profile) setProfile({ ...profile, source: 'manual' });
+  if (app.state.profile) setProfile({ ...app.state.profile, source: 'manual' });
   log('info', 'Intervals.icu: signed out');
   loadWorkouts();
 };
 
-// Threshold test history (the tests are run and analyzed in the session)
-export function loadTests() {
-  return loadJson('tests', []);
-}
-
-
-const vtText = (vt) => `${vt.hr} bpm at ${formatPace(vt.kmh)}/km`;
-export const testText = (r) => `VT1 ${vtText(r.vt1)} · VT2 ${r.vt2 ? `${vtText(r.vt2)}${r.vt2.extrapolated ? ' (extrapolated)' : ''}` : 'not reached'}`;
-
-
-/** Profile: threshold test history; the latest VT2 can become LTHR and threshold pace. */
+/** Profile: threshold test history (session/test-history.js); the latest VT2 can become LTHR and threshold pace. */
 export function renderTests() {
   const tests = loadTests();
   $('pTestsCard').classList.toggle('hidden', !tests.length);
   $('pTests').replaceChildren(...tests.map((t) => {
     const tr = document.createElement('tr');
-    for (const v of [new Date(t.date).toLocaleDateString(), vtText(t.vt1), t.vt2 ? vtText(t.vt2) + (t.vt2.extrapolated ? ' *' : '') : '—', t.r2]) {
+    for (const v of [formatDate(t.date), vtText(t.vt1), t.vt2 ? vtText(t.vt2) + (t.vt2.extrapolated ? ' *' : '') : '—', t.r2]) {
       const td = document.createElement('td');
       td.textContent = v;
       tr.appendChild(td);
@@ -181,17 +171,19 @@ export function renderTests() {
   const last = tests.find((t) => t.vt2);
   $('pTestApply').disabled = !last;
   $('pTestApply').textContent = last
-    ? `Use VT2 as LTHR (${last.vt2.hr}) and threshold pace (${formatPace(last.vt2.kmh)}/km)`
-    : 'Use VT2 as LTHR and threshold pace';
+    ? t('profile.useVt2With', { hr: last.vt2.hr, pace: formatPace(last.vt2.kmh) })
+    : t('profile.useVt2');
 }
 
 /** Startup: sign in, the manual profile, the account buttons and the tests. */
 export function initProfile() {
+  document.addEventListener('bw-language', renderProfile);
+  sessionEvents.on('test', renderTests);
   $('pKeySave').onclick = async () => {
     const key = $('pKey').value.trim();
     if (!key) return;
     intervals.setApiKey(key);
-    renderKeyState('Checking…');
+    renderKeyState(t('profile.checking'));
     try {
       const a = await intervals.getAthlete();
       $('pKey').value = '';
@@ -203,7 +195,7 @@ export function initProfile() {
       loadProfileFromIntervals(); // the account wins: replaces the profile, even a manual one
     } catch (err) {
       intervals.setApiKey(''); // a key that does not work does not sign in
-      renderKeyState(`That didn't work: ${err.message}`);
+      renderKeyState(t('profile.signInFailed', { error: err.message }));
     }
   };
   $('pSave').onclick = saveManualProfile;
@@ -212,7 +204,7 @@ export function initProfile() {
   $('pTestApply').onclick = () => {
     const last = loadTests().find((t) => t.vt2);
     if (!last) return;
-    const base = profile || { pacePct: DEFAULT_PACE_PCT, hrPct: DEFAULT_HR_PCT };
+    const base = app.state.profile || { pacePct: DEFAULT_PACE_PCT, hrPct: DEFAULT_HR_PCT };
     setProfile({ ...base, thresholdKmh: last.vt2.kmh, lthr: last.vt2.hr, source: 'manual' });
     log('info', `Profile from the threshold test: LTHR ${last.vt2.hr}, threshold ${formatPace(last.vt2.kmh)}/km`);
   };

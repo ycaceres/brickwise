@@ -3,11 +3,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildSpeedPacket, buildInclinePacket, parseNotification, INIT_SEQUENCE, POLL_CYCLE, toHex, WRITE_HEADER,
-} from '../src/devices/treadmill/exp5i-protocol.js';
+} from '../src/devices/treadmill/nordictrack-exp5i/protocol.js';
 import {
   MessageAssembler, parseRequest, parseResponse, decodeReads, toStatus, MODE, buildWriteAndRead, buildRequest, chunkMessage,
-} from '../src/devices/treadmill/ifit-messages.js';
-import { parseHeartRate } from '../src/devices/hr-strap.js';
+} from '../src/devices/treadmill/nordictrack-exp5i/messages.js';
+import { parseHeartRate } from '../src/devices/sensors/hr-strap/driver.js';
 
 // Literal replica of qdomyos-zwift's forceSpeed/forceIncline for the EXP 5i
 function qzForce(selector, value, base) {
@@ -78,7 +78,7 @@ test('parseNotification: negative incline and filters', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Full decoding (ifit-messages.js)
+// Full decoding (nordictrack-exp5i/messages.js)
 // ---------------------------------------------------------------------------
 
 /** Same as ianchi/ifit's build_write_messages. */
@@ -296,4 +296,41 @@ test('HR strap: heart rate, contact and RR intervals', () => {
   assert.equal(m2.bpm, 150);
   assert.equal(m2.contact, null);
   assert.deepEqual(m2.rr, [500]);
+});
+
+// Treadmill interface: normalized state, diagnostics, setTarget within limits
+import { normalize, diagnosticsOf } from '../src/devices/treadmill/nordictrack-exp5i/messages.js';
+import { Treadmill } from '../src/devices/treadmill/treadmill.js';
+
+test('normalize: belt, alerts and console HR from the iFit state', () => {
+  assert.deepEqual(
+    (({ belt, alerts, hr, hrSource }) => ({ belt, alerts, hr, hrSource }))(normalize({ mode: MODE.ACTIVE, pulse: { bpm: 128, source: 1 } })),
+    { belt: 'running', alerts: [], hr: 128, hrSource: 'console' });
+  assert.equal(normalize({ mode: MODE.PAUSE }).belt, 'paused');
+  assert.equal(normalize({ mode: MODE.IDLE }).belt, 'stopped');
+  assert.deepEqual(normalize({ mode: MODE.MISSING_SAFETY_KEY }).alerts, ['safety-key-missing']);
+  const noPulse = normalize({ speed: 5, pulse: { bpm: 0, source: 0 } });
+  assert.equal(noPulse.hr, null);
+  assert.equal(noPulse.speed, 5);
+  assert.equal('belt' in normalize({ speed: 5 }), false); // no mode reported, no belt guess
+});
+
+test('diagnostics: console mode and HR source', () => {
+  assert.deepEqual(diagnosticsOf({ mode: MODE.ACTIVE, pulse: { bpm: 120, source: 1 } }), [['Mode', 'running'], ['Console HR', '120 bpm · hand grips']]);
+  assert.deepEqual(diagnosticsOf({}), [['Mode', '—'], ['Console HR', '—']]);
+});
+
+test('Treadmill: setTarget clamps to the limits and rounds to their steps', () => {
+  const calls = [];
+  class Fake extends Treadmill {
+    setSpeed(v) { calls.push(['speed', v]); }
+    setIncline(v) { calls.push(['incline', v]); }
+  }
+  const t = new Fake({}, { capabilities: { speed: true, incline: true }, limits: { speedMin: 0.8, speedMax: 16, speedStep: 0.1, inclineMin: 0, inclineMax: 10, inclineStep: 0.5 } });
+  t.setTarget({ speed: 20, incline: 3.3 });
+  t.setTarget({ speed: 0.2, incline: -2 });
+  t.setTarget({ speed: 8.04 });
+  assert.deepEqual(calls, [['speed', 16], ['incline', 3.5], ['speed', 0.8], ['incline', 0], ['speed', 8]]);
+  assert.deepEqual(t.requested, { speed: 8, incline: 0 });
+  assert.deepEqual(t.diagnostics(), []);
 });

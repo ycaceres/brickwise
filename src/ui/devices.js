@@ -1,105 +1,185 @@
 /**
- * Header pills for the devices: the treadmill (or its simulator), with its
- * menu, and the heart rate strap. Their readings go to session/live.js.
+ * Header pills for the devices: a treadmill (Run tab) and a smart trainer
+ * (Ride tab), each with a menu built from the driver registry
+ * (device-menu.js), and the heart rate strap. Their readings go to
+ * session/live.js. No model is named here: drivers come from the registry.
  */
 
 import { $, setPill } from '../lib/dom.js';
-import { Exp5iTreadmill } from '../devices/treadmill/exp5i.js';
-import { SimulatedTreadmill } from '../devices/treadmill/simulated.js';
-import { HeartRateStrap } from '../devices/hr-strap.js';
+import * as settings from '../lib/settings.js';
+import { getDriver, requestOptions, detect } from '../devices/registry.js';
 import { live, addRr } from '../session/live.js';
 import { log, renderInfo } from './debug.js';
-import { updateControls } from './train.js';
+import { updateControls } from './run.js';
+import { updateTrainerCard } from './ride.js';
+import { DEBUG } from './tabs.js';
+import { connectPlan, menuEntries, KIND_NAMES } from './device-menu.js';
+import * as app from '../state.js';
+import { t } from '../i18n/index.js';
 
-export let treadmill = null;
+const PILLS = { treadmill: 'pillTreadmill', trainer: 'pillTrainer' };
+const MENUS = { treadmill: 'menuTreadmill', trainer: 'menuTrainer' };
+const LABELS = { treadmill: 'devices.pillTreadmill', trainer: 'devices.pillTrainer' };
 
-function treadmillCallbacks() {
+// HR from the console or the trainer, only while no strap is connected to the page
+function deviceHr(state, source) {
+  if (hrStrap.bpm != null) return;
+  if (state.rr?.length) addRr(state.rr, null); // only the simulators send RR this way
+  live.hr = state.hr ?? null;
+  live.hrSource = state.hr ? source : null;
+}
+
+// Last status of each pill, to write it again in another language
+const pillStatus = {};
+
+/** "Treadmill: connecting…" etc. in the interface language. */
+function showStatus(kind, status, detail) {
+  pillStatus[kind] = { status, detail };
+  const label = t(LABELS[kind]);
+  const map = {
+    connecting: ['busy', t('devices.pillStatus', { device: label, state: t('devices.connecting') })],
+    initializing: ['busy', t('devices.pillStatus', { device: label, state: t('devices.activating') })],
+    ready: ['ready', t('devices.pillStatus', { device: label, state: detail || t('devices.ready') })],
+    disconnected: ['error', t('devices.pillStatus', { device: label, state: t('devices.disconnected') })],
+    error: ['error', t('devices.pillStatus', { device: label, state: t('devices.error') })],
+  };
+  const [s, text] = map[status] || ['error', t('devices.pillStatus', { device: label, state: status })];
+  setPill(PILLS[kind], s, text);
+  return text;
+}
+
+function callbacks(kind) {
   return {
-    onStatus: (state, detail) => {
-      const map = {
-        connecting: ['busy', 'Controllable: connecting…'],
-        initializing: ['busy', 'Controllable: activating…'],
-        ready: ['ready', `Controllable: ${detail || 'ready'}`],
-        disconnected: ['error', 'Controllable: disconnected'],
-      };
-      const [s, t] = map[state] || ['error', `Controllable: ${state}`];
-      setPill('pillTreadmill', s, t);
-      log(state === 'disconnected' ? 'warn' : 'info', t);
-      if (state === 'disconnected') {
-        live.speed = 0;
-        live.console = {};
-        if (live.hrSource === 'console') { live.hr = null; live.hrSource = null; }
+    onStatus: (status, detail) => {
+      const text = showStatus(kind, status, detail);
+      log(status === 'disconnected' ? 'warn' : 'info', text);
+      const dev = app.state.devices[kind];
+      if (status === 'ready' && !dev?.descriptor?.debugOnly) {
+        // Remembered for the menu ("last: …"); simulators are not
+        const last = settings.get('lastDevice');
+        settings.set('lastDevice', { ...last, [kind]: { driver: dev?.descriptor?.id, name: detail || dev?.descriptor?.name } });
       }
-      const ready = state === 'ready';
-      $('btnConnect').disabled = $('btnSim').disabled = ready || state === 'connecting' || state === 'initializing';
-      $('btnDisconnect').disabled = !ready;
-      $('btnSimBelt').classList.toggle('hidden', !(ready && treadmill?.simulated));
+      if (status === 'disconnected') {
+        if (kind === 'treadmill') { live.speed = 0; live.console = {}; }
+        else live.trainer = null;
+        if (live.hrSource === (kind === 'treadmill' ? 'console' : 'trainer')) { live.hr = null; live.hrSource = null; }
+      }
       updateControls();
+      updateTrainerCard();
     },
-    onData: (state) => {
-      live.speed = state.speed ?? 0;
-      live.incline = state.incline ?? 0;
-      live.console = state;
-      // HR from the console (hand grips or a strap paired with the treadmill),
-      // only if no strap is connected to the page
-      if (hrStrap.bpm == null) {
-        if (state.rr?.length) addRr(state.rr, null); // only the simulator sends RR this way
-        const bpm = state.pulse?.bpm;
-        live.hr = bpm > 0 ? bpm : null;
-        live.hrSource = bpm > 0 ? 'console' : null;
+    onData: kind === 'treadmill'
+      ? (state) => {
+        live.speed = state.speed ?? 0;
+        live.incline = state.incline ?? 0;
+        live.console = state;
+        deviceHr(state, 'console');
       }
-    },
+      : (state) => {
+        live.trainer = state;
+        deviceHr(state, 'trainer');
+        updateTrainerCard();
+      },
     onInfo: (info) => {
       live.info = info;
       renderInfo();
     },
     onLog: log,
+    onControlLost: () => log('warn', `${kind}: another app took control`),
   };
 }
 
-async function connectTreadmill(simulated) {
-  treadmill = simulated ? new SimulatedTreadmill(treadmillCallbacks()) : new Exp5iTreadmill(treadmillCallbacks());
+/** Connects a device of a kind: a simulator by id, or the real one(s) from the registry. */
+async function connect(kind, driverId = null) {
+  showStatus(kind, 'connecting');
   try {
-    await treadmill.connect();
+    let driver = driverId ? getDriver(driverId) : null;
+    let device;
+    if (!driver) {
+      const plan = connectPlan(kind);
+      if (plan.mode === 'single') driver = plan.driver;
+      else if (plan.mode === 'chooser') {
+        // One Bluetooth chooser for every driver of the kind, then the one that fits
+        device = await navigator.bluetooth.requestDevice(requestOptions(kind));
+        driver = detect(kind, device);
+        if (!driver) throw new Error(`${device.name || 'This device'} is not a supported ${t(KIND_NAMES[kind])}`);
+      } else throw new Error(t('devices.noSupport', { kind: t(KIND_NAMES[kind]) }));
+    }
+    const dev = driver.create(callbacks(kind));
+    app.setDevice(kind, dev);
+    await dev.connect(device ? { device } : undefined);
   } catch (err) {
     log('error', err.message);
-    setPill('pillTreadmill', 'error', 'Controllable: error');
-    $('btnConnect').disabled = $('btnSim').disabled = false;
+    showStatus(kind, 'error');
   }
 }
 
-const hrStrap = new HeartRateStrap({
+let hrName = null;
+const hrStrap = getDriver('hr-strap').create({
   onHr: (bpm) => { live.hr = bpm; live.hrSource = 'strap'; },
   onRr: addRr,
   onStatus: (state, name) => {
-    if (state === 'ready') setPill('pillHr', 'ready', `HRM: ${name || 'connected'}`);
-    else { live.hr = null; live.hrSource = null; setPill('pillHr', 'error', 'HRM: disconnected'); }
+    if (state === 'ready') { hrName = name; setPill('pillHr', 'ready', t('devices.pillStatus', { device: 'HRM', state: name || t('devices.connected') })); }
+    else { live.hr = null; live.hrSource = null; setPill('pillHr', 'error', t('devices.pillStatus', { device: 'HRM', state: t('devices.disconnected') })); }
   },
 });
 
-/** Startup: the controllable menu and the HRM pill. */
+/** Draws a kind's menu from the registry and the connected device. */
+function renderMenu(kind) {
+  const menu = $(MENUS[kind]);
+  const device = app.state.devices[kind];
+  const entries = menuEntries(kind, { debug: DEBUG, device, last: settings.get('lastDevice')[kind] });
+  menu.replaceChildren(...entries.map((e) => {
+    const b = document.createElement('button');
+    b.textContent = e.label;
+    b.disabled = !!e.disabled;
+    if (e.primary) b.className = 'primary';
+    if (e.danger) b.className = 'danger';
+    b.dataset.action = e.action;
+    b.onclick = () => {
+      menu.hidePopover();
+      if (e.action === 'connect') connect(kind);
+      else if (e.action === 'simulator') connect(kind, e.driver);
+      else if (e.action === 'sim-belt') device?.simulate({ belt: 'toggle' });
+      else if (e.action === 'sim-pedal') device?.simulate({ pedaling: !device.pedaling });
+      else if (e.action === 'disconnect') device?.disconnect();
+    };
+    return b;
+  }));
+}
+
+/** Startup: the device menus and the HRM pill. */
 export function initDevices() {
-  // Treadmill menu: opens under its pill and closes on choice
-  const menu = $('menuTreadmill');
-  menu.addEventListener('toggle', (e) => {
-    if (e.newState !== 'open') return;
-    const r = $('pillTreadmill').getBoundingClientRect();
-    menu.style.top = `${r.bottom + 6}px`;
-    menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8))}px`;
-  });
-  const fromMenu = (fn) => () => { menu.hidePopover(); fn(); };
-  $('btnConnect').onclick = fromMenu(() => connectTreadmill(false));
-  $('btnSim').onclick = fromMenu(() => connectTreadmill(true));
-  $('btnDisconnect').onclick = fromMenu(() => treadmill?.disconnect());
-  $('btnSimBelt').onclick = fromMenu(() => treadmill?.toggleBelt?.());
+  app.setDevice('hr', hrStrap);
+  // Pills not connected yet show their name in the interface language
+  const idlePills = () => {
+    for (const kind of Object.keys(PILLS)) {
+      if (pillStatus[kind]) showStatus(kind, pillStatus[kind].status, pillStatus[kind].detail);
+      else $(PILLS[kind]).textContent = t(LABELS[kind]);
+    }
+    const hr = $('pillHr').dataset.state;
+    $('pillHr').textContent = hr === 'ready' ? t('devices.pillStatus', { device: 'HRM', state: hrName || t('devices.connected') }) : hr ? t('devices.pillStatus', { device: 'HRM', state: t(hr === 'busy' ? 'devices.connecting' : 'devices.disconnected') }) : 'HRM';
+  };
+  idlePills();
+  document.addEventListener('bw-language', idlePills);
+  for (const kind of Object.keys(MENUS)) {
+    const menu = $(MENUS[kind]);
+    // Opens under its pill, freshly drawn
+    menu.addEventListener('toggle', (e) => {
+      if (e.newState !== 'open') return;
+      renderMenu(kind);
+      const r = $(PILLS[kind]).getBoundingClientRect();
+      menu.style.top = `${r.bottom + 6}px`;
+      menu.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - menu.offsetWidth - 8))}px`;
+    });
+  }
   $('pillHr').onclick = async () => {
     if ($('pillHr').dataset.state === 'ready' || $('pillHr').dataset.state === 'busy') return;
     try {
-      setPill('pillHr', 'busy', 'HRM: connecting…');
+      setPill('pillHr', 'busy', t('devices.pillStatus', { device: 'HRM', state: t('devices.connecting') }));
       await hrStrap.connect();
     } catch (err) {
-      log('error', `HRM: ${err.message}`);
-      setPill('pillHr', 'error', 'HRM: error');
+      log('error', t('devices.pillStatus', { device: 'HRM', state: err.message }));
+      setPill('pillHr', 'error', t('devices.pillStatus', { device: 'HRM', state: t('devices.error') }));
     }
   };
 }

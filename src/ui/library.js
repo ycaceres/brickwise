@@ -63,7 +63,7 @@ function renderLibrary() {
   else if (!library.length) entries.push({ note: t('library.loading') });
   const shown = library.filter(libraryMatches);
   for (const w of shown) {
-    entries.push({ key: `l:${w.id}`, title: w.featured ? `★ ${w.name} · ${t('common.minutes', { n: w.minutes })}` : w.name, sub: w.summary, hrControl: w.hrControl });
+    entries.push({ key: `l:${w.id}`, title: w.featured ? `★ ${w.name} · ${t('common.minutes', { n: w.minutes })}` : w.name, sub: w.summary, hrControl: w.hrControl, sport: w.sport ?? 'run' });
   }
   if (library.length && !shown.length) entries.push({ note: t('library.noMatch') });
   $('wLibrary').entries = entries;

@@ -3,10 +3,11 @@ import { t } from '../i18n/index.js';
  * <bw-workout-list>: a list of workouts to pick from. Set .entries to items
  * { key, title, sub, hrControl, sport } and notes { note }, in order;
  * .selected marks the chosen key and .disabled locks the list (during a
- * session). A click fires bw-select with detail.key (it bubbles).
+ * session). One line per workout: sport icon, title and HR tag; sub is the
+ * tooltip. A click fires bw-select with detail.key (it bubbles).
  */
 
-const SPORT_ICONS = { run: ['🏃', 'nav.run'], ride: ['🚴', 'nav.ride'] };
+const SPORT_ICONS = { run: 'nav.run', ride: 'nav.ride' };
 
 class BwWorkoutList extends HTMLElement {
   #entries = [];
@@ -44,26 +45,24 @@ class BwWorkoutList extends HTMLElement {
     btn.setAttribute('aria-pressed', String(key === this.#selected));
     const strong = document.createElement('strong');
     if (SPORT_ICONS[sport]) {
-      const [icon, key] = SPORT_ICONS[sport];
-      const label = t(key);
+      const label = t(SPORT_ICONS[sport]);
       const tag = document.createElement('span');
       tag.className = 'sport-icon';
-      tag.textContent = icon;
       tag.title = label;
+      tag.setAttribute('role', 'img');
       tag.setAttribute('aria-label', label);
-      strong.append(tag, ' ');
+      tag.innerHTML = `<bw-icon name="${sport}"></bw-icon>`;
+      btn.append(tag);
     }
-    strong.append(title);
+    strong.textContent = title;
     if (hrControl) {
       const tag = document.createElement('em');
       tag.className = 'hr-tag';
       tag.textContent = '♥ HR';
       tag.title = t('library.hrTag');
-      strong.append(' ', tag);
-    }
-    const span = document.createElement('span');
-    span.textContent = sub ?? '';
-    btn.append(strong, span);
+      btn.append(strong, tag);
+    } else btn.append(strong);
+    if (sub) btn.title = sub;
     btn.onclick = () => this.dispatchEvent(new CustomEvent('bw-select', { bubbles: true, detail: { key } }));
     return btn;
   }

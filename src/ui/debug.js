@@ -7,8 +7,8 @@ import { $, download } from '../lib/dom.js';
 import { formatDuration } from '../workouts/steps.js';
 import { MODES, PULSE_SOURCES } from '../devices/treadmill/ifit-messages.js';
 import { live, STALE_MS } from '../session/live.js';
-import { treadmill } from './devices.js';
 import { updateControls } from './run.js';
+import * as app from '../state.js';
 
 export const logLines = [];
 export function log(kind, text) {
@@ -34,7 +34,7 @@ export function initDebug() {
 let lastMode;
 export function renderConsole() {
   const c = live.console;
-  const fresh = treadmill && Date.now() - (treadmill.state.updatedAt || 0) < STALE_MS;
+  const fresh = app.state.devices.controllable && Date.now() - (app.state.devices.controllable.state.updatedAt || 0) < STALE_MS;
   const modeEl = $('cMode');
   const mode = fresh ? c.mode : undefined;
   modeEl.textContent = mode != null ? MODES[mode] || `mode ${mode}` : '—';

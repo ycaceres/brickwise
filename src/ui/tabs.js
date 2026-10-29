@@ -7,9 +7,10 @@
 import { $ } from '../lib/dom.js';
 import * as settings from '../lib/settings.js';
 import { updateChart } from './run.js';
-import { updatePreview, selected } from './workouts.js';
 import { updateRide } from './ride.js';
 import { session } from '../session/runner.js';
+import { updatePreview } from './workouts.js';
+import * as app from '../state.js';
 
 // The Debug tab (console state and log) and Simulation mode only show with ?debug=true
 export const DEBUG = new URLSearchParams(location.search).get('debug') === 'true';
@@ -45,7 +46,7 @@ export function initTabs() {
   $('nav-debug').classList.toggle('hidden', !DEBUG);
   $('btnSim').classList.toggle('hidden', !DEBUG);
   for (const t of NAV_TABS) $(`nav-${t}`).onclick = () => showTab(t);
-  $('btnGoWorkout').onclick = () => showTab(sessionTab(selected?.event));
+  $('btnGoWorkout').onclick = () => showTab(sessionTab(app.state.selection?.event));
   $('hGoProfile').onclick = () => showTab('profile');
   $('safetyOk').onclick = () => $('safetyPop').hidePopover();
 }

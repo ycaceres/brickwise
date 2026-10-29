@@ -163,6 +163,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/main.js`, `src/lib/pages.js` | Startup: loads every page in parallel, then calls each UI module's `init…()` and loads the data |
 | `src/components/` | Reusable custom elements (light DOM, so `css/app.css` and the palettes apply): `bw-icon`, `bw-user-card` (Home and Profile), `bw-zone-table` (running and cycling), `bw-workout-list` (Home and library), `bw-chart` (workout page and Run). Data goes in through properties; actions come out as bubbling events (`bw-select`, `bw-refresh`, `bw-signout`) |
 | `src/ui/format.js` | UI text without the DOM (account stats, zone tables): pure functions, tested in Node |
+| `src/state.js` | App-wide state (profile and zones, the workout picked, connected devices, account) with change events; no DOM |
 | `src/ui/tabs.js` | Which tab or page is shown |
 | `src/ui/config.js` | Configuration tab: color palette and language |
 | `src/i18n/index.js`, `src/i18n/en.js` | Interface text by language (`t()`, `data-i18n` attributes); a missing key falls back to English |

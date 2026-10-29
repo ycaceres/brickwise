@@ -14,7 +14,8 @@ import { initRun, updateControls } from './ui/run.js';
 import { loadWorkouts, initWorkouts } from './ui/workouts.js';
 import { initTabs, showTab } from './ui/tabs.js';
 import { initConfig } from './ui/config.js';
-import { initProfile, athlete, setProfile, loadProfileFromIntervals, renderProfile, refreshAthlete, refreshWellness } from './ui/profile.js';
+import { initProfile, setProfile, loadProfileFromIntervals, renderProfile, refreshAthlete, refreshWellness } from './ui/profile.js';
+import * as app from './state.js';
 
 const TICK_MS = 250; // how often the session advances and the screen refreshes
 
@@ -44,7 +45,7 @@ try {
   // Without a stored profile, or one from before the cycling zones: ask Intervals.icu
   if (intervals.getApiKey() && (!saved?.pacePct || (saved.source === 'intervals' && !('ride' in saved)))) loadProfileFromIntervals();
   renderProfile();
-  if (intervals.getApiKey() && !athlete) refreshAthlete().catch((err) => log('warn', `Intervals.icu: ${err.message}`));
+  if (intervals.getApiKey() && !app.state.athlete) refreshAthlete().catch((err) => log('warn', `Intervals.icu: ${err.message}`));
   if (intervals.getApiKey()) refreshWellness().catch((err) => log('warn', `Intervals.icu wellness: ${err.message}`));
   showTab(tab || 'home');
   every(TICK_MS, tick);

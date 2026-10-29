@@ -6,12 +6,12 @@
 
 import { $, escapeHtml } from '../lib/dom.js';
 import * as settings from '../lib/settings.js';
+import * as app from '../state.js';
 import { flattenWorkout, followsHr, formatPace, formatDuration } from '../workouts/steps.js';
 import { loadLibrary } from '../workouts/library.js';
 import { resolveDoc } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
 import { log } from './debug.js';
-import { zones } from './profile.js';
 import { session } from '../session/runner.js';
 import { render, updateChart, updateControls, planTimeline } from './run.js';
 import { showTab } from './tabs.js';
@@ -20,7 +20,6 @@ import { updateRide } from './ride.js';
 let workouts = null;       // planned in Intervals.icu (null = not loaded)
 let plannedError = null;   // why they could not be loaded, shown in the lists
 
-export let selected = null;       // { event, steps }
 export let selectedKey = 'none';  // 'none' | 'i:<index>' | 'l:<id>'
 
 const today = () => {
@@ -53,23 +52,13 @@ export async function loadWorkouts() {
 }
 
 /**
- * Zones a workout is planned against: the running ones, or for a bike workout
- * the cycling ones (HR and power, no pace).
- */
-export function zonesFor(event) {
-  if (event?.sport !== 'ride') return zones;
-  const r = zones?.ride;
-  return r ? { hr: r.hr, pace: [], power: r.power, ftp: r.ftp, lthr: r.lthr, maxHr: r.maxHr } : null;
-}
-
-/**
  * Whether HR can steer a workout: library workouts say so (hrControl), the
  * Intervals.icu ones are judged by their steps.
  */
 function hrControllable(w) {
   if (w.hrControl != null) return w.hrControl;
   if (w.sport === 'ride') return false;
-  return followsHr(flattenWorkout(resolveDoc(w.workout_doc, zones), { zones }));
+  return followsHr(flattenWorkout(resolveDoc(w.workout_doc, app.state.zones), { zones: app.state.zones }));
 }
 
 /** Approximate total duration of a workout_doc (s). */
@@ -171,8 +160,8 @@ export function selectWorkout(key = selectedKey) {
   selectedKey = event ? key : 'none';
   if (event) {
     const ride = event.sport === 'ride';
-    const z = zonesFor(event);
-    const needsProfile = ride ? !z?.ftp : event.library && !zones?.thresholdKmh;
+    const z = app.zonesFor(event);
+    const needsProfile = ride ? !z?.ftp : event.library && !app.state.zones?.thresholdKmh;
     const hrControl = hrControllable(event);
     const hrOn = hrControl && $('wHrAdjust').checked;
     const steps = flattenWorkout(resolveDoc(event.workout_doc, z), {
@@ -181,9 +170,9 @@ export function selectWorkout(key = selectedKey) {
       zones: z,
       hrTargets: hrOn,
     });
-    selected = { event, steps, needsProfile, hrControl, hrOn };
+    app.setSelection({ key, event, steps, needsProfile, hrControl, hrOn });
   } else {
-    selected = null;
+    app.setSelection(null);
   }
   settings.set('workout', selectedKey.startsWith('l:') ? selectedKey : '');
   markSelected();
@@ -213,36 +202,36 @@ function renderStepHead(sport) {
 
 function renderWorkout() {
   const body = $('wSteps');
-  const ride = selected?.event.sport === 'ride';
-  $('wHrAdjustRow').hidden = !selected?.hrControl;
+  const ride = app.state.selection?.event.sport === 'ride';
+  $('wHrAdjustRow').hidden = !app.state.selection?.hrControl;
   $('wPosition').closest('label').hidden = $('wIncline').closest('label').hidden = ride;
   renderStepHead(ride ? 'ride' : 'run');
-  if (!selected) {
+  if (!app.state.selection) {
     body.innerHTML = '';
     $('wName').textContent = $('wName').title = 'No workout: manual control';
     $('wDesc').textContent = 'On the Run tab you set speed and incline with the buttons.';
     $('wTotal').textContent = '';
     return;
   }
-  $('wName').textContent = $('wName').title = selected.event.name || 'Workout'; // title: the full name when it is cut
+  $('wName').textContent = $('wName').title = app.state.selection.event.name || 'Workout'; // title: the full name when it is cut
   const missing = ride ? 'FTP is missing in Intervals.icu: without it, steps have no watts.\n' : 'Threshold pace is missing in Profile: without it, steps have no speed.\n';
-  $('wDesc').textContent = (selected.needsProfile ? missing : '') +
-    (selected.event.description || '') +
-    (selected.hrOn ? '\n♥ Long steps follow their HR zone (speed starts at the planned pace); short ones keep their pace.' : '');
+  $('wDesc').textContent = (app.state.selection.needsProfile ? missing : '') +
+    (app.state.selection.event.description || '') +
+    (app.state.selection.hrOn ? '\n♥ Long steps follow their HR zone (speed starts at the planned pace); short ones keep their pace.' : '');
   if (ride) {
-    body.innerHTML = selected.steps.map((s, i) => {
+    body.innerHTML = app.state.selection.steps.map((s, i) => {
       const dur = s.duration ? formatDuration(s.duration) : s.distance ? `${(s.distance / 1000).toFixed(2)} km` : '—';
       const w = s.power ? (s.power.lo === s.power.hi ? s.power.lo : `${s.power.lo}–${s.power.hi}`) : '—';
       const hr = s.hr ? `${s.hr.lo}–${s.hr.hi}` : '—';
       return `<tr data-i="${i}"><td>${i + 1}</td><td>${escapeHtml(s.label)}</td><td class="r num">${dur}</td>` +
         `<td class="r num">${w}</td><td class="r num">${hr}</td></tr>`;
     }).join('');
-    const sec = selected.steps.reduce((a, s) => a + (s.duration || 0), 0);
-    $('wTotal').textContent = `${selected.steps.length} steps · ~${formatDuration(sec)}`;
+    const sec = app.state.selection.steps.reduce((a, s) => a + (s.duration || 0), 0);
+    $('wTotal').textContent = `${app.state.selection.steps.length} steps · ~${formatDuration(sec)}`;
     highlightSteps();
     return;
   }
-  body.innerHTML = selected.steps.map((s, i) => {
+  body.innerHTML = app.state.selection.steps.map((s, i) => {
     const dur = s.duration ? formatDuration(s.duration) : s.distance ? `${(s.distance / 1000).toFixed(2)} km` : '—';
     const spd = s.hasTarget ? (s.ramp ? `${s.speedStart}→${s.speedEnd}` : s.speedStart.toFixed(1)) : 'free';
     const pace = s.hasTarget ? (s.ramp ? `${formatPace(s.speedStart)}→${formatPace(s.speedEnd)}` : formatPace(s.speedStart)) : '—';
@@ -250,9 +239,9 @@ function renderWorkout() {
       `<td class="r num">${spd}</td><td class="r num">${pace}</td><td class="r num">${s.incline}</td></tr>`;
   }).join('');
 
-  const totalSec = selected.steps.reduce((a, s) => a + (s.duration || (s.distance && s.speedStart ? s.distance / (s.speedStart / 3.6) : 0)), 0);
-  const totalKm = selected.steps.reduce((a, s) => a + (s.distance || (s.duration && s.speedStart ? s.duration * ((s.speedStart + s.speedEnd) / 2) / 3.6 : 0)), 0) / 1000;
-  $('wTotal').textContent = `${selected.steps.length} steps · ~${formatDuration(totalSec)} · ~${totalKm.toFixed(2)} km`;
+  const totalSec = app.state.selection.steps.reduce((a, s) => a + (s.duration || (s.distance && s.speedStart ? s.distance / (s.speedStart / 3.6) : 0)), 0);
+  const totalKm = app.state.selection.steps.reduce((a, s) => a + (s.distance || (s.duration && s.speedStart ? s.duration * ((s.speedStart + s.speedEnd) / 2) / 3.6 : 0)), 0) / 1000;
+  $('wTotal').textContent = `${app.state.selection.steps.length} steps · ~${formatDuration(totalSec)} · ~${totalKm.toFixed(2)} km`;
   highlightSteps();
 }
 
@@ -270,7 +259,7 @@ let homeSport = 'all';
 
 // The chosen workout's chart, on this tab
 export function updatePreview() {
-  $('wPreview').update({ plan: planTimeline(true), samples: [], elapsed: 0, zones: zonesFor(selected?.event) });
+  $('wPreview').update({ plan: planTimeline(true), samples: [], elapsed: 0, zones: app.zonesFor(app.state.selection?.event) });
 }
 
 /** Startup: wires Home and the workout page, restores the saved library choice and loads the library. */

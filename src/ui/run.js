@@ -16,9 +16,7 @@ import { live, rrState, rrActive } from '../session/live.js';
 import { session, resetSession, currentStep, applyStep, pushTarget, start, finish } from '../session/runner.js';
 import { wakeError, releaseWakeLock } from '../session/wake-lock.js';
 import { log, renderConsole } from './debug.js';
-import { treadmill } from './devices.js';
-import { zones } from './profile.js';
-import { selected, zonesFor } from './workouts.js';
+import * as app from '../state.js';
 
 // ---------------------------------------------------------------------------
 // Chart
@@ -38,7 +36,7 @@ function plannedSeconds(step) {
  */
 export function planTimeline(planOnly = false) {
   const active = !planOnly && session.state !== 'idle';
-  const steps = active ? session.steps : selected?.steps || [];
+  const steps = active ? session.steps : app.state.selection?.steps || [];
   const out = [];
   let t = 0;
   steps.forEach((step, i) => {
@@ -62,8 +60,8 @@ export function planTimeline(planOnly = false) {
 }
 
 export function updateChart() {
-  const event = session.state !== 'idle' ? session.event : selected?.event;
-  $('chart').update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones: zonesFor(event) });
+  const event = session.state !== 'idle' ? session.event : app.state.selection?.event;
+  $('chart').update({ plan: planTimeline(), samples: session.samples, elapsed: session.totalElapsed, zones: app.zonesFor(event) });
   $('chart').heading = event?.name || 'Free session';
 }
 
@@ -72,12 +70,12 @@ export function updateChart() {
 // ---------------------------------------------------------------------------
 
 export function updateControls() {
-  const connected = !!treadmill?.connected;
+  const connected = !!app.state.devices.controllable?.connected;
   const active = ['armed', 'running', 'paused'].includes(session.state);
   // Rides need the bike trainer, which is not supported yet
-  const ride = selected?.event?.sport === 'ride';
+  const ride = app.state.selection?.event?.sport === 'ride';
   $('btnStart').disabled = !connected || active || ride;
-  const startLabel = selected ? 'Start workout' : 'Start free session';
+  const startLabel = app.state.selection ? 'Start workout' : 'Start free session';
   $('btnStart').title = startLabel;
   $('btnStart').setAttribute('aria-label', startLabel);
   $('btnSkip').disabled = !(session.steps.length && (session.state === 'running' || session.state === 'paused'));
@@ -100,7 +98,7 @@ export function updateControls() {
   if (wakeError && ['armed', 'running', 'paused'].includes(session.state)) {
     $('sessionNote').textContent += ` ${wakeError}`;
   }
-  if (session.state === 'idle' && selected?.needsProfile) {
+  if (session.state === 'idle' && app.state.selection?.needsProfile) {
     $('sessionNote').textContent = 'Threshold pace is missing in Profile: without it, this workout has no speeds.';
   }
   if (session.state === 'idle' && ride) {
@@ -125,7 +123,7 @@ export function render() {
   $('mInclineSub').textContent = planned != null ? `target ${planned} %` : '\u00a0';
   $('mDist').textContent = (session.totalDist / 1000).toFixed(2);
   $('mTime').textContent = formatDuration(session.totalElapsed);
-  const hz = hrZoneOf(zones, live.hr);
+  const hz = hrZoneOf(app.state.zones, live.hr);
   $('mHr').textContent = live.hr || '--';
   $('mHrSub').textContent = `bpm${hz ? ` · Z${hz}` : ''}`;
   $('mHr').parentElement.title = `Heart rate${live.hrSource === 'console' ? ' (from the console)' : live.hrSource === 'strap' ? ' (from the strap)' : ''}`;
@@ -173,13 +171,13 @@ export function initRun() {
         const reported = live.console.targetSpeed;
         const base = reported > 0 ? reported : session.target ?? live.speed;
         session.target = Math.round(Math.min(LIMITS.speedMax, Math.max(LIMITS.speedMin, base + delta)) * 10) / 10;
-        treadmill?.setSpeed(session.target);
+        app.state.devices.controllable?.setSpeed(session.target);
       }
     };
   });
 
   $('tab-run').querySelectorAll('[data-incline]').forEach((btn) => {
-    btn.onclick = () => treadmill?.setIncline(live.incline + parseFloat(btn.dataset.incline));
+    btn.onclick = () => app.state.devices.controllable?.setIncline(live.incline + parseFloat(btn.dataset.incline));
   });
 
   $('btnStart').onclick = start;
@@ -189,7 +187,7 @@ export function initRun() {
   $('btnFinish').onclick = () => {
     if (session.state === 'armed') { resetSession(); releaseWakeLock(); updateControls(); return; }
     finish('Session ended. Belt paused: finish or resume from the console.');
-    treadmill?.pause();
+    app.state.devices.controllable?.pause();
   };
 
   $('btnCsv').onclick = () => {

@@ -15,10 +15,10 @@ import { hrDecision, hrSlope, inclineStep, alphaGuardApplies, SLOPE_WINDOW_S, AE
 import { live, rrState, rrActive, updateAlpha, STALE_MS } from './live.js';
 import { requestWakeLock, releaseWakeLock } from './wake-lock.js';
 import { log } from '../ui/debug.js';
-import { treadmill } from '../ui/devices.js';
-import { zones, loadTests, testText, renderTests } from '../ui/profile.js';
-import { selected, highlightSteps } from '../ui/workouts.js';
+import { loadTests, testText, renderTests } from '../ui/profile.js';
+import { highlightSteps } from '../ui/workouts.js';
 import { render, updateChart, updateControls } from '../ui/run.js';
+import * as app from '../state.js';
 
 const MOVING_KMH = 0.5;      // above this the belt is moving
 const AUTO_PAUSE_MS = 2000;  // belt stopped this long → pause
@@ -103,7 +103,7 @@ export function applyStep(i) {
   else if (session.testStart != null) session.testEnd ??= session.totalElapsed;
   if (!step) {
     finish('Workout complete. Belt paused: finish or resume from the console.');
-    treadmill?.pause();
+    app.state.devices.controllable?.pause();
     return;
   }
   log('info', `Step ${i + 1}/${session.steps.length}: ${step.label}`);
@@ -117,7 +117,7 @@ export function applyStep(i) {
 function pushIncline() {
   const step = currentStep();
   if (!step) return;
-  treadmill?.setIncline(Math.min(LIMITS.inclineMax, Math.max(LIMITS.inclineMin, step.incline + session.inclineAdjust)));
+  app.state.devices.controllable?.setIncline(Math.min(LIMITS.inclineMax, Math.max(LIMITS.inclineMin, step.incline + session.inclineAdjust)));
 }
 
 /** Sends the target speed if it changed (ramps and manual adjustments). */
@@ -128,15 +128,15 @@ export function pushTarget(force = false) {
   const t = Math.round(Math.min(LIMITS.speedMax, Math.max(LIMITS.speedMin, base + session.adjust + session.hrAdjust)) * 10) / 10;
   if (force || t !== session.target) {
     session.target = t;
-    treadmill?.setSpeed(t);
+    app.state.devices.controllable?.setSpeed(t);
   }
 }
 
 export function start() {
   resetSession();
-  session.steps = selected ? selected.steps : [];
-  session.event = selected ? selected.event : null;
-  session.hrOn = !!selected?.hrOn;
+  session.steps = app.state.selection ? app.state.selection.steps : [];
+  session.event = app.state.selection ? app.state.selection.event : null;
+  session.hrOn = !!app.state.selection?.hrOn;
   session.state = 'armed';
   requestWakeLock();
   updateControls();
@@ -168,7 +168,7 @@ export function tick() {
   const dt = Math.min(5, (now - (tick.last || now)) / 1000);
   tick.last = now;
   // Without recent treadmill data no distance is counted (and the session pauses)
-  if (!treadmill || now - treadmill.state.updatedAt > STALE_MS) live.speed = 0;
+  if (!app.state.devices.controllable || now - app.state.devices.controllable.state.updatedAt > STALE_MS) live.speed = 0;
   const moving = live.speed >= MOVING_KMH;
   const restarted = moving && !tick.wasMoving;
   tick.wasMoving = moving;
@@ -245,7 +245,7 @@ export function tick() {
         applyStep(cd < 0 ? session.steps.length : cd);
       } else if (stepProgress(step) >= 1) applyStep(session.stepIdx + 1);
       else if (warmupDone(step)) {
-        log('info', `HR ${live.hr} reached the top of Z1 (${zones.hr[0].hi}): warm-up done`);
+        log('info', `HR ${live.hr} reached the top of Z1 (${app.state.zones.hr[0].hi}): warm-up done`);
         applyStep(session.stepIdx + 1);
       } else {
         adjustForHr(step);
@@ -267,10 +267,10 @@ export function tick() {
  * Only before an aerobic step (Z1–Z2): harder sets keep the whole warm-up.
  */
 function warmupDone(step) {
-  if (!step.warmup || !step.ramp || !zones?.hr.length || !live.hr) return false;
+  if (!step.warmup || !step.ramp || !app.state.zones?.hr.length || !live.hr) return false;
   const next = session.steps[session.stepIdx + 1];
   if (!next || next.zone == null || next.zone > 2) return false;
-  if (live.hr < zones.hr[0].hi) { session.warmupHrSince = null; return false; }
+  if (live.hr < app.state.zones.hr[0].hi) { session.warmupHrSince = null; return false; }
   session.warmupHrSince ??= session.stepElapsed;
   return session.stepElapsed - session.warmupHrSince >= WARMUP_HOLD_S;
 }
@@ -289,7 +289,7 @@ function testOver(step) {
       log('info', `α1 ${a.toFixed(2)} with HR ${live.hr}: around ${name}`);
     }
   }
-  if (zones?.maxHr && live.hr >= zones.maxHr - 2) return `HR ${live.hr} near max HR ${zones.maxHr}`;
+  if (app.state.zones?.maxHr && live.hr >= app.state.zones.maxHr - 2) return `HR ${live.hr} near max HR ${app.state.zones.maxHr}`;
   if (a == null || a >= TEST_STOP_ALPHA || session.totalElapsed - session.testStart < TEST_MIN_S) {
     session.testLowSince = null;
     return null;
@@ -345,7 +345,7 @@ function adjustForHr(step) {
   const recent = session.samples.filter((s) => s.elapsed > session.totalElapsed - SLOPE_WINDOW_S);
   const { delta, reason } = hrDecision({
     mode, lo, hi, hr: live.hr, slope: hrSlope(recent), hrAdjust: session.hrAdjust,
-    alphaLow: low && alphaGuardApplies({ zone: step.zone, warmup: step.warmup, hr: live.hr, z1Top: zones?.hr[0]?.hi }),
+    alphaLow: low && alphaGuardApplies({ zone: step.zone, warmup: step.warmup, hr: live.hr, z1Top: app.state.zones?.hr[0]?.hi }),
     aim: mode === 'target' && step.zone != null && step.zone <= 2 ? AEROBIC_AIM : 0.5,
   });
   const dir = Math.sign(delta);
@@ -385,10 +385,10 @@ function adjustForHr(step) {
 // resumes it.
 let unloadPausedAt = 0;
 function pauseOnClose() {
-  if (!['armed', 'running', 'paused'].includes(session.state) || !treadmill?.connected) return;
+  if (!['armed', 'running', 'paused'].includes(session.state) || !app.state.devices.controllable?.connected) return;
   if (Date.now() - unloadPausedAt < 1000) return;
   unloadPausedAt = Date.now();
-  treadmill.pauseNow();
+  app.state.devices.controllable.pauseNow();
 }
 window.addEventListener('beforeunload', (e) => {
   if (!['armed', 'running', 'paused'].includes(session.state)) return;

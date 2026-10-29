@@ -10,8 +10,8 @@ import { HeartRateStrap } from '../devices/hr-strap.js';
 import { live, addRr } from '../session/live.js';
 import { log, renderInfo } from './debug.js';
 import { updateControls } from './run.js';
+import * as app from '../state.js';
 
-export let treadmill = null;
 
 function treadmillCallbacks() {
   return {
@@ -33,7 +33,7 @@ function treadmillCallbacks() {
       const ready = state === 'ready';
       $('btnConnect').disabled = $('btnSim').disabled = ready || state === 'connecting' || state === 'initializing';
       $('btnDisconnect').disabled = !ready;
-      $('btnSimBelt').classList.toggle('hidden', !(ready && treadmill?.simulated));
+      $('btnSimBelt').classList.toggle('hidden', !(ready && app.state.devices.controllable?.simulated));
       updateControls();
     },
     onData: (state) => {
@@ -58,7 +58,8 @@ function treadmillCallbacks() {
 }
 
 async function connectTreadmill(simulated) {
-  treadmill = simulated ? new SimulatedTreadmill(treadmillCallbacks()) : new Exp5iTreadmill(treadmillCallbacks());
+  const treadmill = simulated ? new SimulatedTreadmill(treadmillCallbacks()) : new Exp5iTreadmill(treadmillCallbacks());
+  app.setDevice('controllable', treadmill);
   try {
     await treadmill.connect();
   } catch (err) {
@@ -79,6 +80,7 @@ const hrStrap = new HeartRateStrap({
 
 /** Startup: the controllable menu and the HRM pill. */
 export function initDevices() {
+  app.setDevice('hr', hrStrap);
   // Treadmill menu: opens under its pill and closes on choice
   const menu = $('menuTreadmill');
   menu.addEventListener('toggle', (e) => {
@@ -90,8 +92,8 @@ export function initDevices() {
   const fromMenu = (fn) => () => { menu.hidePopover(); fn(); };
   $('btnConnect').onclick = fromMenu(() => connectTreadmill(false));
   $('btnSim').onclick = fromMenu(() => connectTreadmill(true));
-  $('btnDisconnect').onclick = fromMenu(() => treadmill?.disconnect());
-  $('btnSimBelt').onclick = fromMenu(() => treadmill?.toggleBelt?.());
+  $('btnDisconnect').onclick = fromMenu(() => app.state.devices.controllable?.disconnect());
+  $('btnSimBelt').onclick = fromMenu(() => app.state.devices.controllable?.toggleBelt?.());
   $('pillHr').onclick = async () => {
     if ($('pillHr').dataset.state === 'ready' || $('pillHr').dataset.state === 'busy') return;
     try {

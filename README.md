@@ -178,6 +178,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/ui/run.js` | Run tab: live numbers, session buttons, chart, export and upload |
 | `src/ui/debug.js` | Debug tab: communication log and console state |
 | `src/ui/session-chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
+| `src/ui/chart-axes.js` | The chart's left axis, one object per kind (pace for runs, power for bike workouts): zones, domain, block heights, ticks, unit, tooltip |
 | `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test. No DOM or UI imports: it reports through events (`change`, `tick`, `log`, `note`, `beep`, `active`, `test`) and `tick(now)` takes the clock, so it runs in Node tests |
 | `src/session/test-history.js` | Threshold test history (newest first, 20 kept) and how a result reads |
 | `src/session/policies.js` | How each sport drives its device: a run drives the treadmill (speed, incline, belt), a ride the smart trainer (power, pedaling) |

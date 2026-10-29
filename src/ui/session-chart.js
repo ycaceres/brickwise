@@ -23,7 +23,8 @@
  */
 
 import { formatDuration, formatPace } from '../workouts/steps.js';
-import { DEFAULT_PACE_PCT, paceZoneOf, hrZoneOf } from '../physiology/zones.js';
+import { DEFAULT_PACE_PCT, hrZoneOf } from '../physiology/zones.js';
+import { niceTicks, paceAxis, leftAxisFor } from './chart-axes.js';
 import { alphaState, ALPHA_LABELS } from '../physiology/hrv.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -37,8 +38,6 @@ const SERIES = [
   { key: 'hr', color: 'var(--series-hr)' },
   { key: 'incline', color: 'var(--series-incline)' },
 ];
-// Candidate paces for the left axis (s/km)
-const PACE_TICKS = [180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 540, 600, 660, 720, 840, 900, 1200, 1500, 1800, 2400, 3600];
 
 const el = (tag, attrs = {}, parent) => {
   const node = document.createElementNS(NS, tag);
@@ -46,17 +45,6 @@ const el = (tag, attrs = {}, parent) => {
   parent?.appendChild(node);
   return node;
 };
-
-/** "Nice" ticks for an axis: 1, 2, 2.5, 5 × 10^n. */
-function niceTicks(lo, hi, count) {
-  const span = hi - lo || 1;
-  const raw = span / count;
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
-  const ticks = [];
-  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) ticks.push(Math.round(v * 100) / 100);
-  return { ticks, lo: Math.floor(lo / step) * step, hi: Math.ceil(hi / step) * step };
-}
 
 function timeTicks(maxSec) {
   const steps = [60, 120, 300, 600, 900, 1800, 3600];
@@ -135,11 +123,6 @@ export class SessionChart {
     return Math.max(600, this.elapsed * 1.05);
   }
 
-  /** Bike workout with watts: the left axis is power instead of pace. */
-  _byPower() {
-    return !!this.zones?.power?.length && this.plan.some((p) => p.power);
-  }
-
   /**
    * HR ↔ left axis mapping that aligns the zones: the top of each HR zone
    * lands at the height of the top of the same pace (or power) zone. Null
@@ -159,34 +142,22 @@ export class SessionChart {
     return { toLeft: (v) => interp(v, bpm, val), toBpm: (v) => interp(v, val, bpm) };
   }
 
-  /** Vertical scale of each series. */
+  /** Vertical scale of each series; the left one comes from the axis (chart-axes.js). */
   _domains() {
     const hrs = this.samples.map((s) => s.hr).filter((v) => v > 0);
     for (const p of this.plan) if (p.hr) hrs.push(p.hr.lo, p.hr.hi);
-    const byPower = this._byPower();
-    const map = this._hrMap(byPower ? this.zones.power : this.zones?.pace);
-
-    // Bike: watts of every step (and HR, aligned by zone) set the left scale
-    let power = null;
-    if (byPower) {
-      const w = this.plan.flatMap((p) => (p.power ? [p.power.lo, p.power.hi] : []));
-      if (map) w.push(...hrs.map(map.toLeft));
-      power = { lo: Math.min(...w) * this.floor, hi: Math.max(...w) * 1.08 };
-    }
-
-    // Starts and stops (< 3 km/h) do not stretch the axis: pace explodes near 0
-    const spd = this.samples.map((s) => s.speed).filter((v) => v >= 3);
-    for (const p of this.plan) if (p.speedStart != null) spd.push(p.speedStart, p.speedEnd);
-    // With aligned zones, HR shares the speed scale
-    if (map && !byPower) spd.push(...hrs.map(map.toLeft).filter((v) => v >= 3));
-    const vMax = Math.max(6, ...spd) * 1.08;
-    // The background starts below the lowest speed, like in Intervals
-    const vMin = spd.length ? Math.min(...spd) * this.floor : 3;
+    const axis = leftAxisFor(this.zones, this.plan);
+    const map = this._hrMap(axis.zonesOf(this.zones));
+    // With aligned zones, HR shares the left scale
+    const hrLeft = map ? hrs.map(map.toLeft) : [];
+    const left = axis.domain({ plan: this.plan, samples: this.samples, hrLeft, floor: this.floor });
+    // The speed line always has its own scale (on a bike workout it is not the left axis)
+    const speed = axis === paceAxis ? left : paceAxis.domain({ plan: this.plan, samples: this.samples, floor: this.floor });
 
     let hr;
     if (map) {
-      const lo = map.toBpm(power ? power.lo : vMin);
-      const hi = map.toBpm(power ? power.hi : vMax);
+      const lo = map.toBpm(left.lo);
+      const hi = map.toBpm(left.hi);
       hr = { lo, hi, ticks: niceTicks(lo, hi, 4).ticks.filter((v) => v >= lo && v <= hi), toLeft: map.toLeft };
     } else {
       hr = hrs.length ? niceTicks(Math.max(40, Math.min(...hrs) - 25), Math.max(...hrs) + 5, 4) : niceTicks(80, 190, 4);
@@ -195,8 +166,9 @@ export class SessionChart {
     const inc = this.samples.map((s) => s.incline);
     for (const p of this.plan) inc.push(p.incline);
     return {
-      speed: { lo: vMin, hi: vMax },
-      power,
+      axis,
+      left,
+      speed,
       hr,
       incline: { lo: 0, hi: Math.max(4, ...inc) * 3 }, // stays in the bottom third
     };
@@ -230,14 +202,15 @@ export class SessionChart {
       const { lo, hi } = dom[s.key];
       this.yOf[s.key] = (v) => bottom - ((Math.max(lo, v) - lo) / (hi - lo)) * this.plotH;
     }
-    if (dom.power) this.yOf.power = (v) => bottom - ((Math.max(dom.power.lo, v) - dom.power.lo) / (dom.power.hi - dom.power.lo)) * this.plotH;
-    const yLeft = dom.power ? this.yOf.power : this.yOf.speed;
+    const { axis, left } = dom;
+    const yLeft = axis === paceAxis ? this.yOf.speed : (v) => bottom - ((Math.max(left.lo, v) - left.lo) / (left.hi - left.lo)) * this.plotH;
+    this.yOf.left = yLeft;
     if (dom.hr.toLeft) this.yOf.hr = (v) => yLeft(dom.hr.toLeft(v));
     this._drawZoneColumns(dom, right, width);
 
     // Background: the whole workout. Without speeds (no profile) blocks use
     // the step's relative intensity, so the shape still shows
-    const byIntensity = !dom.power && !this.plan.some((p) => p.speedStart != null) && this.plan.some((p) => p.intensity);
+    const byIntensity = axis === paceAxis && !this.plan.some((p) => p.speedStart != null) && this.plan.some((p) => p.intensity);
     let yInt = null;
     if (byIntensity) {
       const vals = this.plan.flatMap((p) => p.intensity || []);
@@ -250,14 +223,10 @@ export class SessionChart {
       const x1 = Math.max(x0 + 1, this.xOf(p.t1) - 1);
       let a = bottom - this.plotH * 0.15;
       let b = a;
-      if (dom.power && p.power) {
-        // A ramp goes from lo to hi; a steady step sits in the middle of its range
-        const mid = (p.power.lo + p.power.hi) / 2;
-        a = this.yOf.power(p.ramp ? p.power.lo : mid);
-        b = this.yOf.power(p.ramp ? p.power.hi : mid);
-      } else if (p.speedStart != null) {
-        a = this.yOf.speed(p.speedStart);
-        b = this.yOf.speed(p.speedEnd);
+      const values = axis.blockValues(p);
+      if (values) {
+        a = yLeft(values[0]);
+        b = yLeft(values[1]);
       } else if (yInt && p.intensity) {
         a = yInt(p.intensity[0]);
         b = yInt(p.intensity[1]);
@@ -276,27 +245,11 @@ export class SessionChart {
       el('rect', { x: MARGIN.left, y: top, width: Math.max(0, x - MARGIN.left), height: this.plotH, class: 'viz-elapsed' }, svg);
     }
 
-    // Left axis: power on a bike workout
-    if (dom.power) {
-      for (const v of niceTicks(dom.power.lo, dom.power.hi, 4).ticks) {
-        const y = this.yOf.power(v);
-        if (y < top + 8 || y > bottom - 4) continue;
-        el('line', { x1: MARGIN.left, x2: right, y1: y, y2: y, class: 'viz-grid' }, svg);
-        const t = el('text', { x: MARGIN.left - 8, y: y + 4, class: 'viz-axis on-band', 'text-anchor': 'end' }, svg);
-        t.textContent = v;
-      }
-    }
-    // Left axis: pace, at the heights of its speed
-    let lastY = -Infinity;
-    for (const sec of dom.power || (byIntensity && !this.samples.length) ? [] : PACE_TICKS) { // fastest (top) to slowest (bottom)
-      const kmh = 3600 / sec;
-      if (kmh > dom.speed.hi || kmh < dom.speed.lo + 0.3) continue;
-      const y = this.yOf.speed(kmh);
-      if (y < top + 8 || y - lastY < 26) continue; // without crowding labels
-      lastY = y;
-      el('line', { x1: MARGIN.left, x2: right, y1: y, y2: y, class: 'viz-grid' }, svg);
-      const t = el('text', { x: MARGIN.left - 8, y: y + 4, class: 'viz-axis on-band', 'text-anchor': 'end' }, svg);
-      t.textContent = formatPace(kmh);
+    // Left axis (without a profile and before any data, only the shape: no labels)
+    for (const t of byIntensity && !this.samples.length ? [] : axis.ticks(left, yLeft, { top, bottom })) {
+      el('line', { x1: MARGIN.left, x2: right, y1: t.y, y2: t.y, class: 'viz-grid' }, svg);
+      const label = el('text', { x: MARGIN.left - 8, y: t.y + 4, class: 'viz-axis on-band', 'text-anchor': 'end' }, svg);
+      label.textContent = t.label;
     }
     // Bike workouts have no speed by design: blocks show the power shape
     if (byIntensity && !this.zones?.power) {
@@ -385,13 +338,13 @@ export class SessionChart {
       });
     };
     const z = this.zones;
-    if (dom.power) column(z.power, this.yOf.power, dom.power.lo, dom.power.hi, 2, MARGIN.left - 4);
-    else if (z?.pace?.length) column(z.pace, this.yOf.speed, dom.speed.lo, dom.speed.hi, 2, MARGIN.left - 4);
+    const leftZones = dom.axis.zonesOf(z);
+    if (leftZones?.length) column(leftZones, this.yOf.left, dom.left.lo, dom.left.hi, 2, MARGIN.left - 4);
     if (z?.hr?.length) column(z.hr, this.yOf.hr, dom.hr.lo, dom.hr.hi, right + 2, MARGIN.right - 4);
 
     // Current zone above each unit
     const last = this.samples[this.samples.length - 1];
-    const pz = last && last.speed >= 1 ? paceZoneOf(z, last.speed) : null;
+    const pz = dom.axis.chip(last, z);
     const hz = last?.hr > 0 ? hrZoneOf(z, last.hr) : null;
     const head = (zone, unit, xRight) => {
       if (zone) {
@@ -402,7 +355,7 @@ export class SessionChart {
       const u = el('text', { x: xRight, y: top - 6, class: 'viz-axis', 'text-anchor': 'end' }, svg);
       u.textContent = unit;
     };
-    head(dom.power ? null : pz, dom.power ? 'W' : z?.power ? '' : 'min/km', MARGIN.left - 4); // bike zones without watts: no axis
+    head(pz, dom.axis.unit(z), MARGIN.left - 4);
     head(hz, 'bpm', width - 4);
   }
 
@@ -489,18 +442,7 @@ export class SessionChart {
         rows.push([`alpha-${st || 'none'}`, sample.alpha1 != null ? sample.alpha1.toFixed(2) : '—', `α1 · ${st ? ALPHA_LABELS[st] : 'no value'}`]);
       }
     }
-    if (plan?.power && this.zones?.power) {
-      const { lo, hi } = plan.power;
-      rows.push([null, lo === hi ? `${lo} W` : `${lo}${plan.ramp ? '→' : '–'}${hi} W`, `target${plan.zone ? ` Z${plan.zone}` : ''}`]);
-      if (plan.hr) rows.push([null, `${plan.hr.lo}–${plan.hr.hi} bpm`, 'HR goal']);
-    } else if (plan) {
-      const spd = plan.speedStart == null ? 'free'
-        : plan.speedStart === plan.speedEnd ? `${formatPace(plan.speedStart)}/km` : `${formatPace(plan.speedStart)}→${formatPace(plan.speedEnd)}/km`;
-      rows.push([null, spd, `target${plan.zone ? ` Z${plan.zone}` : ''} · ${plan.incline} %`]);
-      if (plan.hr) {
-        rows.push([null, plan.hr.mode === 'cap' ? `≤ ${plan.hr.hi} bpm` : `${plan.hr.lo}–${plan.hr.hi} bpm`, plan.hr.mode === 'cap' ? 'HR cap' : plan.hr.mode === 'info' ? 'HR goal' : 'HR target']);
-      }
-    }
+    if (plan) rows.push(...(leftAxisFor(this.zones, this.plan).planRows(plan) ?? paceAxis.planRows(plan)));
     this.tip.replaceChildren();
     const head = document.createElement('div');
     head.className = 'viz-tip-head';

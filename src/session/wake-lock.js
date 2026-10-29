@@ -1,7 +1,7 @@
 /** Screen Wake Lock for the length of a session. */
 
 import { log } from '../ui/debug.js';
-import { updateControls } from '../ui/train.js';
+import { updateControls } from '../ui/run.js';
 
 // Keeps the screen on from Start until the session ends. The browser drops
 // the lock whenever the page is hidden (another app, notification shade,

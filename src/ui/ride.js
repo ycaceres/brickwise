@@ -6,7 +6,7 @@
 import { $ } from '../lib/dom.js';
 import { formatDuration } from '../workouts/steps.js';
 import { selected, zonesFor } from './workouts.js';
-import { planTimeline } from './train.js';
+import { planTimeline } from './run.js';
 
 export function updateRide() {
   const ride = selected?.event?.sport === 'ride' ? selected : null;

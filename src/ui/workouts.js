@@ -13,7 +13,7 @@ import * as intervals from '../services/intervals.js';
 import { log } from './debug.js';
 import { zones } from './profile.js';
 import { session } from '../session/runner.js';
-import { render, updateChart, updateControls, planTimeline } from './train.js';
+import { render, updateChart, updateControls, planTimeline } from './run.js';
 import { showTab } from './tabs.js';
 import { updateRide } from './ride.js';
 
@@ -220,7 +220,7 @@ function renderWorkout() {
   if (!selected) {
     body.innerHTML = '';
     $('wName').textContent = $('wName').title = 'No workout: manual control';
-    $('wDesc').textContent = 'On the Train tab you set speed and incline with the buttons.';
+    $('wDesc').textContent = 'On the Run tab you set speed and incline with the buttons.';
     $('wTotal').textContent = '';
     return;
   }

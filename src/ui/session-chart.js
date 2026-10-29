@@ -28,7 +28,7 @@ import { alphaState, ALPHA_LABELS } from '../physiology/hrv.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const MARGIN = { left: 48, right: 46, top: 38 };
-const PLOT_H = 280;     // full height; compact charts (workout page and Train) use half
+const PLOT_H = 280;     // full height; compact charts (workout page and Run) use half
 const AXIS_H = 20;      // time ticks under the chart
 const RIBBON_H = 12;    // α1 ribbon, under the time axis (only with RR intervals)
 const RIBBON_GAP = 6;
@@ -96,7 +96,7 @@ function thin(samples, maxPoints) {
 export class SessionChart {
   /**
    * compact: half height, with the axis starting just below the slowest
-   * speed, so easy Z1 space does not take it over (workout page and Train).
+   * speed, so easy Z1 space does not take it over (workout page and Run).
    */
   constructor(root, { compact = false } = {}) {
     this.root = root;

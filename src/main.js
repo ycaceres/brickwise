@@ -10,7 +10,7 @@ import { loadJson, loadText } from './lib/storage.js';
 import { initDebug, log } from './ui/debug.js';
 import { initDevices } from './ui/devices.js';
 import { tick } from './session/runner.js';
-import { initTrain, updateControls } from './ui/train.js';
+import { initRun, updateControls } from './ui/run.js';
 import { loadWorkouts, initWorkouts } from './ui/workouts.js';
 import { initTabs, showTab } from './ui/tabs.js';
 import { initConfig } from './ui/config.js';
@@ -36,7 +36,7 @@ try {
   initTabs();
   initDebug();
   initDevices();
-  initTrain();
+  initRun();
   initProfile();
   initConfig();
   initWorkouts();

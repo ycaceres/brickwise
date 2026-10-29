@@ -159,10 +159,10 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | File | What it does |
 |---|---|
 | `index.html` | The shell: sidebar, header with the device pills, footer and the startup scripts |
-| `pages/*.html` | One file per page (home, config, profile, workouts, workout, train, debug) |
+| `pages/*.html` | One file per page (home, config, profile, workouts, workout, run, ride, debug) |
 | `src/main.js`, `src/lib/pages.js` | Startup: loads every page in parallel, then calls each UI module's `init…()` and loads the data |
 | `src/components/` | Reusable custom elements (light DOM, so `css/app.css` and the palettes apply): `bw-icon`, `bw-user-card` (Home and Profile), `bw-zone-table` (running and cycling), `bw-workout-list` (Home and library), `bw-chart` (workout page and Run). Data goes in through properties; actions come out as bubbling events (`bw-select`, `bw-refresh`, `bw-signout`) |
-| `src/ui/format.js` | UI text without the DOM (account stats, zone tables), tested |
+| `src/ui/format.js` | UI text without the DOM (account stats, zone tables): pure functions, tested in Node |
 | `src/ui/tabs.js` | Which tab or page is shown |
 | `src/ui/config.js` | Configuration tab: color palette and language |
 | `src/i18n/index.js`, `src/i18n/en.js` | Interface text by language (`t()`, `data-i18n` attributes); a missing key falls back to English |
@@ -171,9 +171,9 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/ui/profile.js` | Profile tab: threshold pace, LTHR and max HR, the Intervals.icu account and the threshold test history |
 | `src/ui/workouts.js` | Planned workouts (Home), the training library and its filters, and the workout page with its preview |
 | `src/ui/ride.js` | Ride tab: the selected bike workout's chart (power axis), view only |
-| `src/ui/train.js` | Run tab: live numbers, session buttons, chart, export and upload |
+| `src/ui/run.js` | Run tab: live numbers, session buttons, chart, export and upload |
 | `src/ui/debug.js` | Debug tab: communication log and console state |
-| `src/ui/chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
+| `src/ui/session-chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
 | `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test |
 | `src/session/hr-control.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
 | `src/session/live.js` | Live device readings: speed, incline, HR, console state, RR intervals and α1 |

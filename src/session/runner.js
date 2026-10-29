@@ -18,7 +18,7 @@ import { log } from '../ui/debug.js';
 import { treadmill } from '../ui/devices.js';
 import { zones, loadTests, testText, renderTests } from '../ui/profile.js';
 import { selected, highlightSteps } from '../ui/workouts.js';
-import { render, updateChart, updateControls } from '../ui/train.js';
+import { render, updateChart, updateControls } from '../ui/run.js';
 
 const MOVING_KMH = 0.5;      // above this the belt is moving
 const AUTO_PAUSE_MS = 2000;  // belt stopped this long → pause

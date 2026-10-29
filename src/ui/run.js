@@ -1,5 +1,5 @@
 /**
- * Train tab: the live numbers (pace, incline, distance, time, HR, α1), the
+ * Run tab: the live numbers (pace, incline, distance, time, HR, α1), the
  * session buttons, the chart, and export or upload when the session ends.
  */
 
@@ -161,8 +161,8 @@ function activityName() {
 // Startup
 // ---------------------------------------------------------------------------
 /** Startup: the session buttons, the speed and incline buttons, and export. */
-export function initTrain() {
-  $('tab-train').querySelectorAll('[data-speed]').forEach((btn) => {
+export function initRun() {
+  $('tab-run').querySelectorAll('[data-speed]').forEach((btn) => {
     btn.onclick = () => {
       const delta = parseFloat(btn.dataset.speed);
       if (currentStep()?.hasTarget && session.state === 'running') {
@@ -178,7 +178,7 @@ export function initTrain() {
     };
   });
 
-  $('tab-train').querySelectorAll('[data-incline]').forEach((btn) => {
+  $('tab-run').querySelectorAll('[data-incline]').forEach((btn) => {
     btn.onclick = () => treadmill?.setIncline(live.incline + parseFloat(btn.dataset.incline));
   });
 

@@ -5,7 +5,7 @@
  * the bike workout chart). .heading sets the
  * title; .update(...) passes the data on to SessionChart.
  */
-import { SessionChart } from '../ui/chart.js';
+import { SessionChart } from '../ui/session-chart.js';
 
 const HELP = {
   run: `

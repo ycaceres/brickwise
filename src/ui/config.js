@@ -19,9 +19,9 @@ function applyTheme(theme) {
 export function initConfig() {
   const theme = $('cfgTheme');
   const lang = $('cfgLang');
-  for (const [code, { name }] of Object.entries(LANGUAGES)) lang.add(new Option(name, code));
+  for (const { code, native } of LANGUAGES) lang.add(new Option(native, code));
   theme.value = applyTheme(settings.get('theme'));
-  lang.value = setLanguage(settings.get('lang') ?? DEFAULT_LANGUAGE);
+  setLanguage(settings.get('lang') ?? DEFAULT_LANGUAGE).then((code) => { lang.value = code; });
   theme.onchange = () => settings.set('theme', applyTheme(theme.value));
-  lang.onchange = () => settings.set('lang', setLanguage(lang.value));
+  lang.onchange = async () => settings.set('lang', await setLanguage(lang.value));
 }

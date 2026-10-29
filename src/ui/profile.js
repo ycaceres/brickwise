@@ -6,6 +6,7 @@
 
 import { $ } from '../lib/dom.js';
 import * as settings from '../lib/settings.js';
+import { formatDate } from '../i18n/format.js';
 import * as app from '../state.js';
 import { formatPace } from '../workouts/steps.js';
 import { profileFromIntervals, rideFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../physiology/zones.js';
@@ -159,7 +160,7 @@ export function renderTests() {
   $('pTestsCard').classList.toggle('hidden', !tests.length);
   $('pTests').replaceChildren(...tests.map((t) => {
     const tr = document.createElement('tr');
-    for (const v of [new Date(t.date).toLocaleDateString(), vtText(t.vt1), t.vt2 ? vtText(t.vt2) + (t.vt2.extrapolated ? ' *' : '') : '—', t.r2]) {
+    for (const v of [formatDate(t.date), vtText(t.vt1), t.vt2 ? vtText(t.vt2) + (t.vt2.extrapolated ? ' *' : '') : '—', t.r2]) {
       const td = document.createElement('td');
       td.textContent = v;
       tr.appendChild(td);

@@ -166,7 +166,8 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/state.js` | App-wide state (profile and zones, the workout picked, connected devices, account) with change events; no DOM |
 | `src/ui/tabs.js` | Which tab or page is shown |
 | `src/ui/config.js` | Configuration tab: color palette and language |
-| `src/i18n/index.js`, `src/i18n/en.js` | Interface text by language (`t()`, `data-i18n` attributes); a missing key falls back to English |
+| `src/i18n/index.js`, `src/i18n/languages.js`, `src/i18n/en.js` | Interface text by language: `t()` with placeholders and plurals, `data-i18n` attributes, languages loaded on demand, English as fallback; see [`src/i18n/README.md`](src/i18n/README.md) to add one |
+| `src/i18n/format.js` | Numbers and dates in the interface language |
 | `css/app.css` | Page styles |
 | `src/ui/devices.js` | Treadmill and HR strap pills: connect, simulator, disconnect |
 | `src/ui/profile.js` | Profile tab: threshold pace, LTHR and max HR, the Intervals.icu account and the threshold test history |

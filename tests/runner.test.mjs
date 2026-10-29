@@ -59,3 +59,29 @@ test('runner: a short workout runs from the belt start to the end', async () => 
   assert.ok(seen.change >= 4);
   assert.ok(session.samples.length >= 7);
 });
+
+test('runner: the plan keeps its speed; what is sent is clamped to the treadmill', async () => {
+  const { session, start, tick, finish } = await import('../src/session/runner.js');
+  const { setDevice, setSelection } = await import('../src/state.js');
+  const { live } = await import('../src/session/live.js');
+  const { flattenWorkout } = await import('../src/workouts/steps.js');
+  const steps = flattenWorkout({ steps: [{ duration: 60, text: 'incline 14%', _pace: { value: 19 / 3.6 } }] });
+  assert.equal(steps[0].speedStart, 19);
+  assert.equal(steps[0].incline, 14);
+  const sent = [];
+  const device = {
+    connected: true, state: { updatedAt: 0 },
+    limits: { speedMin: 0.8, speedMax: 16, inclineMin: 0, inclineMax: 10 },
+    // Like Treadmill.setTarget: the incline is clamped by the device itself
+    setTarget: ({ speed, incline }) => sent.push({ speed, incline: incline != null ? Math.min(10, incline) : undefined }),
+    pause() {},
+  };
+  setDevice('controllable', device);
+  setSelection({ key: 'l:fast', event: { name: 'Fast' }, steps, hrOn: false });
+  start();
+  device.state.updatedAt = 50_000; live.speed = 10; tick(50_000);
+  assert.equal(session.state, 'running');
+  assert.deepEqual(sent.find((c) => c.speed != null).speed, 16);
+  assert.equal(sent.find((c) => c.incline != null).incline, 10);
+  finish('test over');
+});

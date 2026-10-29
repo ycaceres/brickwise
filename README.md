@@ -193,7 +193,9 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/physiology/zones.js` | Profile, HR and pace zones, cycling power and HR zones, HR ranges of each step and resolution of relative paces |
 | `src/physiology/hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `src/physiology/thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
-| `src/workouts/steps.js` | Turns the Intervals.icu `workout_doc` into speed steps |
+| `src/workouts/steps.js` | Turns the Intervals.icu `workout_doc` into steps (shared walk: repeats, labels, durations, incline); targets are the plan as written, the session clamps what it sends to the treadmill |
+| `src/workouts/run.js`, `src/workouts/ride.js` | Per-sport step targets: speed and HR caps/targets for running, watts and power zones for cycling |
+| `src/workouts/format.js` | Pace and duration formatting |
 | `src/workouts/info.js` | A workout's approximate length and whether HR can steer it |
 | `src/workouts/library.js` | Turns `data/library.json` into workouts for every duration and level |
 | `data/library.json` | The workout library (data; edited by hand) |

@@ -122,8 +122,15 @@ header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify
 
 button, select, input {
   font: inherit; color: var(--text);
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px;
   padding: 8px 14px; min-height: 40px;
+}
+/* Own arrow, away from the edge: the native one sits against it and ignores padding */
+select {
+  appearance: none; padding-right: 36px; text-overflow: ellipsis;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 19px) 50%, calc(100% - 14px) 50%;
+  background-size: 5px 5px; background-repeat: no-repeat;
 }
 button { cursor: pointer; font-weight: 600; }
 button:hover:not(:disabled) { border-color: var(--accent); }

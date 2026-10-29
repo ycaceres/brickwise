@@ -7,6 +7,7 @@
  * 'device', 'athlete', 'wellness', 'planned', 'library', 'options'.
  */
 import { zonesFromProfile } from './physiology/zones.js';
+import { createEmitter } from './lib/events.js';
 
 export const state = {
   profile: null,     // see physiology/zones.js
@@ -20,15 +21,9 @@ export const state = {
   workoutOptions: { position: 'mid', defaultIncline: 1, hrAdjust: true },  // workout page choices
 };
 
-const listeners = {};
-
-export function on(name, fn) {
-  (listeners[name] ||= []).push(fn);
-}
-
-function emit(name, value) {
-  for (const fn of listeners[name] || []) fn(value);
-}
+const emitter = createEmitter();
+export const on = emitter.on;
+const emit = emitter.emit;
 
 export function setProfile(p) {
   state.profile = p;

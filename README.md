@@ -178,7 +178,8 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/ui/run.js` | Run tab: live numbers, session buttons, chart, export and upload |
 | `src/ui/debug.js` | Debug tab: communication log and console state |
 | `src/ui/session-chart.js` | Chart of actual data over the workout by zones (SVG, no libraries) |
-| `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test |
+| `src/session/runner.js` | Runs the session: steps, speed and incline commands, samples, HR and α1 adjustments, threshold test. No DOM or UI imports: it reports through events (`change`, `tick`, `log`, `note`, `beep`, `active`, `test`) and `tick(now)` takes the clock, so it runs in Node tests |
+| `src/session/test-history.js` | Threshold test history (newest first, 20 kept) and how a result reads |
 | `src/session/hr-control.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
 | `src/session/live.js` | Live device readings: speed, incline, HR, console state, RR intervals and α1 |
 | `src/session/wake-lock.js` | Keeps the screen on during a session |
@@ -198,6 +199,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/services/intervals.js` | Intervals.icu API calls from the browser: workouts, zones and activity upload, with the API key stored in the browser |
 | `src/lib/timer.js` | Timers in a Web Worker, which keep running with the tab in the background |
 | `src/lib/settings.js`, `src/lib/storage.js` | Every stored setting in one list (see below) and the raw `localStorage` access behind it |
+| `src/lib/events.js` | Tiny event emitter used by the app state and the session |
 | `src/lib/dom.js`, `src/lib/sound.js` | DOM helpers and beeps |
 | `tools/serve.py` | Static server for local development (not deployed) |
 | `tests/` | Hardware-free tests by area (`*.test.mjs`, shared data in `fixtures.mjs`): `npm test` |

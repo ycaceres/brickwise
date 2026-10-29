@@ -2,23 +2,39 @@
  * Runs a session: waits for the belt, walks the workout steps, sends speed
  * and incline, records a sample per second, adjusts by HR and α1, and
  * analyzes the threshold test when it ends.
+ *
+ * No DOM and no UI imports: what happens is reported through `events`
+ * ('change', 'tick', 'log', 'note', 'beep', 'active', 'test'), and the
+ * screens subscribe. tick(now) takes the clock as an argument for tests.
  */
 
-import { $ } from '../lib/dom.js';
-import * as settings from '../lib/settings.js';
-import { beep } from '../lib/sound.js';
+import { createEmitter } from '../lib/events.js';
 import { LIMITS } from '../devices/treadmill/exp5i-protocol.js';
 import { targetSpeedAt } from '../workouts/steps.js';
 import { VT1, VT2 } from '../physiology/hrv.js';
 import { analyzeRamp } from '../physiology/thresholds.js';
 import { hrDecision, hrSlope, inclineStep, alphaGuardApplies, SLOPE_WINDOW_S, AEROBIC_AIM } from './hr-control.js';
 import { live, rrState, rrActive, updateAlpha, STALE_MS } from './live.js';
-import { requestWakeLock, releaseWakeLock } from './wake-lock.js';
-import { log } from '../ui/debug.js';
-import { loadTests, testText, renderTests } from '../ui/profile.js';
-import { highlightSteps } from '../ui/workout.js';
-import { render, updateChart, updateControls } from '../ui/run.js';
+import { addTest, testText } from './test-history.js';
 import * as app from '../state.js';
+
+/**
+ * What the session reports:
+ * - 'change': state or step changed (armed, running, paused, done, cancelled, new step)
+ * - 'tick': every tick (live numbers)
+ * - 'log' { kind, text }, 'note' { text, append }: log line and session note
+ * - 'beep' { freq, seconds }: step changes and the last seconds of a step
+ * - 'active' true | false: a session started, or ended / was cancelled (wake lock)
+ * - 'test' { result }: a threshold test was analyzed and saved
+ */
+export const events = createEmitter();
+const log = (kind, text) => events.emit('log', { kind, text });
+const note = (text, append = false) => events.emit('note', { text, append });
+const beep = (freq, seconds) => events.emit('beep', { freq, seconds });
+const changed = () => events.emit('change');
+
+const ACTIVE = ['armed', 'running', 'paused'];
+export const isActive = () => ACTIVE.includes(session.state);
 
 const MOVING_KMH = 0.5;      // above this the belt is moving
 const AUTO_PAUSE_MS = 2000;  // belt stopped this long → pause
@@ -37,7 +53,6 @@ const INCLINE_SPACING_S = 40; // between incline adjustments (the motor is slow 
 const TEST_STOP_ALPHA = 0.45; // the threshold test ends once α1 is this far past VT2…
 const TEST_STOP_HOLD_S = 20;  // …for this long
 const TEST_MIN_S = 180;       // and never before this much ramp
-const TESTS_KEPT = 20;        // threshold tests kept in the history
 
 export const session = {
   state: 'idle', // idle | armed | running | paused | done
@@ -110,7 +125,7 @@ export function applyStep(i) {
   beep(i === 0 ? 660 : 880, 0.25);
   pushIncline();
   pushTarget(true);
-  highlightSteps();
+  changed();
 }
 
 /** Sends the step's incline plus what HR moved it (steps that follow HR by incline). */
@@ -138,31 +153,35 @@ export function start() {
   session.event = app.state.selection ? app.state.selection.event : null;
   session.hrOn = !!app.state.selection?.hrOn;
   session.state = 'armed';
-  requestWakeLock();
-  updateControls();
-  updateChart();
+  events.emit('active', true);
+  changed();
+}
+
+/** Cancels a session that is armed but has not started (the belt never moved). */
+export function cancel() {
+  if (session.state !== 'armed') return;
+  resetSession();
+  events.emit('active', false);
+  changed();
 }
 
 export function finish(message) {
   if (session.state === 'idle' || session.state === 'done') return;
   session.state = 'done';
   session.target = null;
-  releaseWakeLock();
+  events.emit('active', false);
   log('info', message);
-  $('sessionNote').textContent = message;
+  note(message);
   if (session.steps.length) session.stepStarts[session.stepIdx + 1] ??= session.totalElapsed;
   if (session.testStart != null) {
     session.testEnd ??= session.totalElapsed;
     saveTestResult();
   }
-  highlightSteps();
-  updateControls();
-  updateChart();
+  changed();
   beep(520, 0.6);
 }
 
-export function tick() {
-  const now = Date.now();
+export function tick(now = Date.now()) {
   updateAlpha();
   // Up to 5 s: with the tab hidden ticks may spread out without losing distance
   const dt = Math.min(5, (now - (tick.last || now)) / 1000);
@@ -179,7 +198,7 @@ export function tick() {
     rrState.pending = []; // beats from before the start do not belong to the first sample
     log('info', 'Belt moving: session started');
     if (session.steps.length) applyStep(0);
-    updateControls();
+    changed();
   } else if (session.state === 'running') {
     // The belt stopped and restarted before the auto-pause: the console
     // restarts at its own speed, so the target is resent
@@ -192,7 +211,7 @@ export function tick() {
       if (now - session.stopSince > AUTO_PAUSE_MS) {
         session.state = 'paused';
         log('warn', 'Belt stopped: session paused');
-        updateControls();
+        changed();
       }
     } else {
       session.stopSince = null;
@@ -204,7 +223,7 @@ export function tick() {
     log('info', 'Belt moving: session resumed');
     const step = currentStep();
     if (step) { pushIncline(); pushTarget(true); }
-    updateControls();
+    changed();
   }
 
   if (session.state === 'running') {
@@ -254,11 +273,7 @@ export function tick() {
     }
   }
 
-  render();
-  if (session.state === 'running' && now - (tick.lastChart || 0) >= 1000) {
-    tick.lastChart = now;
-    updateChart();
-  }
+  events.emit('tick', now);
 }
 
 /**
@@ -304,15 +319,14 @@ function saveTestResult() {
   const peakHr = Math.max(0, ...session.samples.map((s) => s.hr || 0));
   if (result.error) {
     log('warn', `Threshold test: ${result.error}`);
-    $('sessionNote').textContent += ` Threshold test: ${result.error}`;
+    note(` Threshold test: ${result.error}`, true);
     return;
   }
-  const tests = [{ date: new Date().toISOString(), ...result, peakHr }, ...loadTests()].slice(0, TESTS_KEPT);
-  settings.set('tests', tests);
+  addTest({ ...result, peakHr });
   const text = testText(result);
   log('info', `Threshold test: ${text} (r² ${result.r2}, ${result.points} points)`);
-  $('sessionNote').textContent += ` Threshold test: ${text}. See Profile.`;
-  renderTests();
+  note(` Threshold test: ${text}. See Profile.`, true);
+  events.emit('test', { result });
 }
 
 /** α1 has been below VT1 for ALPHA_HOLD_S with a clean signal (tracked every tick). */
@@ -381,18 +395,12 @@ function adjustForHr(step) {
 // Closing or reloading the page during an active workout pauses the belt.
 // It happens on beforeunload (while the browser asks whether to leave there
 // is time for the command to arrive) and again on pagehide in case nobody
-// was asked. If you stay, the session remains paused: START on the console
-// resumes it.
+// was asked (ui/run.js wires both). If you stay, the session remains paused:
+// START on the console resumes it.
 let unloadPausedAt = 0;
-function pauseOnClose() {
-  if (!['armed', 'running', 'paused'].includes(session.state) || !app.state.devices.controllable?.connected) return;
+export function pauseOnClose() {
+  if (!isActive() || !app.state.devices.controllable?.connected) return;
   if (Date.now() - unloadPausedAt < 1000) return;
   unloadPausedAt = Date.now();
   app.state.devices.controllable.pauseNow();
 }
-window.addEventListener('beforeunload', (e) => {
-  if (!['armed', 'running', 'paused'].includes(session.state)) return;
-  pauseOnClose();
-  e.preventDefault();
-});
-window.addEventListener('pagehide', pauseOnClose);

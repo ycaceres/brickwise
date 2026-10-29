@@ -13,8 +13,10 @@ import { buildTcx } from '../export/tcx.js';
 import { samplesToCsv } from '../export/csv.js';
 import * as intervals from '../services/intervals.js';
 import { live, rrState, rrActive } from '../session/live.js';
-import { session, resetSession, currentStep, applyStep, pushTarget, start, finish } from '../session/runner.js';
-import { wakeError, releaseWakeLock } from '../session/wake-lock.js';
+import { session, events as sessionEvents, isActive, currentStep, applyStep, pushTarget, start, finish, cancel, pauseOnClose } from '../session/runner.js';
+import { wakeError, requestWakeLock, releaseWakeLock, initWakeLock } from '../session/wake-lock.js';
+import { beep } from '../lib/sound.js';
+import { highlightSteps } from './workout.js';
 import { log, renderConsole } from './debug.js';
 import * as app from '../state.js';
 
@@ -160,6 +162,35 @@ function activityName() {
 // ---------------------------------------------------------------------------
 /** Startup: the session buttons, the speed and incline buttons, and export. */
 export function initRun() {
+  // What the session reports
+  let lastChart = 0;
+  sessionEvents.on('change', () => {
+    updateControls();
+    updateChart();
+    highlightSteps();
+  });
+  sessionEvents.on('tick', (now) => {
+    render();
+    if (session.state === 'running' && now - lastChart >= 1000) {
+      lastChart = now;
+      updateChart();
+    }
+  });
+  sessionEvents.on('note', ({ text, append }) => {
+    if (append) $('sessionNote').textContent += text;
+    else $('sessionNote').textContent = text;
+  });
+  sessionEvents.on('beep', ({ freq, seconds }) => beep(freq, seconds));
+  sessionEvents.on('active', (on) => (on ? requestWakeLock() : releaseWakeLock()));
+  initWakeLock({ onChange: updateControls, log });
+  // Closing or reloading the page during a workout pauses the belt (see session/runner.js)
+  window.addEventListener('beforeunload', (e) => {
+    if (!isActive()) return;
+    pauseOnClose();
+    e.preventDefault();
+  });
+  window.addEventListener('pagehide', pauseOnClose);
+
   app.on('selection', () => {
     render();
     updateChart();
@@ -190,7 +221,7 @@ export function initRun() {
     if (session.state === 'running' || session.state === 'paused') applyStep(session.stepIdx + 1);
   };
   $('btnFinish').onclick = () => {
-    if (session.state === 'armed') { resetSession(); releaseWakeLock(); updateControls(); return; }
+    if (session.state === 'armed') { cancel(); return; }
     finish('Session ended. Belt paused: finish or resume from the console.');
     app.state.devices.controllable?.pause();
   };

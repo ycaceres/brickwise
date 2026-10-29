@@ -12,6 +12,8 @@ import { profileFromIntervals, rideFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_P
 import * as intervals from '../services/intervals.js';
 import { log } from './debug.js';
 import { loadWorkouts } from './home.js';
+import { loadTests, vtText } from '../session/test-history.js';
+import { events as sessionEvents } from '../session/runner.js';
 
 export function setProfile(p, { save = true } = {}) {
   app.setProfile(p);
@@ -151,17 +153,7 @@ const signOut = () => {
   loadWorkouts();
 };
 
-// Threshold test history (the tests are run and analyzed in the session)
-export function loadTests() {
-  return settings.get('tests');
-}
-
-
-const vtText = (vt) => `${vt.hr} bpm at ${formatPace(vt.kmh)}/km`;
-export const testText = (r) => `VT1 ${vtText(r.vt1)} · VT2 ${r.vt2 ? `${vtText(r.vt2)}${r.vt2.extrapolated ? ' (extrapolated)' : ''}` : 'not reached'}`;
-
-
-/** Profile: threshold test history; the latest VT2 can become LTHR and threshold pace. */
+/** Profile: threshold test history (session/test-history.js); the latest VT2 can become LTHR and threshold pace. */
 export function renderTests() {
   const tests = loadTests();
   $('pTestsCard').classList.toggle('hidden', !tests.length);
@@ -183,6 +175,7 @@ export function renderTests() {
 
 /** Startup: sign in, the manual profile, the account buttons and the tests. */
 export function initProfile() {
+  sessionEvents.on('test', renderTests);
   $('pKeySave').onclick = async () => {
     const key = $('pKey').value.trim();
     if (!key) return;

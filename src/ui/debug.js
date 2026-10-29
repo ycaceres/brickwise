@@ -9,6 +9,7 @@ import { MODES, PULSE_SOURCES } from '../devices/treadmill/ifit-messages.js';
 import { live, STALE_MS } from '../session/live.js';
 import { updateControls } from './run.js';
 import * as app from '../state.js';
+import { events as sessionEvents } from '../session/runner.js';
 
 export const logLines = [];
 export function log(kind, text) {
@@ -27,6 +28,7 @@ export function log(kind, text) {
 
 /** Startup: wires the Debug tab. */
 export function initDebug() {
+  sessionEvents.on('log', ({ kind, text }) => log(kind, text));
   $('btnLogDownload').onclick = () => download(`brickwise-log-${Date.now()}.txt`, logLines.join('\n'), 'text/plain');
 }
 

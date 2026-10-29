@@ -61,12 +61,13 @@ export class Exp5iTreadmill extends Treadmill {
     return !!this.device?.gatt?.connected && this.running;
   }
 
-  async connect() {
+  /** opts.device: a Bluetooth device the app already chose (one chooser for every treadmill driver). */
+  async connect(opts = {}) {
     if (!navigator.bluetooth) {
       throw new Error('This browser has no Web Bluetooth. Use Chrome or Edge over HTTPS or localhost.');
     }
     this.onStatus('connecting');
-    this.device = await navigator.bluetooth.requestDevice({
+    this.device = opts.device ?? await navigator.bluetooth.requestDevice({
       filters: [{ namePrefix: 'I_' }, { services: [SERVICE_UUID] }],
       optionalServices: [SERVICE_UUID],
     });

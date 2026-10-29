@@ -4,12 +4,13 @@
  * Bluetooth access, so it can be tested in Node.
  */
 import exp5i from './treadmill/nordictrack-exp5i/index.js';
+import ftmsTreadmill from './treadmill/ftms/index.js';
 import simulatedTreadmill from './treadmill/simulated/index.js';
 import simulatedTrainer from './trainer/simulated/index.js';
 import hrStrap from './sensors/hr-strap/index.js';
 
 /** @type {import('./types.js').DriverDescriptor[]} */
-export const DRIVERS = [exp5i, simulatedTreadmill, simulatedTrainer, hrStrap];
+export const DRIVERS = [exp5i, ftmsTreadmill, simulatedTreadmill, simulatedTrainer, hrStrap];
 
 export const driversFor = (kind, { debug = false } = {}) => DRIVERS.filter((d) => d.kind === kind && (debug || !d.debugOnly));
 
@@ -28,12 +29,13 @@ export function requestOptions(kind) {
 }
 
 /**
- * The driver for a chosen device of a kind: by name prefix, or the only real
- * driver of that kind. Null when it cannot tell (the menu then asks).
+ * The driver for a chosen device of a kind: by name prefix, else the generic
+ * (standard-protocol) driver of the kind, else the only real one. Null when
+ * it cannot tell.
  */
 export function detect(kind, { name = '' } = {}) {
   const real = driversFor(kind);
   const byName = real.find((d) => d.match?.namePrefix?.some((p) => name.startsWith(p)));
   if (byName) return byName;
-  return real.length === 1 ? real[0] : null;
+  return real.find((d) => d.generic) ?? (real.length === 1 ? real[0] : null);
 }

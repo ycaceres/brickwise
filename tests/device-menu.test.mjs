@@ -5,8 +5,9 @@ import { connectPlan, menuEntries } from '../src/ui/device-menu.js';
 const labels = (entries) => entries.map((e) => e.label);
 
 test('device menu: treadmill, with and without debug', () => {
-  assert.equal(connectPlan('treadmill').mode, 'single');
-  assert.equal(connectPlan('treadmill').driver.id, 'nordictrack-exp5i');
+  // Two real treadmill drivers (EXP 5i and FTMS): one chooser for both
+  assert.equal(connectPlan('treadmill').mode, 'chooser');
+  assert.deepEqual(connectPlan('treadmill').drivers.map((d) => d.id), ['nordictrack-exp5i', 'ftms-treadmill']);
   assert.deepEqual(labels(menuEntries('treadmill')), ['Connect treadmill']);
   assert.deepEqual(labels(menuEntries('treadmill', { debug: true })), ['Connect treadmill', 'Simulator: Simulated treadmill']);
   assert.deepEqual(labels(menuEntries('treadmill', { last: { driver: 'nordictrack-exp5i', name: 'I_TL1234' } })), ['Connect treadmill (last: I_TL1234)']);

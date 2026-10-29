@@ -24,8 +24,8 @@ for (const d of DRIVERS.filter((x) => x.debugOnly)) {
 }
 
 test('registry: simulators only with debug; lookups', () => {
-  assert.deepEqual(driversFor('treadmill').map((d) => d.id), ['nordictrack-exp5i']);
-  assert.deepEqual(driversFor('treadmill', { debug: true }).map((d) => d.id), ['nordictrack-exp5i', 'simulated-treadmill']);
+  assert.deepEqual(driversFor('treadmill').map((d) => d.id), ['nordictrack-exp5i', 'ftms-treadmill']);
+  assert.deepEqual(driversFor('treadmill', { debug: true }).map((d) => d.id), ['nordictrack-exp5i', 'ftms-treadmill', 'simulated-treadmill']);
   assert.deepEqual(driversFor('trainer'), []);
   assert.deepEqual(driversFor('trainer', { debug: true }).map((d) => d.id), ['simulated-trainer']);
   assert.equal(getDriver('hr-strap').kind, 'hr');
@@ -38,7 +38,8 @@ test('registry: requestDevice options and detection', () => {
   assert.ok(t.optionalServices.length >= 1);
   assert.deepEqual(requestOptions('hr'), { filters: [{ services: ['heart_rate'] }], optionalServices: ['heart_rate'] });
   assert.equal(detect('treadmill', { name: 'I_TL123' }).id, 'nordictrack-exp5i');
-  assert.equal(detect('treadmill', { name: 'Other' }).id, 'nordictrack-exp5i'); // the only real treadmill driver
+  assert.equal(detect('treadmill', { name: 'Horizon T202' }).id, 'ftms-treadmill'); // the generic (FTMS) driver
+  assert.ok(t.filters.some((f) => f.services?.includes('fitness_machine')));
   assert.equal(detect('trainer', { name: 'KICKR' }), null);
 });
 

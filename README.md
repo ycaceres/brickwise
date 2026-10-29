@@ -190,6 +190,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/devices/treadmill/nordictrack-exp5i/driver.js` | Web Bluetooth connection to the EXP 5i (write queue, retries) |
 | `src/devices/treadmill/nordictrack-exp5i/protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
 | `src/devices/treadmill/nordictrack-exp5i/messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
+| `src/devices/treadmill/ftms/` | Generic driver for treadmills with the standard Bluetooth FTMS service (protocol + driver, unit tested; **not yet tested on a real treadmill**) |
 | `src/devices/treadmill/simulated/driver.js` | Treadmill simulator with the same interface (and simulated RR), a driver like any other (debug only) |
 | `src/devices/sensors/hr-strap/driver.js` | Standard Bluetooth heart rate strap: HR, contact and RR intervals |
 | `src/devices/ble/` | Shared Web Bluetooth helpers for new drivers: GATT connect with timeout, notifications, write queue with retries |
@@ -210,6 +211,15 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/lib/dom.js`, `src/lib/sound.js` | DOM helpers and beeps |
 | `tools/serve.py` | Static server for local development (not deployed) |
 | `tests/` | Hardware-free tests by area (`*.test.mjs`, shared data in `fixtures.mjs`): `npm test` |
+
+## Supported treadmills
+
+| Treadmill | Driver | Status |
+|---|---|---|
+| NordicTrack EXP 5i (iFit Bluetooth) | `nordictrack-exp5i` | Tested on the real treadmill |
+| Treadmills with Bluetooth FTMS (Fitness Machine Service) | `ftms-treadmill` (generic) | Written from the specification and tested against a simulated Bluetooth device; not yet on a real treadmill |
+
+**Connect treadmill** opens one Bluetooth chooser for all of them; the treadmill is recognized by its name (iFit `I_…`) and any other one is tried with FTMS. In every case the belt starts from the console (safety key).
 
 ## Stored settings
 

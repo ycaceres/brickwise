@@ -36,6 +36,7 @@
  * @property {Capabilities} capabilities
  * @property {Limits} limits
  * @property {boolean} [debugOnly]    simulators: only listed with ?debug=true
+ * @property {boolean} [generic]      speaks a standard protocol (e.g. FTMS): tried for devices no other driver recognizes
  * @property {(events: DeviceEvents) => Device} create
  *
  * @typedef {object} DeviceEvents   Callbacks a driver calls (all optional).

@@ -17,7 +17,7 @@ class BwZoneTable extends HTMLElement {
         <tbody data-part="rows"></tbody>
       </table>
       <div class="zsummary num" data-part="summary"></div>
-      <div class="note" data-part="note" style="margin-top: 4px"></div>`;
+      <div class="note mt-4" data-part="note"></div>`;
     this.#part('heading').textContent = this.getAttribute('heading') ?? '';
     this.#render();
   }

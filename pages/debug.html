@@ -4,13 +4,13 @@
     <h2>Devices</h2>
     <!-- One block per connected treadmill / trainer: normalized readings, then the driver's own rows -->
     <div id="devTables"><p class="note">No device connected.</p></div>
-    <div class="note" id="cInfo" style="margin-top: 10px">No equipment info yet.</div>
+    <div class="note mt-10" id="cInfo">No equipment info yet.</div>
   </section>
   <section class="card">
     <details open>
       <summary>Communication log</summary>
-      <div class="row" style="margin: 10px 0">
-        <label class="row note"><input type="checkbox" id="logTraffic" style="min-height: auto"> Show TX/RX packets</label>
+      <div class="row my-10">
+        <label class="row note"><input type="checkbox" id="logTraffic" class="check"> Show TX/RX packets</label>
         <button id="btnLogDownload">Download log</button>
       </div>
       <div class="log" id="log"></div>

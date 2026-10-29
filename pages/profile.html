@@ -7,31 +7,31 @@
   <div class="layout" id="pLogin">
     <section class="card">
       <h2>Sign in with Intervals.icu</h2>
-      <p class="note" style="margin-bottom: 12px">Paste your API key (Intervals.icu → Settings → Developer Settings). It is stored only in this browser; it is used to read your workouts and zones and to upload activities.</p>
+      <p class="note mb-12">Paste your API key (Intervals.icu → Settings → Developer Settings). It is stored only in this browser; it is used to read your workouts and zones and to upload activities.</p>
       <div class="row">
-        <input type="password" id="pKey" autocomplete="off" spellcheck="false" placeholder="API key" aria-label="API key" style="flex: 1; min-width: 180px">
+        <input type="password" id="pKey" autocomplete="off" spellcheck="false" placeholder="API key" aria-label="API key" class="grow">
         <button class="primary" id="pKeySave">Sign in</button>
       </div>
-      <div class="note" id="pKeyNote" style="margin-top: 10px"></div>
+      <div class="note mt-10" id="pKeyNote"></div>
     </section>
     <section class="card">
       <h2>Or enter your data</h2>
-      <p class="note" style="margin-bottom: 12px">Without an account, zones are computed from these three numbers. The library and TCX download still work.</p>
+      <p class="note mb-12">Without an account, zones are computed from these three numbers. The library and TCX download still work.</p>
       <div class="row">
         <label class="field">Threshold pace (min/km)
-          <input type="text" id="pPace" inputmode="numeric" placeholder="6:10" style="width: 110px">
+          <input type="text" id="pPace" inputmode="numeric" placeholder="6:10" class="w-110">
         </label>
         <label class="field">LTHR (bpm)
-          <input type="number" id="pLthr" min="100" max="220" placeholder="168" style="width: 90px">
+          <input type="number" id="pLthr" min="100" max="220" placeholder="168" class="w-90">
         </label>
         <label class="field">Max HR (bpm)
-          <input type="number" id="pMaxHr" min="100" max="230" placeholder="185" style="width: 90px">
+          <input type="number" id="pMaxHr" min="100" max="230" placeholder="185" class="w-90">
         </label>
       </div>
-      <div class="row" style="margin-top: 12px">
+      <div class="row mt-12">
         <button class="primary" id="pSave">Save</button>
       </div>
-      <div class="note" id="pNote" style="margin-top: 10px"></div>
+      <div class="note mt-10" id="pNote"></div>
     </section>
   </div>
 
@@ -39,12 +39,12 @@
   <bw-zone-table class="card hidden" id="pRideZones" sport="ride" heading="Cycling zones"></bw-zone-table>
 
   <section class="card hidden" id="pTestsCard">
-    <h2>Threshold tests (<span style="text-transform: none">α1</span>)</h2>
+    <h2>Threshold tests (<span class="as-written">α1</span>)</h2>
     <table class="ztable num">
       <thead><tr><th>Date</th><th>VT1 (aerobic)</th><th>VT2 (≈ LTHR)</th><th>r²</th></tr></thead>
       <tbody id="pTests"></tbody>
     </table>
-    <div class="note" style="margin-top: 8px">Pace is the flat equivalent of speed and incline. * extrapolated: α1 did not quite reach 0.5. With Intervals.icu, also update its running settings, or Refresh will bring its values back.</div>
-    <div class="row" style="margin-top: 12px"><button id="pTestApply">Use VT2 as LTHR and threshold pace</button></div>
+    <div class="note mt-8">Pace is the flat equivalent of speed and incline. * extrapolated: α1 did not quite reach 0.5. With Intervals.icu, also update its running settings, or Refresh will bring its values back.</div>
+    <div class="row mt-12"><button id="pTestApply">Use VT2 as LTHR and threshold pace</button></div>
   </section>
 </div>

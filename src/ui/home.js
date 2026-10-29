@@ -11,6 +11,7 @@ import { workoutSeconds, hrControllable } from '../workouts/info.js';
 import * as intervals from '../services/intervals.js';
 import { log } from './debug.js';
 import { selectedKey, selectWorkout } from './selection.js';
+import { t } from '../i18n/index.js';
 
 let plannedError = null;   // why they could not be loaded, shown in the list
 let homeSport = 'all';
@@ -22,7 +23,7 @@ const today = () => {
 
 export async function loadWorkouts() {
   const day = $('hDate').value || today();
-  $('hPlanned').entries = [{ note: 'Loading…' }];
+  $('hPlanned').entries = [{ note: t('common.loading') }];
   if (!intervals.getApiKey()) {
     app.setPlanned([]);
     renderPlanned();
@@ -53,11 +54,11 @@ function plannedEntries(sport = 'all') {
   const shown = (planned || []).map((w, i) => [w, i]).filter(([w]) => sport === 'all' || w.sport === sport);
   const entries = shown.map(([w, i]) => {
     const sec = workoutSeconds(w.workout_doc);
-    return { key: `i:${i}`, title: w.name || 'Workout', sub: sec ? `~${formatDuration(sec)}` : '', hrControl: hrControllable(w, app.state.zones), sport: w.sport };
+    return { key: `i:${i}`, title: w.name || t('common.workout'), sub: sec ? `~${formatDuration(sec)}` : '', hrControl: hrControllable(w, app.state.zones), sport: w.sport };
   });
   if (!shown.length) {
-    const none = { all: 'No runs or rides planned that day.', run: 'No runs planned that day.', ride: 'No rides planned that day.' }[sport];
-    entries.push({ note: plannedError ? `Could not load from Intervals.icu: ${plannedError}` : planned ? none : 'Loading…' });
+    const none = { all: t('home.noneAll'), run: t('home.noneRun'), ride: t('home.noneRide') }[sport];
+    entries.push({ note: plannedError ? t('home.loadFailed', { error: plannedError }) : planned ? none : t('common.loading') });
   }
   return entries;
 }
@@ -78,5 +79,6 @@ export function initHome() {
     renderPlanned();
   };
   $('hReload').onclick = loadWorkouts;
+  document.addEventListener('bw-language', renderPlanned);
   renderPlanned();
 }

@@ -9,6 +9,7 @@ import * as app from '../state.js';
 import { loadLibrary } from '../workouts/library.js';
 import { log } from './debug.js';
 import { selectedKey, selectWorkout } from './selection.js';
+import { t } from '../i18n/index.js';
 
 let libTypes = [];
 let libDurations = [30, 45, 60];
@@ -49,29 +50,30 @@ function renderFilters() {
     wrap.appendChild(sel);
     box.appendChild(wrap);
   };
-  select('Duration', 'minutes', [['all', 'All'], ...libDurations.map((m) => [m, `${m} min`])]);
-  select('Type', 'type', [['all', 'All'], ...libTypes.map((t) => [t.id, t.name])]);
-  select('Level', 'level', [['all', 'All'], ...[1, 2, 3, 4, 5].map((n) => [n, String(n)])]);
+  select(t('library.duration'), 'minutes', [['all', t('common.all')], ...libDurations.map((m) => [m, t('common.minutes', { n: m })])]);
+  select(t('library.type'), 'type', [['all', t('common.all')], ...libTypes.map((x) => [x.id, x.name])]);
+  select(t('library.level'), 'level', [['all', t('common.all')], ...[1, 2, 3, 4, 5].map((n) => [n, String(n)])]);
 }
 
 function renderLibrary() {
   const library = app.state.library.entries;
   renderFilters();
-  const entries = [{ key: 'none', title: 'No workout', sub: 'Manual speed and incline control' }];
-  if (libError) entries.push({ note: `Could not load the library: ${libError}` });
-  else if (!library.length) entries.push({ note: 'Loading library…' });
+  const entries = [{ key: 'none', title: t('library.noWorkout'), sub: t('library.manualControl') }];
+  if (libError) entries.push({ note: t('library.loadFailed', { error: libError }) });
+  else if (!library.length) entries.push({ note: t('library.loading') });
   const shown = library.filter(libraryMatches);
   for (const w of shown) {
-    entries.push({ key: `l:${w.id}`, title: w.featured ? `★ ${w.name} · ${w.minutes} min` : w.name, sub: w.summary, hrControl: w.hrControl });
+    entries.push({ key: `l:${w.id}`, title: w.featured ? `★ ${w.name} · ${t('common.minutes', { n: w.minutes })}` : w.name, sub: w.summary, hrControl: w.hrControl });
   }
-  if (library.length && !shown.length) entries.push({ note: 'No workouts match those filters.' });
+  if (library.length && !shown.length) entries.push({ note: t('library.noMatch') });
   $('wLibrary').entries = entries;
-  $('wLibCount').textContent = library.length ? `${shown.length} of ${library.length}` : '';
+  $('wLibCount').textContent = library.length ? t('library.count', { shown: shown.length, total: library.length }) : '';
 }
 
 /** Startup: the filters, then the library itself (picks the saved workout once loaded). */
 export function initLibrary() {
   libFilter = { ...libFilter, ...settings.get('libFilter') };
+  document.addEventListener('bw-language', renderLibrary);
   renderLibrary();
   loadLibrary().then((lib) => {
     libTypes = lib.types;

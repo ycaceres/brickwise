@@ -3,23 +3,23 @@
   <bw-user-card class="card hidden"></bw-user-card>
   <section class="card hidden" id="hLogin">
     <h2>Intervals.icu</h2>
-    <p class="note">Sign in with your API key in <button class="link" id="hGoProfile">Profile</button> to see your account and planned workouts.</p>
+    <p class="note"><span data-i18n="home.signInLead">Sign in with your API key in</span> <button class="link" id="hGoProfile" data-i18n="home.profile">Profile</button> <span data-i18n="home.signInTail">to see your account and planned workouts.</span></p>
   </section>
 
   <section class="card">
-    <h2>Planned workouts</h2>
+    <h2 data-i18n="home.plannedWorkouts">Planned workouts</h2>
     <div class="home-filters">
-      <label class="field">Day
+      <label class="field"><span data-i18n="home.day">Day</span>
         <input type="date" id="hDate">
       </label>
-      <label class="field">Sport
+      <label class="field"><span data-i18n="home.sport">Sport</span>
         <select id="hSport">
-          <option value="all">All</option>
-          <option value="run">🏃 Run</option>
-          <option value="ride">🚴 Ride</option>
+          <option value="all" data-i18n="home.all">All</option>
+          <option value="run" data-i18n="home.run">🏃 Run</option>
+          <option value="ride" data-i18n="home.ride">🚴 Ride</option>
         </select>
       </label>
-      <button class="icon" id="hReload" aria-label="Reload the day" title="Reload the day"><bw-icon name="refresh"></bw-icon></button>
+      <button class="icon" id="hReload" aria-label="Reload the day" title="Reload the day" data-i18n-label="home.reload"><bw-icon name="refresh"></bw-icon></button>
     </div>
     <bw-workout-list class="wlist" id="hPlanned"></bw-workout-list>
   </section>

@@ -4,6 +4,7 @@
  */
 import { hrTargetRange, DEFAULT_POWER_PCT } from '../physiology/zones.js';
 import { paceIntensity } from './run.js';
+import { t } from '../i18n/index.js';
 
 /** Middle of a default power zone, in % of FTP. */
 function powerZonePct(z) {
@@ -57,8 +58,8 @@ function powerZoneOf(zones, w) {
 function describePower(power, watts) {
   if (!power) return '';
   const w = watts ? ` (${watts.lo === watts.hi ? watts.lo : `${watts.lo}–${watts.hi}`} W)` : '';
-  if (power.units === 'power_zone') return `Z${power.start != null ? `${power.start}–${power.end}` : power.value} power${w}`;
-  if (power.units === '%ftp') return `${power.start != null ? `${power.start}–${power.end}` : power.value}% FTP${w}`;
+  if (power.units === 'power_zone') return t('step.zonePower', { zone: power.start != null ? `${power.start}–${power.end}` : power.value }) + w;
+  if (power.units === '%ftp') return t('step.pctFtp', { pct: power.start != null ? `${power.start}–${power.end}` : power.value }) + w;
   return watts ? `${watts.lo === watts.hi ? watts.lo : `${watts.lo}–${watts.hi}`} W` : '';
 }
 
@@ -74,7 +75,7 @@ export function rideTargets(step, { zones = null } = {}) {
   }
   const hrRange = hrTargetRange(zones, step.hr, step._hr);
   const hr = hrRange ? { ...hrRange, mode: 'info' } : null;
-  const label = describePower(step.power, power) || (step.hr ? 'HR target' : 'free');
+  const label = describePower(step.power, power) || (step.hr ? t('step.hrTarget') : t('common.free'));
   // Watts without a % become % of FTP, so the chart can draw the shape
   const intensity = powerIntensity(step) ?? paceIntensity(step) ??
     (power && zones?.ftp ? [(power.lo / zones.ftp) * 100, (power.hi / zones.ftp) * 100] : null);

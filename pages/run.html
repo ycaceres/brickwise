@@ -2,10 +2,10 @@
 <div id="tab-run" class="tab">
   <!-- Safety reminder: shown on arriving here while no session runs, until acknowledged -->
   <div popover="manual" id="safetyPop" class="help-pop" role="alertdialog" aria-labelledby="safetyTitle">
-    <h2 id="safetyTitle">Safety</h2>
-    <p>Start the belt from the console, with the safety key attached. The ■ (finish) button and the end of the workout pause the belt, but if anything goes wrong use STOP on the console or pull the key.</p>
+    <h2 id="safetyTitle" data-i18n="run.safety">Safety</h2>
+    <p data-i18n="run.safetyText">Start the belt from the console, with the safety key attached. The ■ (finish) button and the end of the workout pause the belt, but if anything goes wrong use STOP on the console or pull the key.</p>
     <div class="row mt-14 end">
-      <button class="primary" id="safetyOk">Got it</button>
+      <button class="primary" id="safetyOk" data-i18n="run.gotIt">Got it</button>
     </div>
   </div>
 
@@ -13,41 +13,41 @@
     <bw-chart id="chart" compact help heading="Session chart"></bw-chart>
   </section>
 
-  <section class="dash card" aria-label="Session controls">
+  <section class="dash card" aria-label="Session controls" data-i18n-aria="run.sessionControls">
     <div class="dash-half">
       <div class="dash-vals num">
-        <span class="dv" title="Distance"><b id="mDist">0.00</b><small>km</small></span>
-        <span class="dv" title="Time"><bw-icon name="time"></bw-icon><b id="mTime">0:00</b></span>
-        <span class="dv" title="Heart rate"><bw-icon name="heart"></bw-icon><b id="mHr">--</b><small id="mHrSub">bpm</small></span>
+        <span class="dv" title="Distance" data-i18n-title="run.distance"><b id="mDist">0.00</b><small>km</small></span>
+        <span class="dv" title="Time" data-i18n-title="run.time"><bw-icon name="time"></bw-icon><b id="mTime">0:00</b></span>
+        <span class="dv" title="Heart rate" data-i18n-title="run.heartRate"><bw-icon name="heart"></bw-icon><b id="mHr">--</b><small id="mHrSub">bpm</small></span>
         <span class="dv alpha hidden" id="mAlphaBox"><i class="alpha-dot" aria-hidden="true"></i><b id="mAlpha">--</b><small id="mAlphaSub">α1</small></span>
       </div>
       <div class="dash-btns">
         <button class="icon primary" id="btnStart" aria-label="Start" title="Start" disabled><bw-icon name="play"></bw-icon></button>
-        <button class="icon" id="btnSkip" aria-label="Skip step" title="Skip step" disabled><bw-icon name="skip"></bw-icon></button>
-        <button class="icon danger" id="btnFinish" aria-label="Finish (pauses the belt)" title="Finish (pauses the belt)" disabled><bw-icon name="stop"></bw-icon></button>
-        <button class="icon" id="btnExport" popovertarget="menuExport" aria-label="Download the session" title="Download (when finished)" disabled><bw-icon name="download"></bw-icon></button>
+        <button class="icon" id="btnSkip" aria-label="Skip step" title="Skip step" disabled data-i18n-label="run.skipStep"><bw-icon name="skip"></bw-icon></button>
+        <button class="icon danger" id="btnFinish" aria-label="Finish (pauses the belt)" title="Finish (pauses the belt)" disabled data-i18n-label="run.finish"><bw-icon name="stop"></bw-icon></button>
+        <button class="icon" id="btnExport" popovertarget="menuExport" aria-label="Download the session" title="Download (when finished)" disabled data-i18n-title="run.downloadHelp" data-i18n-aria="run.download"><bw-icon name="download"></bw-icon></button>
         <button class="icon" id="btnUpload" aria-label="Upload to Intervals.icu" title="Upload to Intervals.icu (when finished)" disabled><bw-icon name="upload"></bw-icon></button>
         <div popover id="menuExport" class="menu">
-          <button id="btnCsv">CSV (second by second)</button>
-          <button id="btnTcx">TCX (for Strava, Garmin…)</button>
+          <button id="btnCsv" data-i18n="run.csv">CSV (second by second)</button>
+          <button id="btnTcx" data-i18n="run.tcx">TCX (for Strava, Garmin…)</button>
         </div>
       </div>
     </div>
     <div class="dash-half dash-split">
       <div class="dash-ctl" id="mInclineCtl">
-        <span class="dv" title="Incline"><bw-icon name="incline"></bw-icon><b id="mIncline">0.0</b><small>%</small></span>
+        <span class="dv" title="Incline" data-i18n-title="run.incline"><bw-icon name="incline"></bw-icon><b id="mIncline">0.0</b><small>%</small></span>
         <span class="dash-sub num" id="mInclineSub">&nbsp;</span>
         <div class="pm">
-          <button data-incline="0.5" aria-label="Raise incline 0.5 %" title="+0.5 %">+</button>
-          <button data-incline="-0.5" aria-label="Lower incline 0.5 %" title="−0.5 %">−</button>
+          <button data-incline="0.5" aria-label="Raise incline 0.5 %" title="+0.5 %" data-i18n-aria="run.inclineUp">+</button>
+          <button data-incline="-0.5" aria-label="Lower incline 0.5 %" title="−0.5 %" data-i18n-aria="run.inclineDown">−</button>
         </div>
       </div>
       <div class="dash-ctl">
-        <span class="dv" title="Pace"><bw-icon name="pace"></bw-icon><b id="mPace">--:--</b><small>min/km</small></span>
+        <span class="dv" title="Pace" data-i18n-title="run.pace"><bw-icon name="pace"></bw-icon><b id="mPace">--:--</b><small>min/km</small></span>
         <span class="dash-sub num" id="mSpeedSub">0.0 km/h</span>
         <div class="pm">
-          <button data-speed="0.5" aria-label="Faster 0.5 km/h" title="+0.5 km/h">+</button>
-          <button data-speed="-0.5" aria-label="Slower 0.5 km/h" title="−0.5 km/h">−</button>
+          <button data-speed="0.5" aria-label="Faster 0.5 km/h" title="+0.5 km/h" data-i18n-title="run.plusSpeed" data-i18n-aria="run.faster">+</button>
+          <button data-speed="-0.5" aria-label="Slower 0.5 km/h" title="−0.5 km/h" data-i18n-title="run.minusSpeed" data-i18n-aria="run.slower">−</button>
         </div>
       </div>
     </div>

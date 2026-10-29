@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 /**
  * <bw-workout-list>: a list of workouts to pick from. Set .entries to items
  * { key, title, sub, hrControl, sport } and notes { note }, in order;
@@ -5,7 +6,7 @@
  * session). A click fires bw-select with detail.key (it bubbles).
  */
 
-const SPORT_ICONS = { run: ['🏃', 'Run'], ride: ['🚴', 'Ride'] };
+const SPORT_ICONS = { run: ['🏃', 'nav.run'], ride: ['🚴', 'nav.ride'] };
 
 class BwWorkoutList extends HTMLElement {
   #entries = [];
@@ -43,7 +44,8 @@ class BwWorkoutList extends HTMLElement {
     btn.setAttribute('aria-pressed', String(key === this.#selected));
     const strong = document.createElement('strong');
     if (SPORT_ICONS[sport]) {
-      const [icon, label] = SPORT_ICONS[sport];
+      const [icon, key] = SPORT_ICONS[sport];
+      const label = t(key);
       const tag = document.createElement('span');
       tag.className = 'sport-icon';
       tag.textContent = icon;
@@ -56,7 +58,7 @@ class BwWorkoutList extends HTMLElement {
       const tag = document.createElement('em');
       tag.className = 'hr-tag';
       tag.textContent = '♥ HR';
-      tag.title = 'Speed can follow your heart rate';
+      tag.title = t('library.hrTag');
       strong.append(' ', tag);
     }
     const span = document.createElement('span');

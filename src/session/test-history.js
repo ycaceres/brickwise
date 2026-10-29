@@ -5,6 +5,7 @@
  */
 import * as settings from '../lib/settings.js';
 import { formatPace } from '../workouts/steps.js';
+import { t } from '../i18n/index.js';
 
 export const TESTS_KEPT = 20;
 
@@ -19,5 +20,5 @@ export function addTest(result, date = new Date()) {
   return tests;
 }
 
-export const vtText = (vt) => `${vt.hr} bpm at ${formatPace(vt.kmh)}/km`;
-export const testText = (r) => `VT1 ${vtText(r.vt1)} · VT2 ${r.vt2 ? `${vtText(r.vt2)}${r.vt2.extrapolated ? ' (extrapolated)' : ''}` : 'not reached'}`;
+export const vtText = (vt) => t('tests.vt', { hr: vt.hr, pace: formatPace(vt.kmh) });
+export const testText = (r) => `VT1 ${vtText(r.vt1)} · VT2 ${r.vt2 ? `${vtText(r.vt2)}${r.vt2.extrapolated ? ` (${t('tests.extrapolated')})` : ''}` : t('tests.notReached')}`;

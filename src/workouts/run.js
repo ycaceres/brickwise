@@ -4,6 +4,7 @@
  */
 import { paceZoneOf, hrTargetRange, hrZoneOf, DEFAULT_PACE_PCT } from '../physiology/zones.js';
 import { formatPace } from './format.js';
+import { t } from '../i18n/index.js';
 
 const MS_TO_KMH = 3.6;
 
@@ -51,9 +52,9 @@ export function paceIntensity(step) {
 
 function describePace(pace) {
   if (!pace) return '';
-  if (pace.units === 'pace_zone') return `Z${pace.value} pace`;
+  if (pace.units === 'pace_zone') return t('step.zonePace', { zone: pace.value });
   if (pace.units === '%pace') {
-    return pace.start != null ? `${pace.start}–${pace.end}% pace` : `${pace.value}% pace`;
+    return t('step.pctPace', { pct: pace.start != null ? `${pace.start}–${pace.end}` : pace.value });
   }
   return '';
 }
@@ -84,8 +85,8 @@ export function runTargets(step, { position = 'mid', zones = null, hrTargets = f
     const z = hrZoneOf(zones, Math.round((hrRange.lo + hrRange.hi) / 2));
     zone = z;
     hrLabel = step.lockSpeed
-      ? `HR goal ${z ? `Z${z}` : `${hrRange.lo}–${hrRange.hi}`}`
-      : `HR ${hrRange.lo}–${hrRange.hi}${z ? ` (Z${z})` : ''}${byIncline ? ' by incline' : ''}`;
+      ? t('step.hrGoal', { range: z ? `Z${z}` : `${hrRange.lo}–${hrRange.hi}` })
+      : t('step.hrRange', { range: `${hrRange.lo}–${hrRange.hi}${z ? ` (Z${z})` : ''}` }) + (byIncline ? ` ${t('step.byIncline')}` : '');
     if (speedStart == null) {
       // Starting speed: the pace zone in the same position
       const pz = z && zones.pace[Math.min(z, zones.pace.length) - 1];
@@ -103,11 +104,11 @@ export function runTargets(step, { position = 'mid', zones = null, hrTargets = f
     else if (!hrTargets || edge) hr = { lo: hz.lo, hi: hz.hi, mode: 'cap' };
     else if (pz <= 4 && (step.duration || 0) >= HR_STEP_MIN_S) {
       hr = { lo: hz.lo, hi: hz.hi, mode: 'target', ...(pz >= 3 && { settle: HR_SETTLE_S }) };
-      hrLabel = `HR ${hz.lo}–${hz.hi} (Z${pz})`;
+      hrLabel = t('step.hrRange', { range: `${hz.lo}–${hz.hi} (Z${pz})` });
     }
   }
 
   const label = hrLabel || describePace(step.pace) ||
-    (speedStart != null ? `pace ${formatPace(speedStart)}/km` : step.hr ? 'HR target' : 'free');
+    (speedStart != null ? t('step.pace', { pace: formatPace(speedStart) }) : step.hr ? t('step.hrTarget') : t('common.free'));
   return { speedStart, speedEnd, hr, zone, label, intensity: paceIntensity(step) };
 }

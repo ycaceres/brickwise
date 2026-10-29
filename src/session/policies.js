@@ -18,7 +18,7 @@ export const POLICIES = {
     sample: () => ({ speed: live.speed, incline: live.incline }),
     resetStale: () => { live.speed = 0; },
     hrSteerable: true,
-    words: { started: 'Belt moving: session started', stopped: 'Belt stopped: session paused', resumed: 'Belt moving: session resumed', done: 'Workout complete. Belt paused: finish or resume from the console.' },
+    words: { started: 'Belt moving: session started', stopped: 'Belt stopped: session paused', resumed: 'Belt moving: session resumed', done: 'run.note.complete' },
   },
   ride: {
     sport: 'ride',
@@ -28,7 +28,7 @@ export const POLICIES = {
     sample: () => ({ speed: live.trainer?.speed ?? 0, power: live.trainer?.power ?? null, cadence: live.trainer?.cadence ?? null }),
     resetStale: () => { if (live.trainer) live.trainer = { ...live.trainer, cadence: 0, speed: 0, power: 0 }; },
     hrSteerable: false, // HR on watts: #8
-    words: { started: 'Pedaling: session started', stopped: 'Pedaling stopped: session paused', resumed: 'Pedaling: session resumed', done: 'Workout complete. Trainer released.' },
+    words: { started: 'Pedaling: session started', stopped: 'Pedaling stopped: session paused', resumed: 'Pedaling: session resumed', done: 'ride.note.complete' },
   },
 };
 

@@ -56,4 +56,5 @@ export function initSelection() {
   });
   app.on('options', () => selectWorkout());
   app.on('profile', () => selectWorkout()); // recomputes speeds and HR caps
+  document.addEventListener('bw-language', () => selectWorkout()); // step labels in the new language
 }

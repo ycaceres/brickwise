@@ -6,6 +6,7 @@
  */
 import { formatPace } from '../workouts/format.js';
 import { paceZoneOf } from '../physiology/zones.js';
+import { t } from '../i18n/index.js';
 
 // Candidate paces for the left axis (s/km)
 const PACE_TICKS = [180, 210, 240, 270, 300, 330, 360, 390, 420, 450, 480, 540, 600, 660, 720, 840, 900, 1200, 1500, 1800, 2400, 3600];
@@ -22,7 +23,8 @@ export function niceTicks(lo, hi, count) {
   return { ticks, lo: Math.floor(lo / step) * step, hi: Math.ceil(hi / step) * step };
 }
 
-const hrRow = (hr) => [null, hr.mode === 'cap' ? `≤ ${hr.hi} bpm` : `${hr.lo}–${hr.hi} bpm`, hr.mode === 'cap' ? 'HR cap' : hr.mode === 'info' ? 'HR goal' : 'HR target'];
+const hrRow = (hr) => [null, hr.mode === 'cap' ? `≤ ${hr.hi} bpm` : `${hr.lo}–${hr.hi} bpm`, hr.mode === 'cap' ? t('chart.hrCap') : hr.mode === 'info' ? t('chart.hrGoal') : t('chart.hrTarget')];
+const targetLabel = (zone) => `${t('chart.target')}${zone ? ` Z${zone}` : ''}`;
 
 export const paceAxis = {
   key: 'speed',
@@ -56,9 +58,9 @@ export const paceAxis = {
   unit: (z) => (z?.power ? '' : 'min/km'), // bike zones without watts: no axis
   chip: (last, z) => (last && last.speed >= 1 ? paceZoneOf(z, last.speed) : null),
   planRows(p) {
-    const spd = p.speedStart == null ? 'free'
+    const spd = p.speedStart == null ? t('common.free')
       : p.speedStart === p.speedEnd ? `${formatPace(p.speedStart)}/km` : `${formatPace(p.speedStart)}→${formatPace(p.speedEnd)}/km`;
-    return [[null, spd, `target${p.zone ? ` Z${p.zone}` : ''} · ${p.incline} %`], ...(p.hr ? [hrRow(p.hr)] : [])];
+    return [[null, spd, `${targetLabel(p.zone)} · ${p.incline} %`], ...(p.hr ? [hrRow(p.hr)] : [])];
   },
 };
 
@@ -87,7 +89,7 @@ export const powerAxis = {
   planRows(p) {
     if (!p.power) return null;
     const { lo, hi } = p.power;
-    return [[null, lo === hi ? `${lo} W` : `${lo}${p.ramp ? '→' : '–'}${hi} W`, `target${p.zone ? ` Z${p.zone}` : ''}`], ...(p.hr ? [[null, `${p.hr.lo}–${p.hr.hi} bpm`, 'HR goal']] : [])];
+    return [[null, lo === hi ? `${lo} W` : `${lo}${p.ramp ? '→' : '–'}${hi} W`, targetLabel(p.zone)], ...(p.hr ? [[null, `${p.hr.lo}–${p.hr.hi} bpm`, t('chart.hrGoal')]] : [])];
   },
 };
 

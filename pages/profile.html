@@ -6,45 +6,45 @@
   <!-- Without an API key: sign in with Intervals.icu or enter the data by hand -->
   <div class="layout" id="pLogin">
     <section class="card">
-      <h2>Sign in with Intervals.icu</h2>
-      <p class="note mb-12">Paste your API key (Intervals.icu → Settings → Developer Settings). It is stored only in this browser; it is used to read your workouts and zones and to upload activities.</p>
+      <h2 data-i18n="profile.signInTitle">Sign in with Intervals.icu</h2>
+      <p class="note mb-12" data-i18n="profile.apiKeyHelp">Paste your API key (Intervals.icu → Settings → Developer Settings). It is stored only in this browser; it is used to read your workouts and zones and to upload activities.</p>
       <div class="row">
-        <input type="password" id="pKey" autocomplete="off" spellcheck="false" placeholder="API key" aria-label="API key" class="grow">
-        <button class="primary" id="pKeySave">Sign in</button>
+        <input type="password" id="pKey" autocomplete="off" spellcheck="false" placeholder="API key" aria-label="API key" class="grow" data-i18n-aria="profile.apiKey" data-i18n-placeholder="profile.apiKey">
+        <button class="primary" id="pKeySave" data-i18n="profile.signIn">Sign in</button>
       </div>
       <div class="note mt-10" id="pKeyNote"></div>
     </section>
     <section class="card">
-      <h2>Or enter your data</h2>
-      <p class="note mb-12">Without an account, zones are computed from these three numbers. The library and TCX download still work.</p>
+      <h2 data-i18n="profile.manualTitle">Or enter your data</h2>
+      <p class="note mb-12" data-i18n="profile.manualHelp">Without an account, zones are computed from these three numbers. The library and TCX download still work.</p>
       <div class="row">
-        <label class="field">Threshold pace (min/km)
+        <label class="field"><span data-i18n="profile.thresholdPace">Threshold pace (min/km)</span>
           <input type="text" id="pPace" inputmode="numeric" placeholder="6:10" class="w-110">
         </label>
-        <label class="field">LTHR (bpm)
+        <label class="field"><span data-i18n="profile.lthrBpm">LTHR (bpm)</span>
           <input type="number" id="pLthr" min="100" max="220" placeholder="168" class="w-90">
         </label>
-        <label class="field">Max HR (bpm)
+        <label class="field"><span data-i18n="profile.maxHrBpm">Max HR (bpm)</span>
           <input type="number" id="pMaxHr" min="100" max="230" placeholder="185" class="w-90">
         </label>
       </div>
       <div class="row mt-12">
-        <button class="primary" id="pSave">Save</button>
+        <button class="primary" id="pSave" data-i18n="profile.save">Save</button>
       </div>
       <div class="note mt-10" id="pNote"></div>
     </section>
   </div>
 
-  <bw-zone-table class="card hidden" id="pRunZones" sport="run" heading="Running zones"></bw-zone-table>
-  <bw-zone-table class="card hidden" id="pRideZones" sport="ride" heading="Cycling zones"></bw-zone-table>
+  <bw-zone-table class="card hidden" id="pRunZones" sport="run" heading="profile.runningZones"></bw-zone-table>
+  <bw-zone-table class="card hidden" id="pRideZones" sport="ride" heading="profile.cyclingZones"></bw-zone-table>
 
   <section class="card hidden" id="pTestsCard">
-    <h2>Threshold tests (<span class="as-written">α1</span>)</h2>
+    <h2><span data-i18n="profile.testsTitle">Threshold tests (</span><span class="as-written">α1</span>)</h2>
     <table class="ztable num">
-      <thead><tr><th>Date</th><th>VT1 (aerobic)</th><th>VT2 (≈ LTHR)</th><th>r²</th></tr></thead>
+      <thead><tr><th data-i18n="profile.date">Date</th><th data-i18n="profile.vt1Aerobic">VT1 (aerobic)</th><th data-i18n="profile.vt2Lthr">VT2 (≈ LTHR)</th><th data-i18n="profile.r2">r²</th></tr></thead>
       <tbody id="pTests"></tbody>
     </table>
-    <div class="note mt-8">Pace is the flat equivalent of speed and incline. * extrapolated: α1 did not quite reach 0.5. With Intervals.icu, also update its running settings, or Refresh will bring its values back.</div>
+    <div class="note mt-8" data-i18n="profile.testsHelp">Pace is the flat equivalent of speed and incline. * extrapolated: α1 did not quite reach 0.5. With Intervals.icu, also update its running settings, or Refresh will bring its values back.</div>
     <div class="row mt-12"><button id="pTestApply">Use VT2 as LTHR and threshold pace</button></div>
   </section>
 </div>

@@ -15,6 +15,7 @@ import { log } from './debug.js';
 import { loadWorkouts } from './home.js';
 import { loadTests, vtText } from '../session/test-history.js';
 import { events as sessionEvents } from '../session/runner.js';
+import { t } from '../i18n/index.js';
 
 export function setProfile(p, { save = true } = {}) {
   app.setProfile(p);
@@ -30,7 +31,7 @@ function setUserNote(text) {
 }
 
 export async function loadProfileFromIntervals() {
-  setUserNote('Loading zones from Intervals.icu…');
+  setUserNote(t('profile.loadingZones'));
   try {
     const { run, ride } = await intervals.getSportSettings();
     setProfile({ ...profileFromIntervals(run), ride: rideFromIntervals(ride) });
@@ -38,7 +39,7 @@ export async function loadProfileFromIntervals() {
     log('info', `Intervals.icu profile: threshold ${formatPace(app.state.zones.thresholdKmh)}/km, LTHR ${app.state.zones.lthr}, max HR ${app.state.zones.maxHr}`);
     log('info', app.state.zones.ride ? `Intervals.icu cycling: FTP ${app.state.zones.ride.ftp ?? '—'} W, LTHR ${app.state.zones.ride.lthr ?? '—'}, max HR ${app.state.zones.ride.maxHr ?? '—'}` : 'Intervals.icu: no cycling settings');
   } catch (err) {
-    setUserNote(`Could not read the zones: ${err.message}`);
+    setUserNote(t('profile.zonesFailed', { error: err.message }));
     log('warn', `Intervals.icu zones: ${err.message}`);
   }
 }
@@ -58,7 +59,7 @@ function saveManualProfile() {
   const lthr = parseInt($('pLthr').value, 10) || null;
   const maxHr = parseInt($('pMaxHr').value, 10) || null;
   if ($('pPace').value && !kmh) {
-    $('pNote').textContent = 'Enter threshold pace as mm:ss, for example 6:10.';
+    $('pNote').textContent = t('profile.paceFormat');
     return;
   }
   const base = app.state.profile || { pacePct: DEFAULT_PACE_PCT, hrPct: DEFAULT_HR_PCT };
@@ -84,10 +85,10 @@ export function renderProfile() {
   $('pPace').value = app.state.zones?.thresholdKmh ? formatPace(app.state.zones.thresholdKmh) : '';
   $('pLthr').value = app.state.profile?.lthr ?? '';
   $('pMaxHr').value = app.state.profile?.maxHr ?? '';
-  const src = { intervals: 'Data from Intervals.icu', manual: 'Data entered by hand' }[app.state.profile?.source] || 'No data yet';
+  const src = { intervals: t('profile.fromIntervals'), manual: t('profile.byHand') }[app.state.profile?.source] || t('profile.noData');
   const derived = [];
-  if (app.state.profile && !app.state.profile.lthr && app.state.zones?.lthr) derived.push(`Estimated LTHR ${app.state.zones.lthr} (91 % of max HR)`);
-  if (app.state.profile && !app.state.profile.maxHr && app.state.zones?.maxHr) derived.push(`Estimated max HR ${app.state.zones.maxHr}`);
+  if (app.state.profile && !app.state.profile.lthr && app.state.zones?.lthr) derived.push(t('profile.estimatedLthr', { value: app.state.zones.lthr }));
+  if (app.state.profile && !app.state.profile.maxHr && app.state.zones?.maxHr) derived.push(t('profile.estimatedMaxHr', { value: app.state.zones.maxHr }));
   $('pNote').textContent = [src, ...derived].join(' · ');
 
   // Logged in: the account and its data
@@ -103,7 +104,7 @@ function renderZoneTables() {
   const r = app.state.profile?.ride;
   $('pRideZones').data = {
     zones: app.state.zones?.ride,
-    note: r?.indoorFtp && r.indoorFtp !== r.ftp ? `Power from the indoor FTP (${r.indoorFtp} W; outdoor ${r.ftp ?? '—'} W).` : '',
+    note: r?.indoorFtp && r.indoorFtp !== r.ftp ? t('profile.indoorFtp', { indoor: r.indoorFtp, outdoor: r.ftp ?? '—' }) : '',
   };
 }
 
@@ -139,7 +140,7 @@ const refreshAll = async () => {
     await loadProfileFromIntervals();
     loadWorkouts();
   } catch (err) {
-    setUserNote(`Could not refresh: ${err.message}`);
+    setUserNote(t('profile.refreshFailed', { error: err.message }));
   }
 };
 
@@ -170,18 +171,19 @@ export function renderTests() {
   const last = tests.find((t) => t.vt2);
   $('pTestApply').disabled = !last;
   $('pTestApply').textContent = last
-    ? `Use VT2 as LTHR (${last.vt2.hr}) and threshold pace (${formatPace(last.vt2.kmh)}/km)`
-    : 'Use VT2 as LTHR and threshold pace';
+    ? t('profile.useVt2With', { hr: last.vt2.hr, pace: formatPace(last.vt2.kmh) })
+    : t('profile.useVt2');
 }
 
 /** Startup: sign in, the manual profile, the account buttons and the tests. */
 export function initProfile() {
+  document.addEventListener('bw-language', renderProfile);
   sessionEvents.on('test', renderTests);
   $('pKeySave').onclick = async () => {
     const key = $('pKey').value.trim();
     if (!key) return;
     intervals.setApiKey(key);
-    renderKeyState('Checking…');
+    renderKeyState(t('profile.checking'));
     try {
       const a = await intervals.getAthlete();
       $('pKey').value = '';
@@ -193,7 +195,7 @@ export function initProfile() {
       loadProfileFromIntervals(); // the account wins: replaces the profile, even a manual one
     } catch (err) {
       intervals.setApiKey(''); // a key that does not work does not sign in
-      renderKeyState(`That didn't work: ${err.message}`);
+      renderKeyState(t('profile.signInFailed', { error: err.message }));
     }
   };
   $('pSave').onclick = saveManualProfile;

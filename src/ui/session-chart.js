@@ -25,7 +25,8 @@
 import { formatDuration, formatPace } from '../workouts/steps.js';
 import { DEFAULT_PACE_PCT, hrZoneOf } from '../physiology/zones.js';
 import { niceTicks, paceAxis, leftAxisFor } from './chart-axes.js';
-import { alphaState, ALPHA_LABELS } from '../physiology/hrv.js';
+import { alphaState } from '../physiology/hrv.js';
+import { t } from '../i18n/index.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const MARGIN = { left: 48, right: 46, top: 38 };
@@ -97,7 +98,7 @@ export class SessionChart {
     this.hoverT = null;
 
     root.classList.add('viz-root');
-    this.svg = el('svg', { class: 'viz-svg', role: 'img', 'aria-label': 'Session speed, incline and HR over the planned workout' }, root);
+    this.svg = el('svg', { class: 'viz-svg', role: 'img', 'aria-label': t('chart.aria') }, root);
     this.tip = document.createElement('div');
     this.tip.className = 'viz-tip hidden';
     root.appendChild(this.tip);
@@ -254,7 +255,7 @@ export class SessionChart {
     // Bike workouts have no speed by design: blocks show the power shape
     if (byIntensity && !this.zones?.power) {
       const msg = el('text', { x: MARGIN.left + 8, y: top + 16, class: 'viz-empty' }, svg);
-      msg.textContent = 'No threshold pace in Profile: the background only shows the workout shape';
+      msg.textContent = t('chart.noThreshold');
     }
 
     // Right axis: HR
@@ -294,7 +295,7 @@ export class SessionChart {
 
     if (!this.plan.length && !this.samples.length) {
       const msg = el('text', { x: MARGIN.left + plotW / 2, y: top + this.plotH / 2, class: 'viz-empty', 'text-anchor': 'middle' }, svg);
-      msg.textContent = 'No workout: lines appear once the belt starts moving';
+      msg.textContent = t('chart.noWorkout');
     }
 
     // Progress
@@ -420,8 +421,8 @@ export class SessionChart {
     }
     const sample = this._sampleAt(this.hoverT);
     const plan = this._planAt(this.hoverT);
-    const t = sample ? sample.elapsed : this.hoverT;
-    const x = this.xOf(t);
+    const at = sample ? sample.elapsed : this.hoverT;
+    const x = this.xOf(at);
 
     el('line', { x1: x, x2: x, y1: this.box.top, y2: this.box.bottom, class: 'viz-cross' }, this.hoverLayer);
     for (const s of SERIES) {
@@ -434,19 +435,19 @@ export class SessionChart {
     // Tooltip: value first, label after; built with textContent
     const rows = [];
     if (sample) {
-      rows.push(['speed', `${formatPace(sample.speed)}/km`, `pace · ${sample.speed.toFixed(1)} km/h`]);
-      rows.push(['incline', `${sample.incline.toFixed(1)} %`, 'incline']);
-      rows.push(['hr', sample.hr > 0 ? `${sample.hr} bpm` : '—', 'HR']);
+      rows.push(['speed', `${formatPace(sample.speed)}/km`, `${t('chart.pace')} · ${(sample.speed ?? 0).toFixed(1)} km/h`]);
+      if (sample.incline != null) rows.push(['incline', `${sample.incline.toFixed(1)} %`, t('chart.incline')]);
+      rows.push(['hr', sample.hr > 0 ? `${sample.hr} bpm` : '—', t('common.hr')]);
       if (sample.alpha1 !== undefined) {
         const st = alphaState(sample.alpha1);
-        rows.push([`alpha-${st || 'none'}`, sample.alpha1 != null ? sample.alpha1.toFixed(2) : '—', `α1 · ${st ? ALPHA_LABELS[st] : 'no value'}`]);
+        rows.push([`alpha-${st || 'none'}`, sample.alpha1 != null ? sample.alpha1.toFixed(2) : '—', `α1 · ${st ? t(`alpha.${st}`) : t('alpha.noValue')}`]);
       }
     }
     if (plan) rows.push(...(leftAxisFor(this.zones, this.plan).planRows(plan) ?? paceAxis.planRows(plan)));
     this.tip.replaceChildren();
     const head = document.createElement('div');
     head.className = 'viz-tip-head';
-    head.textContent = formatDuration(t);
+    head.textContent = formatDuration(at);
     this.tip.appendChild(head);
     for (const [key, value, label] of rows) {
       const row = document.createElement('div');

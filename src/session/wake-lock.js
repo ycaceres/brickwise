@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 /**
  * Screen Wake Lock for the length of a session. Keeps the screen on from
  * Start until the session ends. The browser drops the lock whenever the page
@@ -16,7 +17,7 @@ export async function requestWakeLock() {
   wakeWanted = true;
   if (wakeLock || document.visibilityState !== 'visible') return;
   if (!navigator.wakeLock) {
-    wakeError = 'This browser cannot keep the screen on: turn off auto-lock in the device settings.';
+    wakeError = t('run.wakeUnsupported');
     onChange();
     return;
   }
@@ -26,7 +27,7 @@ export async function requestWakeLock() {
     wakeLock.addEventListener('release', () => { wakeLock = null; });
   } catch (err) {
     // Usually battery saver mode
-    wakeError = 'The screen may lock (battery saver?): turn off auto-lock or battery saver.';
+    wakeError = t('run.wakeFailed');
     log('warn', `Wake lock: ${err.message}`);
   }
   onChange();

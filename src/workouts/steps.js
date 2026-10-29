@@ -24,6 +24,7 @@
 
 import { runTargets, HR_STEP_MIN_S } from './run.js';
 import { rideTargets } from './ride.js';
+import { t } from '../i18n/index.js';
 
 export { HR_STEP_MIN_S } from './run.js';
 export { formatPace, formatDuration } from './format.js';
@@ -74,28 +75,28 @@ export function flattenWorkout(doc, { position = 'mid', defaultIncline = 1, zone
         return;
       }
 
-      const t = step.power
+      const targets = step.power
         ? { speedStart: null, speedEnd: null, ...rideTargets(step, { zones }) }
         : { power: null, ...runTargets(step, { position, zones, hrTargets }) };
-      const kind = step.warmup ? 'Warm-up' : step.cooldown ? 'Cooldown' : 'Work';
+      const kind = step.warmup ? 'Warm-up' : step.cooldown ? 'Cooldown' : 'Work'; // also an id (followsHr)
 
       out.push({
-        label: [kind, ...path, t.label].join(' · '),
+        label: [t(`step.kind.${kind}`), ...path, targets.label].join(' · '),
         text: step.text || '',
         kind,
         duration: step.duration || null,              // s
         distance: step.duration ? null : step.distance || null, // m
-        speedStart: t.speedStart != null ? round1(t.speedStart) : null,
-        speedEnd: t.speedEnd != null ? round1(t.speedEnd) : null,
+        speedStart: targets.speedStart != null ? round1(targets.speedStart) : null,
+        speedEnd: targets.speedEnd != null ? round1(targets.speedEnd) : null,
         incline: parseIncline(step.text) ?? defaultIncline,
-        hasTarget: t.speedStart != null,
+        hasTarget: targets.speedStart != null,
         ramp: !!step.ramp,
         warmup: !!step.warmup,
         test: !!step.test,
-        hr: t.hr,
-        power: t.power,  // bike steps: { lo, hi } W
-        intensity: t.intensity,
-        zone: t.zone,    // pace zone (HR zone for an HR target, power zone on a bike), to color the chart
+        hr: targets.hr,
+        power: targets.power,  // bike steps: { lo, hi } W
+        intensity: targets.intensity,
+        zone: targets.zone,    // pace zone (HR zone for an HR target, power zone on a bike), to color the chart
       });
     });
   };

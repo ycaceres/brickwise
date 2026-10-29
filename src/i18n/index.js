@@ -5,7 +5,8 @@
  * object ({ one, other, … }) chosen by vars.n with Intl.PluralRules.
  *
  * In the page, elements carry data-i18n="key" (text), data-i18n-label="key"
- * (title and aria-label) and data-i18n-placeholder="key". setLanguage()
+ * (title and aria-label), data-i18n-title / data-i18n-aria (when they
+ * differ) and data-i18n-placeholder="key". setLanguage()
  * applies them and fires 'bw-language' on document, so code that builds
  * text in JS can redraw.
  */
@@ -45,6 +46,8 @@ export function translate(root = document) {
     el.title = t(el.dataset.i18nLabel);
     el.setAttribute('aria-label', el.title);
   }
+  for (const el of root.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
+  for (const el of root.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
   for (const el of root.querySelectorAll('[data-i18n-placeholder]')) el.placeholder = t(el.dataset.i18nPlaceholder);
 }
 

@@ -15,10 +15,11 @@ import { updateTrainerCard } from './ride.js';
 import { DEBUG } from './tabs.js';
 import { connectPlan, menuEntries, KIND_NAMES } from './device-menu.js';
 import * as app from '../state.js';
+import { t } from '../i18n/index.js';
 
 const PILLS = { treadmill: 'pillTreadmill', trainer: 'pillTrainer' };
 const MENUS = { treadmill: 'menuTreadmill', trainer: 'menuTrainer' };
-const LABELS = { treadmill: 'Treadmill', trainer: 'Trainer' };
+const LABELS = { treadmill: 'devices.pillTreadmill', trainer: 'devices.pillTrainer' };
 
 // HR from the console or the trainer, only while no strap is connected to the page
 function deviceHr(state, source) {
@@ -28,19 +29,30 @@ function deviceHr(state, source) {
   live.hrSource = state.hr ? source : null;
 }
 
+// Last status of each pill, to write it again in another language
+const pillStatus = {};
+
+/** "Treadmill: connecting…" etc. in the interface language. */
+function showStatus(kind, status, detail) {
+  pillStatus[kind] = { status, detail };
+  const label = t(LABELS[kind]);
+  const map = {
+    connecting: ['busy', `${label}: ${t('devices.connecting')}`],
+    initializing: ['busy', `${label}: ${t('devices.activating')}`],
+    ready: ['ready', `${label}: ${detail || t('devices.ready')}`],
+    disconnected: ['error', `${label}: ${t('devices.disconnected')}`],
+    error: ['error', `${label}: ${t('devices.error')}`],
+  };
+  const [s, text] = map[status] || ['error', `${label}: ${status}`];
+  setPill(PILLS[kind], s, text);
+  return text;
+}
+
 function callbacks(kind) {
-  const label = LABELS[kind];
   return {
     onStatus: (status, detail) => {
-      const map = {
-        connecting: ['busy', `${label}: connecting…`],
-        initializing: ['busy', `${label}: activating…`],
-        ready: ['ready', `${label}: ${detail || 'ready'}`],
-        disconnected: ['error', `${label}: disconnected`],
-      };
-      const [s, t] = map[status] || ['error', `${label}: ${status}`];
-      setPill(PILLS[kind], s, t);
-      log(status === 'disconnected' ? 'warn' : 'info', t);
+      const text = showStatus(kind, status, detail);
+      log(status === 'disconnected' ? 'warn' : 'info', text);
       const dev = app.state.devices[kind];
       if (status === 'ready' && !dev?.descriptor?.debugOnly) {
         // Remembered for the menu ("last: …"); simulators are not
@@ -72,13 +84,13 @@ function callbacks(kind) {
       renderInfo();
     },
     onLog: log,
-    onControlLost: () => log('warn', `${label}: another app took control`),
+    onControlLost: () => log('warn', `${kind}: another app took control`),
   };
 }
 
 /** Connects a device of a kind: a simulator by id, or the real one(s) from the registry. */
 async function connect(kind, driverId = null) {
-  setPill(PILLS[kind], 'busy', `${LABELS[kind]}: connecting…`);
+  showStatus(kind, 'connecting');
   try {
     let driver = driverId ? getDriver(driverId) : null;
     let device;
@@ -89,24 +101,25 @@ async function connect(kind, driverId = null) {
         // One Bluetooth chooser for every driver of the kind, then the one that fits
         device = await navigator.bluetooth.requestDevice(requestOptions(kind));
         driver = detect(kind, device);
-        if (!driver) throw new Error(`${device.name || 'This device'} is not a supported ${KIND_NAMES[kind]}`);
-      } else throw new Error(`No ${KIND_NAMES[kind]} support yet`);
+        if (!driver) throw new Error(`${device.name || 'This device'} is not a supported ${t(KIND_NAMES[kind])}`);
+      } else throw new Error(t('devices.noSupport', { kind: t(KIND_NAMES[kind]) }));
     }
     const dev = driver.create(callbacks(kind));
     app.setDevice(kind, dev);
     await dev.connect(device ? { device } : undefined);
   } catch (err) {
     log('error', err.message);
-    setPill(PILLS[kind], 'error', `${LABELS[kind]}: error`);
+    showStatus(kind, 'error');
   }
 }
 
+let hrName = null;
 const hrStrap = getDriver('hr-strap').create({
   onHr: (bpm) => { live.hr = bpm; live.hrSource = 'strap'; },
   onRr: addRr,
   onStatus: (state, name) => {
-    if (state === 'ready') setPill('pillHr', 'ready', `HRM: ${name || 'connected'}`);
-    else { live.hr = null; live.hrSource = null; setPill('pillHr', 'error', 'HRM: disconnected'); }
+    if (state === 'ready') { hrName = name; setPill('pillHr', 'ready', `HRM: ${name || t('devices.connected')}`); }
+    else { live.hr = null; live.hrSource = null; setPill('pillHr', 'error', `HRM: ${t('devices.disconnected')}`); }
   },
 });
 
@@ -137,6 +150,17 @@ function renderMenu(kind) {
 /** Startup: the device menus and the HRM pill. */
 export function initDevices() {
   app.setDevice('hr', hrStrap);
+  // Pills not connected yet show their name in the interface language
+  const idlePills = () => {
+    for (const kind of Object.keys(PILLS)) {
+      if (pillStatus[kind]) showStatus(kind, pillStatus[kind].status, pillStatus[kind].detail);
+      else $(PILLS[kind]).textContent = t(LABELS[kind]);
+    }
+    const hr = $('pillHr').dataset.state;
+    $('pillHr').textContent = hr === 'ready' ? `HRM: ${hrName || t('devices.connected')}` : hr ? `HRM: ${t(hr === 'busy' ? 'devices.connecting' : 'devices.disconnected')}` : 'HRM';
+  };
+  idlePills();
+  document.addEventListener('bw-language', idlePills);
   for (const kind of Object.keys(MENUS)) {
     const menu = $(MENUS[kind]);
     // Opens under its pill, freshly drawn
@@ -151,11 +175,11 @@ export function initDevices() {
   $('pillHr').onclick = async () => {
     if ($('pillHr').dataset.state === 'ready' || $('pillHr').dataset.state === 'busy') return;
     try {
-      setPill('pillHr', 'busy', 'HRM: connecting…');
+      setPill('pillHr', 'busy', `HRM: ${t('devices.connecting')}`);
       await hrStrap.connect();
     } catch (err) {
       log('error', `HRM: ${err.message}`);
-      setPill('pillHr', 'error', 'HRM: error');
+      setPill('pillHr', 'error', `HRM: ${t('devices.error')}`);
     }
   };
 }

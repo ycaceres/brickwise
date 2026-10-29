@@ -19,6 +19,9 @@ English (`en.js`) is the source and the fallback: every key exists there. Other 
 
 ## What not to translate
 
+- The Debug tab's device tables and every log line (Debug log, session and device logs): they are diagnostics, read in English in bug reports.
+- The name and description of activities uploaded to Intervals.icu.
+
 - Brand and product names (Brickwise, Intervals.icu, NordicTrack…), and names that come from Intervals.icu or the library (workout names and descriptions).
 - Acronyms athletes use as they are: FTP, LTHR, HRV, DFA α1, VT1/VT2, ERG, TCX, CSV, HRM.
 - Units are keys (`units.*`), so a language can decide spacing.

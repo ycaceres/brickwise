@@ -61,3 +61,34 @@ test('i18n: numbers and dates in the language', () => {
   assert.equal(formatDate('2026-10-28T12:00:00', { lang: 'es' }), '28/10/26');
   assert.match(formatDate('2026-10-28T12:00:00'), /10\/28\/26/);
 });
+
+test('i18n: no visible English text is left without a key in the page HTML', () => {
+  // Text written by the code (ids below) and names that are not translated are skipped
+  const BY_CODE = ['wName', 'wDesc', 'wTotal', 'wLibCount', 'sessionNote', 'pNote', 'pKeyNote', 'pTestApply', 'rideNote', 'cInfo', 'btnStart', 'btnUpload', 'devTables', 'log', 'pillTreadmill', 'pillTrainer', 'pillHr',
+    'mPace', 'mSpeedSub', 'mHr', 'mHrSub', 'mAlpha', 'mAlphaSub', 'mDist', 'mTime', 'mIncline', 'mInclineSub', 'rtPower', 'rtCadence', 'rtSpeed', 'rtTarget', 'rtLevel'];
+  const KEEP = new Set(['Brickwise', 'Intervals.icu', 'HRM', 'Treadmill', 'Trainer', 'km', 'bpm', 'min/km', 'W', 'rpm', 'km/h', 'α1', '%']);
+  for (const file of ['../index.html', ...PAGE_FILES.map((n) => `../pages/${n}.html`)]) {
+    const html = read(file).replace(/<!--[\s\S]*?-->/g, '').replace(/<(script|style)[\s\S]*?<\/\1>/g, '');
+    const stack = [];
+    for (const tok of html.match(/<[^>]+>|[^<]+/g)) {
+      if (tok.startsWith('</')) { stack.pop(); continue; }
+      if (tok.startsWith('<')) {
+        if (/^<(input|br|img|meta|link|!)/i.test(tok) || tok.endsWith('/>')) continue;
+        const id = tok.match(/\sid="([^"]+)"/)?.[1];
+        stack.push(/\sdata-i18n(-html)?="/.test(tok) || BY_CODE.includes(id));
+        continue;
+      }
+      const text = tok.replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!text || !/[A-Za-z]/.test(text) || KEEP.has(text)) continue;
+      assert.ok(stack.some(Boolean), `${file}: "${text}" has no data-i18n`);
+    }
+  }
+});
+
+test('i18n: HTML messages only use simple markup', () => {
+  const allowed = new Set(['b', 'i', 'span', 'ul', 'li', 'p', 'h2', 'div']);
+  for (const [key, msg] of Object.entries(en).filter(([k]) => k.endsWith('_html'))) {
+    for (const [, tag] of msg.matchAll(/<\/?([a-z0-9]+)/gi)) assert.ok(allowed.has(tag.toLowerCase()), `${key}: <${tag}>`);
+    assert.ok(!/\son\w+=|javascript:/i.test(msg), `${key}: no handlers or javascript: links`);
+  }
+});

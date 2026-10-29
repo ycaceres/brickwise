@@ -3,28 +3,28 @@
   <section class="card">
     <div class="workout-head">
       <div class="workout-title" id="wName">No workout: manual control</div>
-      <button class="icon primary" id="btnGoWorkout" aria-label="Go to the workout (Run or Ride)" title="Go to the workout (Run or Ride)"><bw-icon name="play"></bw-icon></button>
+      <button class="icon primary" id="btnGoWorkout" aria-label="Go to the workout (Run or Ride)" title="Go to the workout (Run or Ride)" data-i18n-label="workout.go"><bw-icon name="play"></bw-icon></button>
     </div>
     <div class="workout-desc" id="wDesc"></div>
     <bw-chart id="wPreview" compact class="mt-12"></bw-chart>
     <div class="row mt-12">
-      <label class="field">Pace within the zone
+      <label class="field"><span data-i18n="workout.position">Pace within the zone</span>
         <select id="wPosition">
-          <option value="low">Low (slower)</option>
-          <option value="mid" selected>Mid</option>
-          <option value="high">High (faster)</option>
+          <option value="low" data-i18n="workout.lowSlower">Low (slower)</option>
+          <option value="mid" selected data-i18n="workout.mid">Mid</option>
+          <option value="high" data-i18n="workout.highFaster">High (faster)</option>
         </select>
       </label>
-      <label class="field">Base incline (%)
+      <label class="field"><span data-i18n="workout.baseIncline">Base incline (%)</span>
         <input type="number" id="wIncline" min="0" max="10" step="0.5" value="1" class="w-90">
       </label>
-      <label class="row note field-end" id="wHrAdjustRow" title="Long steps follow their HR zone instead of the pace">
-        <input type="checkbox" id="wHrAdjust" checked class="check"> Adjust speed by HR
+      <label class="row note field-end" id="wHrAdjustRow" title="Long steps follow their HR zone instead of the pace" data-i18n-title="workout.hrAdjustHelp">
+        <input type="checkbox" id="wHrAdjust" checked class="check"> <span data-i18n="workout.hrAdjust">Adjust speed by HR</span>
       </label>
     </div>
     <div class="steps-wrap mt-10">
       <table>
-        <thead id="wStepsHead"><tr><th>#</th><th>Step</th><th class="r">Dur.</th><th class="r">km/h</th><th class="r">Pace</th><th class="r">%</th></tr></thead>
+        <thead id="wStepsHead"><tr><th>#</th><th data-i18n="workout.step">Step</th><th class="r" data-i18n="workout.dur">Dur.</th><th class="r">km/h</th><th class="r" data-i18n="workout.pace">Pace</th><th class="r">%</th></tr></thead>
         <tbody id="wSteps"></tbody>
       </table>
     </div>

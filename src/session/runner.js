@@ -17,6 +17,7 @@ import { live, rrState, rrActive, updateAlpha } from './live.js';
 import { addTest, testText } from './test-history.js';
 import { policyFor, isStale, powerAt, POLICIES } from './policies.js';
 import * as app from '../state.js';
+import { t } from '../i18n/index.js';
 
 /**
  * What the session reports:
@@ -120,7 +121,7 @@ export function applyStep(i) {
   if (step?.test) session.testStart ??= session.totalElapsed;
   else if (session.testStart != null) session.testEnd ??= session.totalElapsed;
   if (!step) {
-    finish(policy().words.done);
+    finish(t(policy().words.done));
     stopDevice();
     return;
   }
@@ -345,13 +346,13 @@ function saveTestResult() {
   const peakHr = Math.max(0, ...session.samples.map((s) => s.hr || 0));
   if (result.error) {
     log('warn', `Threshold test: ${result.error}`);
-    note(` Threshold test: ${result.error}`, true);
+    note(` ${t('tests.failed', { error: result.error })}`, true);
     return;
   }
   addTest({ ...result, peakHr });
   const text = testText(result);
   log('info', `Threshold test: ${text} (r² ${result.r2}, ${result.points} points)`);
-  note(` Threshold test: ${text}. See Profile.`, true);
+  note(` ${t('tests.result', { result: text })}`, true);
   events.emit('test', { result });
 }
 

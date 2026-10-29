@@ -4,9 +4,7 @@
  */
 
 import { $, setPill } from '../lib/dom.js';
-import { Exp5iTreadmill } from '../devices/treadmill/exp5i.js';
-import { SimulatedTreadmill } from '../devices/treadmill/simulated.js';
-import { HeartRateStrap } from '../devices/hr-strap.js';
+import { getDriver } from '../devices/registry.js';
 import { live, addRr } from '../session/live.js';
 import { log, renderInfo } from './debug.js';
 import { updateControls } from './run.js';
@@ -58,7 +56,7 @@ function treadmillCallbacks() {
 }
 
 async function connectTreadmill(simulated) {
-  const treadmill = simulated ? new SimulatedTreadmill(treadmillCallbacks()) : new Exp5iTreadmill(treadmillCallbacks());
+  const treadmill = getDriver(simulated ? 'simulated-treadmill' : 'nordictrack-exp5i').create(treadmillCallbacks());
   app.setDevice('controllable', treadmill);
   try {
     await treadmill.connect();
@@ -69,7 +67,7 @@ async function connectTreadmill(simulated) {
   }
 }
 
-const hrStrap = new HeartRateStrap({
+const hrStrap = getDriver('hr-strap').create({
   onHr: (bpm) => { live.hr = bpm; live.hrSource = 'strap'; },
   onRr: addRr,
   onStatus: (state, name) => {

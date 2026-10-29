@@ -6,7 +6,7 @@
  * range or {value} for a fixed value), so the zones are not needed.
  */
 
-import { LIMITS } from '../devices/treadmill/exp5i-protocol.js';
+import { LIMITS } from '../devices/treadmill/nordictrack-exp5i/protocol.js';
 import { paceZoneOf, hrTargetRange, hrZoneOf, DEFAULT_PACE_PCT, DEFAULT_POWER_PCT } from '../physiology/zones.js';
 
 const MS_TO_KMH = 3.6;

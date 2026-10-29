@@ -4,9 +4,9 @@
  * Starts stopped: use toggleBelt() to mimic the console buttons.
  */
 
-import { RrSimulator } from '../../physiology/hrv.js';
-import { LIMITS, POLL_INTERVAL_MS } from './exp5i-protocol.js';
-import { sleep, every } from '../../lib/timer.js';
+import { RrSimulator } from '../../../physiology/hrv.js';
+import { LIMITS, POLL_INTERVAL_MS } from '../nordictrack-exp5i/protocol.js';
+import { sleep, every } from '../../../lib/timer.js';
 
 const noop = () => {};
 

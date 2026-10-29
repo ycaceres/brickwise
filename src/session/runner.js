@@ -9,7 +9,7 @@
  */
 
 import { createEmitter } from '../lib/events.js';
-import { LIMITS } from '../devices/treadmill/exp5i-protocol.js';
+import { LIMITS } from '../devices/treadmill/nordictrack-exp5i/protocol.js';
 import { targetSpeedAt } from '../workouts/steps.js';
 import { VT1, VT2 } from '../physiology/hrv.js';
 import { analyzeRamp } from '../physiology/thresholds.js';

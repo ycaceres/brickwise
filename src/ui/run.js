@@ -5,8 +5,8 @@
 
 import { $, download } from '../lib/dom.js';
 import { formatPace, formatDuration } from '../workouts/steps.js';
-import { LIMITS } from '../devices/treadmill/exp5i-protocol.js';
-import { MODE } from '../devices/treadmill/ifit-messages.js';
+import { LIMITS } from '../devices/treadmill/nordictrack-exp5i/protocol.js';
+import { MODE } from '../devices/treadmill/nordictrack-exp5i/messages.js';
 import { hrZoneOf } from '../physiology/zones.js';
 import { alphaState, ALPHA_LABELS } from '../physiology/hrv.js';
 import { buildTcx } from '../export/tcx.js';

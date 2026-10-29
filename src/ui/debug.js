@@ -5,7 +5,7 @@
 
 import { $, download } from '../lib/dom.js';
 import { formatDuration } from '../workouts/steps.js';
-import { MODES, PULSE_SOURCES } from '../devices/treadmill/ifit-messages.js';
+import { MODES, PULSE_SOURCES } from '../devices/treadmill/nordictrack-exp5i/messages.js';
 import { live, STALE_MS } from '../session/live.js';
 import { updateControls } from './run.js';
 import * as app from '../state.js';

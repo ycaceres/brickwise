@@ -3,11 +3,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildSpeedPacket, buildInclinePacket, parseNotification, INIT_SEQUENCE, POLL_CYCLE, toHex, WRITE_HEADER,
-} from '../src/devices/treadmill/exp5i-protocol.js';
+} from '../src/devices/treadmill/nordictrack-exp5i/protocol.js';
 import {
   MessageAssembler, parseRequest, parseResponse, decodeReads, toStatus, MODE, buildWriteAndRead, buildRequest, chunkMessage,
-} from '../src/devices/treadmill/ifit-messages.js';
-import { parseHeartRate } from '../src/devices/hr-strap.js';
+} from '../src/devices/treadmill/nordictrack-exp5i/messages.js';
+import { parseHeartRate } from '../src/devices/sensors/hr-strap/driver.js';
 
 // Literal replica of qdomyos-zwift's forceSpeed/forceIncline for the EXP 5i
 function qzForce(selector, value, base) {
@@ -78,7 +78,7 @@ test('parseNotification: negative incline and filters', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Full decoding (ifit-messages.js)
+// Full decoding (nordictrack-exp5i/messages.js)
 // ---------------------------------------------------------------------------
 
 /** Same as ianchi/ifit's build_write_messages. */

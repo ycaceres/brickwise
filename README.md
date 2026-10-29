@@ -183,11 +183,13 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/session/hr-control.js` | Speed (or incline) adjustment by HR: projection, proportional correction and the α1 guard |
 | `src/session/live.js` | Live device readings: speed, incline, HR, console state, RR intervals and α1 |
 | `src/session/wake-lock.js` | Keeps the screen on during a session |
-| `src/devices/treadmill/exp5i.js` | Web Bluetooth connection to the treadmill (write queue, retries) |
-| `src/devices/treadmill/simulated.js` | Treadmill simulator with the same interface (and simulated RR) |
-| `src/devices/treadmill/exp5i-protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
-| `src/devices/treadmill/ifit-messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
-| `src/devices/hr-strap.js` | Standard Bluetooth heart rate strap: HR, contact and RR intervals |
+| `src/devices/registry.js`, `src/devices/types.js` | Every device driver by kind (treadmill, trainer, HR…) and the contract they follow; see [`src/devices/README.md`](src/devices/README.md) to add one |
+| `src/devices/treadmill/nordictrack-exp5i/driver.js` | Web Bluetooth connection to the EXP 5i (write queue, retries) |
+| `src/devices/treadmill/nordictrack-exp5i/protocol.js` | iFit protocol packets for the EXP 5i: init and activation, polling cycle, speed and incline |
+| `src/devices/treadmill/nordictrack-exp5i/messages.js` | Full decoding: reassembles multi-packet messages, pairs each response with its request and reads every field (table from [ianchi/ifit](https://github.com/ianchi/ifit)) |
+| `src/devices/treadmill/simulated/driver.js` | Treadmill simulator with the same interface (and simulated RR), a driver like any other (debug only) |
+| `src/devices/sensors/hr-strap/driver.js` | Standard Bluetooth heart rate strap: HR, contact and RR intervals |
+| `src/devices/ble/` | Shared Web Bluetooth helpers for new drivers: GATT connect with timeout, notifications, write queue with retries |
 | `src/physiology/zones.js` | Profile, HR and pace zones, cycling power and HR zones, HR ranges of each step and resolution of relative paces |
 | `src/physiology/hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `src/physiology/thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
@@ -251,7 +253,7 @@ Open-source projects consulted while building Brickwise:
 | Repository | What it contributed |
 |---|---|
 | [cagnulein/qdomyos-zwift](https://github.com/cagnulein/qdomyos-zwift) | The EXP 5i activation sequence, polling cycle and speed/incline packets (`nordictrack_treadmill_exp_5i` profile), captured from a real unit |
-| [ianchi/ifit](https://github.com/ianchi/ifit) ([PyPI](https://pypi.org/project/ifit/)) | The iFit message format, characteristics table and response decoding used in `src/devices/treadmill/ifit-messages.js`; its `ifit discover-activation` command captures a unit's activation code |
+| [ianchi/ifit](https://github.com/ianchi/ifit) ([PyPI](https://pypi.org/project/ifit/)) | The iFit message format, characteristics table and response decoding used in `src/devices/treadmill/nordictrack-exp5i/messages.js`; its `ifit discover-activation` command captures a unit's activation code |
 | [dawsontoth/zwifit](https://github.com/dawsontoth/zwifit) | An earlier iFit treadmill bridge, reviewed to understand the BLE protocol |
 | [cagnulein/QZCompanionNordictrackTreadmill](https://github.com/cagnulein/QZCompanionNordictrackTreadmill) | Companion app for NordicTrack treadmills, reviewed for alternative connection methods |
 | [nategreco/uBike](https://github.com/nategreco/uBike) | Console replacement firmware for NordicTrack equipment, reviewed for the low-level protocol |

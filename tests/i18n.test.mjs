@@ -109,3 +109,22 @@ test('i18n: the browser language picks a supported one', async () => {
 test('i18n: the translations are complete', async () => {
   for (const [code, dict] of await dictionaries()) assert.deepEqual(missingKeys(dict), [], `${code} misses keys`);
 });
+
+test('i18n: French and Spanish plurals and typography', async () => {
+  const { setLanguage } = await import('../src/i18n/index.js');
+  globalThis.document = { documentElement: {}, querySelectorAll: () => [], dispatchEvent() {} };
+  try {
+    await setLanguage('fr');
+    assert.equal(t('common.steps', { n: 0 }), '0 étape');   // French: 0 is singular
+    assert.equal(t('common.steps', { n: 1 }), '1 étape');
+    assert.equal(t('common.steps', { n: 3 }), '3 étapes');
+    assert.equal(t('run.uploadFailed', { error: 'x' }), 'Échec de l’envoi : x'); // narrow no-break space before ':'
+    await setLanguage('es');
+    assert.equal(t('common.steps', { n: 0 }), '0 pasos');
+    assert.equal(t('common.steps', { n: 1 }), '1 paso');
+    assert.equal(t('nav.home'), 'Inicio');
+  } finally {
+    await setLanguage('en');
+    delete globalThis.document;
+  }
+});

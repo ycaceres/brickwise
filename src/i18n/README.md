@@ -53,3 +53,19 @@ Neutral Spanish with Latin American terms.
 | Run / Ride (tabs) | Correr / Bici |
 
 Pill states avoid gender ("en línea", "sin conexión") because the same word follows "Caminadora" and "Rodillo".
+
+## French (`fr.js`)
+
+| English | Français |
+|---|---|
+| workout / step | séance / étape |
+| Training library | Bibliothèque de séances |
+| threshold pace | allure seuil |
+| HR / max HR / resting HR | FC / FC max / FC au repos |
+| warm-up / cooldown | échauffement / retour au calme |
+| treadmill / smart trainer | tapis de course / home trainer connecté |
+| belt / safety key | tapis / clé de sécurité |
+| sign in / sign out | se connecter / se déconnecter |
+| Run / Ride (tabs) | Course / Vélo |
+
+Typography: narrow no-break space (U+202F) before `:` `;` `?` `!`, no-break space (U+00A0) before `%` and in "45 min"; typographic apostrophe `’`. FTP stays FTP (PMA is a different metric). In French 0 takes the singular ("0 étape").

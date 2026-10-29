@@ -37,13 +37,13 @@ function showStatus(kind, status, detail) {
   pillStatus[kind] = { status, detail };
   const label = t(LABELS[kind]);
   const map = {
-    connecting: ['busy', `${label}: ${t('devices.connecting')}`],
-    initializing: ['busy', `${label}: ${t('devices.activating')}`],
-    ready: ['ready', `${label}: ${detail || t('devices.ready')}`],
-    disconnected: ['error', `${label}: ${t('devices.disconnected')}`],
-    error: ['error', `${label}: ${t('devices.error')}`],
+    connecting: ['busy', t('devices.pillStatus', { device: label, state: t('devices.connecting') })],
+    initializing: ['busy', t('devices.pillStatus', { device: label, state: t('devices.activating') })],
+    ready: ['ready', t('devices.pillStatus', { device: label, state: detail || t('devices.ready') })],
+    disconnected: ['error', t('devices.pillStatus', { device: label, state: t('devices.disconnected') })],
+    error: ['error', t('devices.pillStatus', { device: label, state: t('devices.error') })],
   };
-  const [s, text] = map[status] || ['error', `${label}: ${status}`];
+  const [s, text] = map[status] || ['error', t('devices.pillStatus', { device: label, state: status })];
   setPill(PILLS[kind], s, text);
   return text;
 }
@@ -118,8 +118,8 @@ const hrStrap = getDriver('hr-strap').create({
   onHr: (bpm) => { live.hr = bpm; live.hrSource = 'strap'; },
   onRr: addRr,
   onStatus: (state, name) => {
-    if (state === 'ready') { hrName = name; setPill('pillHr', 'ready', `HRM: ${name || t('devices.connected')}`); }
-    else { live.hr = null; live.hrSource = null; setPill('pillHr', 'error', `HRM: ${t('devices.disconnected')}`); }
+    if (state === 'ready') { hrName = name; setPill('pillHr', 'ready', t('devices.pillStatus', { device: 'HRM', state: name || t('devices.connected') })); }
+    else { live.hr = null; live.hrSource = null; setPill('pillHr', 'error', t('devices.pillStatus', { device: 'HRM', state: t('devices.disconnected') })); }
   },
 });
 
@@ -157,7 +157,7 @@ export function initDevices() {
       else $(PILLS[kind]).textContent = t(LABELS[kind]);
     }
     const hr = $('pillHr').dataset.state;
-    $('pillHr').textContent = hr === 'ready' ? `HRM: ${hrName || t('devices.connected')}` : hr ? `HRM: ${t(hr === 'busy' ? 'devices.connecting' : 'devices.disconnected')}` : 'HRM';
+    $('pillHr').textContent = hr === 'ready' ? t('devices.pillStatus', { device: 'HRM', state: hrName || t('devices.connected') }) : hr ? t('devices.pillStatus', { device: 'HRM', state: t(hr === 'busy' ? 'devices.connecting' : 'devices.disconnected') }) : 'HRM';
   };
   idlePills();
   document.addEventListener('bw-language', idlePills);
@@ -175,11 +175,11 @@ export function initDevices() {
   $('pillHr').onclick = async () => {
     if ($('pillHr').dataset.state === 'ready' || $('pillHr').dataset.state === 'busy') return;
     try {
-      setPill('pillHr', 'busy', `HRM: ${t('devices.connecting')}`);
+      setPill('pillHr', 'busy', t('devices.pillStatus', { device: 'HRM', state: t('devices.connecting') }));
       await hrStrap.connect();
     } catch (err) {
-      log('error', `HRM: ${err.message}`);
-      setPill('pillHr', 'error', `HRM: ${t('devices.error')}`);
+      log('error', t('devices.pillStatus', { device: 'HRM', state: err.message }));
+      setPill('pillHr', 'error', t('devices.pillStatus', { device: 'HRM', state: t('devices.error') }));
     }
   };
 }

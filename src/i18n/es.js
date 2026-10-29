@@ -181,6 +181,7 @@ export default {
   'devices.simPedal': 'Empezar/parar de pedalear (sim)',
   'devices.simBelt': 'Start/Stop de la consola (sim)',
   'devices.disconnect': 'Desconectar',
+  'devices.pillStatus': '{device}: {state}',
   'devices.pillTreadmill': 'Caminadora',
   'devices.pillTrainer': 'Rodillo',
   'devices.connecting': 'conectando…',

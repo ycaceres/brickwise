@@ -16,7 +16,7 @@ import { live, rrState, rrActive, updateAlpha, STALE_MS } from './live.js';
 import { requestWakeLock, releaseWakeLock } from './wake-lock.js';
 import { log } from '../ui/debug.js';
 import { loadTests, testText, renderTests } from '../ui/profile.js';
-import { highlightSteps } from '../ui/workouts.js';
+import { highlightSteps } from '../ui/workout.js';
 import { render, updateChart, updateControls } from '../ui/run.js';
 import * as app from '../state.js';
 

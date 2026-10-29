@@ -11,13 +11,12 @@ import { formatPace } from '../workouts/steps.js';
 import { profileFromIntervals, rideFromIntervals, DEFAULT_PACE_PCT, DEFAULT_HR_PCT } from '../physiology/zones.js';
 import * as intervals from '../services/intervals.js';
 import { log } from './debug.js';
-import { selectWorkout, selectedKey, loadWorkouts } from './workouts.js';
+import { loadWorkouts } from './home.js';
 
 export function setProfile(p, { save = true } = {}) {
   app.setProfile(p);
   if (save) settings.set('profile', p);
   renderProfile();
-  selectWorkout(selectedKey); // recomputes speeds and HR caps
 }
 
 // The account card, in Home and Profile

@@ -9,7 +9,7 @@ import * as settings from '../lib/settings.js';
 import { updateChart } from './run.js';
 import { updateRide } from './ride.js';
 import { session } from '../session/runner.js';
-import { updatePreview } from './workouts.js';
+import { updatePreview } from './workout.js';
 import * as app from '../state.js';
 
 // The Debug tab (console state and log) and Simulation mode only show with ?debug=true

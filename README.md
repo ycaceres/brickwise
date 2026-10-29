@@ -170,7 +170,10 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `css/app.css` | Page styles |
 | `src/ui/devices.js` | Treadmill and HR strap pills: connect, simulator, disconnect |
 | `src/ui/profile.js` | Profile tab: threshold pace, LTHR and max HR, the Intervals.icu account and the threshold test history |
-| `src/ui/workouts.js` | Planned workouts (Home), the training library and its filters, and the workout page with its preview |
+| `src/ui/home.js` | Home: the day's planned workouts, date and sport filter |
+| `src/ui/library.js` | Training library and its filters |
+| `src/ui/selection.js` | The workout picked: turns it into steps for the current zones and options, remembers library picks |
+| `src/ui/workout.js` | Workout page: options, steps table, totals and preview |
 | `src/ui/ride.js` | Ride tab: the selected bike workout's chart (power axis), view only |
 | `src/ui/run.js` | Run tab: live numbers, session buttons, chart, export and upload |
 | `src/ui/debug.js` | Debug tab: communication log and console state |
@@ -188,6 +191,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | `src/physiology/hrv.js` | RR intervals: artifact cleanup and DFA α1 |
 | `src/physiology/thresholds.js` | VT1 and VT2 from the threshold test (α1 vs HR fit, flat-equivalent speed) |
 | `src/workouts/steps.js` | Turns the Intervals.icu `workout_doc` into speed steps |
+| `src/workouts/info.js` | A workout's approximate length and whether HR can steer it |
 | `src/workouts/library.js` | Turns `data/library.json` into workouts for every duration and level |
 | `data/library.json` | The workout library (data; edited by hand) |
 | `src/export/tcx.js`, `src/export/csv.js` | Build the session TCX and CSV |

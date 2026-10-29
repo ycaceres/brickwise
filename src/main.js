@@ -11,7 +11,11 @@ import { initDebug, log } from './ui/debug.js';
 import { initDevices } from './ui/devices.js';
 import { tick } from './session/runner.js';
 import { initRun, updateControls } from './ui/run.js';
-import { loadWorkouts, initWorkouts } from './ui/workouts.js';
+import { initSelection } from './ui/selection.js';
+import { initWorkoutPage } from './ui/workout.js';
+import { initHome, loadWorkouts } from './ui/home.js';
+import { initLibrary } from './ui/library.js';
+import { initRide } from './ui/ride.js';
 import { initTabs, showTab } from './ui/tabs.js';
 import { initConfig } from './ui/config.js';
 import { initProfile, setProfile, loadProfileFromIntervals, renderProfile, refreshAthlete, refreshWellness } from './ui/profile.js';
@@ -40,7 +44,11 @@ try {
   initRun();
   initProfile();
   initConfig();
-  initWorkouts();
+  initRide();
+  initSelection();
+  initWorkoutPage();
+  initHome();
+  initLibrary();
   if (saved?.pacePct) setProfile(saved, { save: false });
   // Without a stored profile, or one from before the cycling zones: ask Intervals.icu
   if (intervals.getApiKey() && (!saved?.pacePct || (saved.source === 'intervals' && !('ride' in saved)))) loadProfileFromIntervals();

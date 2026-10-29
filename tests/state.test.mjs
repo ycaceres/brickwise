@@ -36,3 +36,17 @@ test('state: selection and devices notify with their value', () => {
   assert.equal(state.devices.controllable.id, 'sim');
   assert.equal(state.selection, null);
 });
+
+test('state: planned workouts, library and workout options notify', async () => {
+  const { setPlanned, setLibrary, setWorkoutOptions } = await import('../src/state.js');
+  const seen = [];
+  on('planned', (l) => seen.push(['planned', l.length]));
+  on('library', (l) => seen.push(['library', l.entries.length, l.loaded]));
+  on('options', (o) => seen.push(['options', o.position, o.hrAdjust]));
+  assert.equal(state.library.loaded, false);
+  setPlanned([{ name: 'a' }]);
+  setLibrary([{ id: 'x' }, { id: 'y' }]);
+  setWorkoutOptions({ position: 'high' });
+  assert.deepEqual(seen, [['planned', 1], ['library', 2, true], ['options', 'high', true]]);
+  assert.equal(state.workoutOptions.defaultIncline, 1); // the rest is kept
+});

@@ -4,7 +4,7 @@
  * screens and the session engine read it, and the screen that owns each part
  * sets it through the functions below (persistence stays with that screen).
  * on(name, fn) is called after each change: 'profile', 'selection',
- * 'device', 'athlete', 'wellness'.
+ * 'device', 'athlete', 'wellness', 'planned', 'library', 'options'.
  */
 import { zonesFromProfile } from './physiology/zones.js';
 
@@ -15,6 +15,9 @@ export const state = {
   devices: { controllable: null, hr: null, sensors: [] },
   athlete: null,     // Intervals.icu account
   wellness: null,    // latest weight, sleep, resting HR, HRV
+  planned: null,     // the day's Intervals.icu workouts (null = not loaded)
+  library: { entries: [], loaded: false },   // data/library.json (loaded: done, even if it failed)
+  workoutOptions: { position: 'mid', defaultIncline: 1, hrAdjust: true },  // workout page choices
 };
 
 const listeners = {};
@@ -52,6 +55,21 @@ export function setAthlete(a) {
 export function setWellness(w) {
   state.wellness = w;
   emit('wellness', w);
+}
+
+export function setPlanned(list) {
+  state.planned = list;
+  emit('planned', list);
+}
+
+export function setLibrary(entries) {
+  state.library = { entries, loaded: true };
+  emit('library', state.library);
+}
+
+export function setWorkoutOptions(o) {
+  state.workoutOptions = { ...state.workoutOptions, ...o };
+  emit('options', state.workoutOptions);
 }
 
 /**

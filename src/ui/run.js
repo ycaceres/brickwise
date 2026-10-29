@@ -160,6 +160,11 @@ function activityName() {
 // ---------------------------------------------------------------------------
 /** Startup: the session buttons, the speed and incline buttons, and export. */
 export function initRun() {
+  app.on('selection', () => {
+    render();
+    updateChart();
+    updateControls();
+  });
   $('tab-run').querySelectorAll('[data-speed]').forEach((btn) => {
     btn.onclick = () => {
       const delta = parseFloat(btn.dataset.speed);

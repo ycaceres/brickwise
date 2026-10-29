@@ -22,3 +22,8 @@ export function updateRide() {
   const missing = ride.needsProfile ? ' FTP is missing in Intervals.icu: without it, the chart only shows the workout shape.' : '';
   $('rideNote').textContent = `${ride.steps.length} steps · ~${formatDuration(sec)}. Riding on a bike trainer is not supported yet: for now this page only shows the workout.${missing}`;
 }
+
+/** Startup: redraw on each selection. */
+export function initRide() {
+  app.on('selection', updateRide);
+}

@@ -37,4 +37,22 @@ src/devices/
 7. **Tests:** `tests/devices.test.mjs` runs the shared checks in `tests/devices/contract.mjs` on every registered driver (descriptor sanity; full lifecycle for drivers that run without Bluetooth). Add protocol tests for `protocol.js` with real captures, like `tests/treadmill.test.mjs` does for iFit.
 8. **Hardware:** test against the real device, or an emulator (for FTMS, a GATT server profile in nRF Connect or zwack). Do not change a driver proven on hardware without testing on it again.
 
-Normalized state fields and the `Treadmill` / `Trainer` base classes come with #13 and #23.
+## Treadmills
+
+Treadmill drivers extend `Treadmill` (`treadmill/treadmill.js`) and implement `setSpeed(kmh)`, `setIncline(pct)`, `pause()`, `pauseNow()`, `connect()`, `disconnect()` and `connected`. The app only calls `setTarget({ speed, incline })`, which clamps to `limits` and rounds to their steps first; a driver may narrow `limits` once the device reports its real ranges (the EXP 5i does).
+
+Every reading published with `onData(state)` carries these normalized fields next to the driver's own (see `TreadmillState` in `types.js`):
+
+| Field | Meaning |
+|---|---|
+| `speed`, `incline` | actual km/h and % |
+| `targetSpeed` | what the treadmill reports as requested (it changes when someone uses the console) |
+| `distance`, `time` | the console's counters (m, s), if any |
+| `belt` | `'running'` \| `'paused'` \| `'stopped'` |
+| `alerts` | e.g. `['safety-key-missing']`; the Run page shows a notice for each known alert |
+| `hr`, `hrSource` | HR from the console (`'console'`), or null |
+| `updatedAt` | ms timestamp of the reading |
+
+`diagnostics()` returns extra `[label, value]` rows for the Debug page (the EXP 5i shows its iFit mode and where the console HR comes from).
+
+Smart trainers get the same treatment with a `Trainer` base class (#23).

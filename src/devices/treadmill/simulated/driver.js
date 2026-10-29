@@ -7,12 +7,13 @@
 import { RrSimulator } from '../../../physiology/hrv.js';
 import { LIMITS, POLL_INTERVAL_MS } from '../nordictrack-exp5i/protocol.js';
 import { sleep, every } from '../../../lib/timer.js';
+import { normalize, diagnosticsOf } from '../nordictrack-exp5i/messages.js';
+import { Treadmill } from '../treadmill.js';
 
-const noop = () => {};
 
-export class SimulatedTreadmill {
-  constructor({ onStatus = noop, onData = noop, onInfo = noop, onLog = noop } = {}) {
-    Object.assign(this, { onStatus, onData, onInfo, onLog });
+export class SimulatedTreadmill extends Treadmill {
+  constructor(events = {}, descriptor = {}) {
+    super(events, descriptor);
     this.state = { speed: 0, incline: 0, targetSpeed: 0, mode: 1, distance: 0, time: 0, calories: 0, pulse: null, updatedAt: 0 };
     this.target = { speed: 0, incline: 0 };
     this.belt = false;
@@ -41,6 +42,10 @@ export class SimulatedTreadmill {
     this._stopTimer?.();
     this.running = false;
     this.onStatus('disconnected');
+  }
+
+  diagnostics() {
+    return diagnosticsOf(this.state);
   }
 
   pause() {
@@ -98,6 +103,7 @@ export class SimulatedTreadmill {
     } else {
       s.rr = [];
     }
+    Object.assign(s, normalize(s));
     this.onData({ ...s, distance: Math.round(s.distance), time: Math.floor(s.time) });
   }
 }

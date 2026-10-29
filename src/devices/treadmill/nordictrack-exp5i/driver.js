@@ -1,10 +1,11 @@
 /**
- * Connection to the EXP 5i over Web Bluetooth. The simulator (simulated.js)
- * has the same interface.
+ * Connection to the EXP 5i over Web Bluetooth (a Treadmill, see
+ * ../treadmill.js). The simulator (../simulated/driver.js) has the same interface.
  *
  * Events (constructor callbacks):
  *   onStatus(state, detail)  'connecting' | 'initializing' | 'ready' | 'disconnected' | 'error'
  *   onData(state)            {speed, incline, targetSpeed, mode, pulse, distance, time, calories, …}
+ *                            plus the normalized belt, alerts, hr, hrSource (messages.js normalize)
  *   onInfo(info)             {supported, firmware, serial, reference, capabilities, commands}
  *   onLog(direction, text)   'tx' | 'rx' | 'info' | 'warn' | 'error'
  */
@@ -16,10 +17,11 @@ import {
 } from './protocol.js';
 import {
   MessageAssembler, parseRequest, parseResponse, toStatus, buildWriteAndRead, MODES, MODE,
+  normalize, diagnosticsOf,
 } from './messages.js';
+import { Treadmill } from '../treadmill.js';
 import { sleep } from '../../../lib/timer.js';
 
-const noop = () => {};
 
 // If the treadmill has not moved at all this long after sending a value, it is resent
 const VERIFY_AFTER_MS = 2500;
@@ -36,9 +38,9 @@ class Requests {
   }
 }
 
-export class Exp5iTreadmill {
-  constructor({ onStatus = noop, onData = noop, onInfo = noop, onLog = noop } = {}) {
-    Object.assign(this, { onStatus, onData, onInfo, onLog });
+export class Exp5iTreadmill extends Treadmill {
+  constructor(events = {}, descriptor = {}) {
+    super(events, descriptor);
     this.device = null;
     this.writeChar = null;
     this.notifyChar = null;
@@ -48,7 +50,7 @@ export class Exp5iTreadmill {
     this._responseWaiter = null;
     this.simulated = false;
     this.info = {};
-    this.limits = {};
+    this.reported = {};          // ranges the console reports (MinKph, MaxKph, MinIncline, MaxIncline)
     this._tx = new MessageAssembler();
     this._rx = new MessageAssembler();
     this._pending = [];          // full requests waiting for a response
@@ -103,7 +105,7 @@ export class Exp5iTreadmill {
    */
   setSpeed(kmh) {
     if (kmh <= 0) return this.pause();
-    const lim = this.limits;
+    const lim = this.reported;
     const lo = lim.minKph ?? 0;
     const hi = Math.min(LIMITS.speedMax, lim.maxKph ?? LIMITS.speedMax);
     const v = Math.round(Math.min(hi, Math.max(lo, kmh)) * 10) / 10;
@@ -111,7 +113,7 @@ export class Exp5iTreadmill {
   }
 
   setIncline(pct) {
-    const lim = this.limits;
+    const lim = this.reported;
     const lo = Math.max(LIMITS.inclineMin, lim.minIncline ?? LIMITS.inclineMin);
     const hi = Math.min(LIMITS.inclineMax, lim.maxIncline ?? LIMITS.inclineMax);
     const v = Math.round(Math.min(hi, Math.max(lo, pct)) * 2) / 2;
@@ -137,6 +139,10 @@ export class Exp5iTreadmill {
     const packets = buildWriteAndRead({ 12: MODE.PAUSE });
     this.onLog('info', 'Page closing: immediate pause');
     packets.reduce((p, pkt) => p.then(() => this._writeFn(pkt)), Promise.resolve()).catch(() => {});
+  }
+
+  diagnostics() {
+    return diagnosticsOf(this.state);
   }
 
   // --- internals --------------------------------------------------------------
@@ -319,8 +325,14 @@ export class Exp5iTreadmill {
       }
       const v = res.values || {};
       if ('MinKph' in v || 'MaxKph' in v || 'MinIncline' in v || 'MaxIncline' in v) {
-        this.limits = { minKph: v.MinKph, maxKph: v.MaxKph, minIncline: v.MinIncline, maxIncline: v.MaxIncline };
-        Object.assign(this.info, { limits: this.limits });
+        this.reported = { minKph: v.MinKph, maxKph: v.MaxKph, minIncline: v.MinIncline, maxIncline: v.MaxIncline };
+        Object.assign(this.info, { limits: this.reported });
+        // The interface limits narrow to what this unit reports
+        const l = this.limits;
+        if (v.MinKph != null) l.speedMin = Math.max(l.speedMin ?? 0, v.MinKph);
+        if (v.MaxKph != null) l.speedMax = Math.min(l.speedMax ?? Infinity, v.MaxKph);
+        if (v.MinIncline != null) l.inclineMin = Math.max(l.inclineMin ?? -Infinity, v.MinIncline);
+        if (v.MaxIncline != null) l.inclineMax = Math.min(l.inclineMax ?? Infinity, v.MaxIncline);
         this.onLog('info', `Limits: speed ${v.MinKph}–${v.MaxKph} km/h, incline ${v.MinIncline}–${v.MaxIncline} %`);
         this.onInfo({ ...this.info });
         return;
@@ -365,7 +377,7 @@ export class Exp5iTreadmill {
     if (status.mode != null && status.mode !== this.state.mode) {
       this.onLog('info', `Treadmill mode: ${MODES[status.mode] || status.mode}`);
     }
-    Object.assign(this.state, status, { updatedAt: Date.now() });
+    Object.assign(this.state, normalize(status), { updatedAt: Date.now() });
     this.onData({ ...this.state });
   }
 

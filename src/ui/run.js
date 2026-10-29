@@ -5,8 +5,6 @@
 
 import { $, download } from '../lib/dom.js';
 import { formatPace, formatDuration } from '../workouts/steps.js';
-import { LIMITS } from '../devices/treadmill/nordictrack-exp5i/protocol.js';
-import { MODE } from '../devices/treadmill/nordictrack-exp5i/messages.js';
 import { hrZoneOf } from '../physiology/zones.js';
 import { alphaState, ALPHA_LABELS } from '../physiology/hrv.js';
 import { buildTcx } from '../export/tcx.js';
@@ -106,7 +104,7 @@ export function updateControls() {
   if (session.state === 'idle' && ride) {
     $('sessionNote').textContent = 'This is a bike workout: it needs a bike trainer, which is not supported yet.';
   }
-  if (connected && live.console.mode === MODE.MISSING_SAFETY_KEY) {
+  if (connected && live.console.alerts?.includes('safety-key-missing')) {
     $('sessionNote').textContent = 'Safety key missing: attach it to the console.';
   }
 }
@@ -206,14 +204,16 @@ export function initRun() {
         // Base: the requested speed the console reports (includes changes made on it)
         const reported = live.console.targetSpeed;
         const base = reported > 0 ? reported : session.target ?? live.speed;
-        session.target = Math.round(Math.min(LIMITS.speedMax, Math.max(LIMITS.speedMin, base + delta)) * 10) / 10;
-        app.state.devices.controllable?.setSpeed(session.target);
+        const dev = app.state.devices.controllable;
+        if (!dev) return;
+        session.target = dev.clampSpeed(base + delta);
+        dev.setTarget({ speed: session.target });
       }
     };
   });
 
   $('tab-run').querySelectorAll('[data-incline]').forEach((btn) => {
-    btn.onclick = () => app.state.devices.controllable?.setIncline(live.incline + parseFloat(btn.dataset.incline));
+    btn.onclick = () => app.state.devices.controllable?.setTarget({ incline: live.incline + parseFloat(btn.dataset.incline) });
   });
 
   $('btnStart').onclick = start;

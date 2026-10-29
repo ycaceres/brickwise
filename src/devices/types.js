@@ -44,6 +44,16 @@
  * @property {(info: object) => void} [onInfo]    model, firmware, serial…
  * @property {(kind: string, text: string) => void} [onLog]
  *
+ * @typedef {object} TreadmillState   What treadmill drivers publish with onData (plus their own fields).
+ * @property {number} speed            actual km/h
+ * @property {number} incline          actual %
+ * @property {number} [targetSpeed]    requested km/h as the treadmill reports it
+ * @property {number} [distance] @property {number} [time]   console counters (m, s)
+ * @property {'running' | 'paused' | 'stopped'} [belt]
+ * @property {string[]} [alerts]       e.g. 'safety-key-missing'
+ * @property {number | null} [hr] @property {'console' | null} [hrSource]
+ * @property {number} updatedAt        ms
+ *
  * @typedef {object} Device
  * @property {(opts?: { device?: object }) => Promise<void>} connect   opts.device: a BluetoothDevice already chosen
  * @property {() => void} disconnect
@@ -51,5 +61,7 @@
  * @property {object} [info]
  * @property {object} [state]   latest readings, with updatedAt (ms)
  * @property {() => Array<[string, string]>} [diagnostics]   rows for the Debug page
+ * @property {Capabilities} [capabilities] @property {Limits} [limits]   from the descriptor (limits may narrow after connecting)
+ * @property {(t: { speed?: number, incline?: number, power?: number }) => void} [setTarget]   clamped to limits
  */
 export {};

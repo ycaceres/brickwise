@@ -3,7 +3,7 @@ import { Exp5iTreadmill } from './driver.js';
 import { SERVICE_UUID, LIMITS } from './protocol.js';
 
 /** @type {import('../../types.js').DriverDescriptor} */
-export default {
+const descriptor = {
   id: 'nordictrack-exp5i',
   kind: 'treadmill',
   name: 'NordicTrack EXP 5i (iFit Bluetooth)',
@@ -16,5 +16,7 @@ export default {
     distance: true, calories: true,
   },
   limits: { speedMin: LIMITS.speedMin, speedMax: LIMITS.speedMax, speedStep: 0.1, inclineMin: LIMITS.inclineMin, inclineMax: LIMITS.inclineMax, inclineStep: 0.5 },
-  create: (events) => new Exp5iTreadmill(events),
+  create: (events) => new Exp5iTreadmill(events, descriptor),
 };
+
+export default descriptor;

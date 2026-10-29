@@ -47,3 +47,16 @@ export async function checkLifecycle(d) {
   await wait(500);
   assert.equal(dev.state.updatedAt, t1, 'no timer left running after disconnect');
 }
+
+/** Treadmills: the common interface, and targets clamped to the limits (no connection needed). */
+export function checkTreadmill(d) {
+  const dev = d.create({});
+  assert.deepEqual(dev.limits, d.limits, `${d.id}: limits from the descriptor`);
+  assert.equal(dev.capabilities.speed, true, `${d.id}: speed capability`);
+  assert.equal(typeof dev.setTarget, 'function');
+  assert.ok(Array.isArray(dev.diagnostics()), `${d.id}: diagnostics() rows`);
+  dev.setTarget({ speed: d.limits.speedMax + 5, incline: d.limits.inclineMax + 5 });
+  assert.equal(dev.requested.speed, d.limits.speedMax);
+  assert.equal(dev.requested.incline, d.limits.inclineMax);
+  assert.doesNotThrow(() => dev.pause());
+}

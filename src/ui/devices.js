@@ -42,9 +42,8 @@ function treadmillCallbacks() {
       // only if no strap is connected to the page
       if (hrStrap.bpm == null) {
         if (state.rr?.length) addRr(state.rr, null); // only the simulator sends RR this way
-        const bpm = state.pulse?.bpm;
-        live.hr = bpm > 0 ? bpm : null;
-        live.hrSource = bpm > 0 ? 'console' : null;
+        live.hr = state.hr ?? null;
+        live.hrSource = state.hr ? 'console' : null;
       }
     },
     onInfo: (info) => {

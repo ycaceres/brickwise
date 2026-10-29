@@ -195,9 +195,9 @@ tr.done td { color: var(--muted); }
 .console-grid div { display: grid; gap: 2px; min-width: 0; }
 .console-grid span { font-size: 12px; color: var(--muted); }
 .console-grid strong { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mode[data-mode="2"] { color: var(--ok); }
-.mode[data-mode="3"], .mode[data-mode="1"], .mode[data-mode="10"] { color: var(--warn); }
-.mode[data-mode="8"] { color: var(--danger); }
+.mode[data-belt="running"] { color: var(--ok); }
+.mode[data-belt="paused"], .mode[data-belt="stopped"] { color: var(--warn); }
+.mode[data-alert="true"] { color: var(--danger); }
 @media (max-width: 860px) { .console-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Chart */

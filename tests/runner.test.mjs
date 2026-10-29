@@ -18,8 +18,11 @@ test('runner: a short workout runs from the belt start to the end', async () => 
   const device = {
     connected: true,
     state: { updatedAt: 0 },
-    setSpeed: (v) => sent.push(['speed', v]),
-    setIncline: (v) => sent.push(['incline', v]),
+    limits: { speedMin: 0.8, speedMax: 16, inclineMin: 0, inclineMax: 10 },
+    setTarget: ({ speed, incline }) => {
+      if (incline != null) sent.push(['incline', incline]);
+      if (speed != null) sent.push(['speed', speed]);
+    },
     pause: () => sent.push(['pause']),
   };
   setDevice('controllable', device);

@@ -5,7 +5,6 @@
 
 import { $, download } from '../lib/dom.js';
 import { formatDuration } from '../workouts/steps.js';
-import { MODES, PULSE_SOURCES } from '../devices/treadmill/nordictrack-exp5i/messages.js';
 import { live, STALE_MS } from '../session/live.js';
 import { updateControls } from './run.js';
 import * as app from '../state.js';
@@ -36,14 +35,18 @@ export function initDebug() {
 let lastMode;
 export function renderConsole() {
   const c = live.console;
-  const fresh = app.state.devices.controllable && Date.now() - (app.state.devices.controllable.state.updatedAt || 0) < STALE_MS;
+  const dev = app.state.devices.controllable;
+  const fresh = dev && Date.now() - (dev.state.updatedAt || 0) < STALE_MS;
+  // Driver-specific rows (iFit mode, console HR source…)
+  const diag = Object.fromEntries(fresh ? dev.diagnostics?.() ?? [] : []);
   const modeEl = $('cMode');
-  const mode = fresh ? c.mode : undefined;
-  modeEl.textContent = mode != null ? MODES[mode] || `mode ${mode}` : '—';
-  modeEl.dataset.mode = mode ?? '';
+  modeEl.textContent = diag.Mode ?? '—';
+  modeEl.dataset.belt = fresh ? c.belt ?? '' : '';
+  modeEl.dataset.alert = fresh && c.alerts?.length ? 'true' : '';
+  const mode = fresh ? `${c.belt}|${c.alerts?.join(',')}` : undefined;
   if (mode !== lastMode) {
     lastMode = mode;
-    updateControls(); // the safety key notice depends on the mode
+    updateControls(); // the safety key notice depends on the alerts
   }
   const set = (id, text) => { $(id).textContent = fresh && text != null ? text : '—'; };
   set('cSpeed', c.speed != null ? `${c.speed.toFixed(1)} km/h${c.speedSource === 'requested' ? ' (no actual reading)' : ''}` : null);
@@ -52,9 +55,7 @@ export function renderConsole() {
   set('cDist', c.distance != null ? `${(c.distance / 1000).toFixed(2)} km` : null);
   set('cTime', c.time != null ? formatDuration(c.time) : null);
   set('cCal', c.calories != null ? `${Math.round(c.calories)} kcal` : null);
-  set('cPulse', c.pulse
-    ? (c.pulse.bpm > 0 ? `${c.pulse.bpm} bpm · ${PULSE_SOURCES[c.pulse.source] || `source ${c.pulse.source}`}` : 'no pulse')
-    : null);
+  set('cPulse', diag['Console HR'] ?? null);
 }
 
 export function renderInfo() {

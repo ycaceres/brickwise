@@ -3,12 +3,16 @@ import assert from 'node:assert/strict';
 import { DRIVERS, driversFor, getDriver, requestOptions, detect } from '../src/devices/registry.js';
 import { connectGatt, subscribe } from '../src/devices/ble/gatt.js';
 import { createWriteQueue } from '../src/devices/ble/write-queue.js';
-import { checkDescriptor, checkLifecycle } from './devices/contract.mjs';
+import { checkDescriptor, checkLifecycle, checkTreadmill } from './devices/contract.mjs';
 
 test('drivers: every descriptor follows the contract, ids are unique', () => {
   for (const d of DRIVERS) checkDescriptor(d);
   assert.equal(new Set(DRIVERS.map((d) => d.id)).size, DRIVERS.length);
 });
+
+for (const d of DRIVERS.filter((x) => x.kind === 'treadmill')) {
+  test(`drivers: ${d.id} treadmill interface`, () => checkTreadmill(d));
+}
 
 for (const d of DRIVERS.filter((x) => x.debugOnly)) {
   test(`drivers: ${d.id} lifecycle`, () => checkLifecycle(d));

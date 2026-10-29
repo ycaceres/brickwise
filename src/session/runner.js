@@ -9,7 +9,6 @@
  */
 
 import { createEmitter } from '../lib/events.js';
-import { LIMITS } from '../devices/treadmill/nordictrack-exp5i/protocol.js';
 import { targetSpeedAt } from '../workouts/steps.js';
 import { VT1, VT2 } from '../physiology/hrv.js';
 import { analyzeRamp } from '../physiology/thresholds.js';
@@ -34,6 +33,8 @@ const beep = (freq, seconds) => events.emit('beep', { freq, seconds });
 const changed = () => events.emit('change');
 
 const ACTIVE = ['armed', 'running', 'paused'];
+const device = () => app.state.devices.controllable;
+const limits = () => device()?.limits ?? {};
 export const isActive = () => ACTIVE.includes(session.state);
 
 const MOVING_KMH = 0.5;      // above this the belt is moving
@@ -132,7 +133,7 @@ export function applyStep(i) {
 function pushIncline() {
   const step = currentStep();
   if (!step) return;
-  app.state.devices.controllable?.setIncline(Math.min(LIMITS.inclineMax, Math.max(LIMITS.inclineMin, step.incline + session.inclineAdjust)));
+  device()?.setTarget({ incline: step.incline + session.inclineAdjust }); // clamped by the treadmill
 }
 
 /** Sends the target speed if it changed (ramps and manual adjustments). */
@@ -140,10 +141,11 @@ export function pushTarget(force = false) {
   const step = currentStep();
   if (!step?.hasTarget) { session.target = null; return; }
   const base = targetSpeedAt(step, stepProgress(step));
-  const t = Math.round(Math.min(LIMITS.speedMax, Math.max(LIMITS.speedMin, base + session.adjust + session.hrAdjust)) * 10) / 10;
+  const l = limits();
+  const t = Math.round(Math.min(l.speedMax ?? Infinity, Math.max(l.speedMin ?? 0, base + session.adjust + session.hrAdjust)) * 10) / 10;
   if (force || t !== session.target) {
     session.target = t;
-    app.state.devices.controllable?.setSpeed(t);
+    device()?.setTarget({ speed: t });
   }
 }
 
@@ -371,7 +373,8 @@ function adjustForHr(step) {
   if (dir > 0 && session.hrLastRise != null && t - session.hrLastRise < HR_RISE_SPACING_S) return;
   if (byIncline) {
     // The incline moves within the treadmill's range; speed stays as planned
-    const next = Math.min(LIMITS.inclineMax - step.incline, Math.max(LIMITS.inclineMin - step.incline, session.inclineAdjust + inclineStep(delta)));
+    const l = limits();
+    const next = Math.min((l.inclineMax ?? Infinity) - step.incline, Math.max((l.inclineMin ?? 0) - step.incline, session.inclineAdjust + inclineStep(delta)));
     if (next === session.inclineAdjust) return;
     const applied = next - session.inclineAdjust;
     session.inclineAdjust = next;

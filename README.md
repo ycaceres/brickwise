@@ -125,13 +125,13 @@ On load, the running HR and pace zones are read from Intervals.icu (running spor
 
 How speed follows HR:
 
-HR is projected 30 s ahead with its slope over the last 20 s, so speed changes while HR is still heading somewhere instead of after it got there. Corrections are proportional: 0.1 km/h per bpm off target, between 0.1 and 0.5 km/h (`src/session/hr-control.js`).
+While HR climbs it is projected 30 s ahead with its slope over the last 30 s, so speed drops while HR is still heading up instead of after it got there. A falling HR is not projected, so a short dip does not ask for more speed. Corrections are proportional: 0.1 km/h per bpm off target, between 0.1 and 0.5 km/h when slowing down and at most 0.2 km/h when speeding up, because HR answers a rise 1–2 min later (`src/session/hr-control.js`). Tuning history and the sessions behind it: GitHub project *Adaptative*, starting with [#10](https://github.com/ycaceres/brickwise/issues/10).
 
-- **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR is heading above that cap, speed drops, up to 2 km/h in total. Once HR is 5 bpm below the cap and no longer rising, the removed speed returns.
-- **Steps with an HR target:** the starting speed comes from the matching pace zone. Then speed moves to keep HR in the **middle** of the range (±3 bpm), not at its top (at most +1.5 km/h and −2 km/h).
-- **α1 guard on aerobic steps (Z1–Z2):** with a chest strap, if α1 stays below 0.75 for 60 s, the effort is above the aerobic threshold even when HR is still in its zone, so speed drops 0.2 km/h and is never raised while it lasts. α1 is only trusted after the first 2 minutes and with a clean signal.
+- **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR is heading above that cap, speed drops, up to 2 km/h in total. Once HR is 5 bpm below the cap and no longer rising, the removed speed returns, 0.2 km/h at a time.
+- **Steps with an HR target:** the starting speed comes from the matching pace zone. Then speed moves to keep HR in the **middle** of the range (±3 bpm), not at its top (at most +1.5 km/h and −2 km/h). In Z1–Z2 it aims lower, at 40 % of the range (Z2 135–150 → 141), because VT1 tends to sit near the middle of Z2. Speed never rises while HR is still climbing.
+- **α1 guard on aerobic steps (Z1–Z2, not the warm-up, HR above Z1):** with a chest strap, if α1 stays below 0.75 for 60 s, the effort is above the aerobic threshold even when HR is still in its zone, so speed drops 0.2 km/h and is never raised while it lasts. α1 is only trusted after the first 2 minutes and with a clean signal; early in exercise and at easy effort it is not in steady state and reads low.
 - **Warm-up ramps end early** when the next step is aerobic (Z1–Z2): once HR has been at or above the top of Z1 for 5 s, the warm-up is over. Before harder steps the whole warm-up is kept.
-- The same correction must be asked for 10 s in a row, and at least 25 s pass between adjustments. Nothing is adjusted in the first 45 s of each step (2.5 min on HR-zone steps from Z3 up), because HR takes time to respond. Every adjustment is logged with its reason.
+- The same correction must be asked for 10 s in a row, and at least 25 s pass between adjustments (60 s between two rises). Nothing is adjusted in the first 45 s of each step (2.5 min on HR-zone steps from Z3 up), because HR takes time to respond. Every adjustment is logged with its reason.
 
 ## Threshold test (α1)
 

@@ -1,11 +1,12 @@
 /**
  * Configuration tab: color palette and language, kept in localStorage
- * (brickwise.theme, brickwise.lang). The palette is also applied by the
+ * (brickwise.theme, brickwise.lang; 'system' follows the browser's language). The palette is also applied by the
  * inline script in index.html before the page paints, to avoid a flash.
  */
 import { $ } from '../lib/dom.js';
 import * as settings from '../lib/settings.js';
-import { LANGUAGES, DEFAULT_LANGUAGE, setLanguage } from '../i18n/index.js';
+import { LANGUAGES, DEFAULT_LANGUAGE, setLanguage, t } from '../i18n/index.js';
+import { pickLanguage, browserLanguages } from '../i18n/detect.js';
 
 export const THEMES = ['system', 'light', 'dark', 'monochrome', 'vivid'];
 
@@ -16,12 +17,32 @@ function applyTheme(theme) {
   return theme;
 }
 
+/** The language to show for a choice: 'system' follows the browser. */
+const resolve = (choice) => (choice === 'system' ? pickLanguage(browserLanguages(), LANGUAGES.map((l) => l.code), DEFAULT_LANGUAGE) : choice);
+
 export function initConfig() {
   const theme = $('cfgTheme');
   const lang = $('cfgLang');
+  const system = new Option('', 'system');
+  const systemLabel = () => {
+    const code = resolve('system');
+    system.text = t('config.language.system', { name: LANGUAGES.find((l) => l.code === code)?.native ?? code });
+  };
+  lang.add(system);
   for (const { code, native } of LANGUAGES) lang.add(new Option(native, code));
   theme.value = applyTheme(settings.get('theme'));
-  setLanguage(settings.get('lang') ?? DEFAULT_LANGUAGE).then((code) => { lang.value = code; });
+  lang.value = settings.get('lang');
+  if (!lang.value) lang.value = 'system';
+  setLanguage(resolve(lang.value)).then(systemLabel);
   theme.onchange = () => settings.set('theme', applyTheme(theme.value));
-  lang.onchange = async () => settings.set('lang', await setLanguage(lang.value));
+  lang.onchange = async () => {
+    settings.set('lang', lang.value);
+    await setLanguage(resolve(lang.value));
+    systemLabel();
+  };
+  // The browser (or OS) language changed: follow it while the choice is "System"
+  window.addEventListener('languagechange', async () => {
+    if (lang.value === 'system') await setLanguage(resolve('system'));
+    systemLabel();
+  });
 }

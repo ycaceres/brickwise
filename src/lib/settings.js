@@ -19,7 +19,7 @@ export const SETTINGS = {
   workout:      { type: 'text' },                       // last library workout picked
   homeSport:    { type: 'text', fallback: 'all' },      // Home sport filter
   theme:        { type: 'text', fallback: 'system' },   // color palette (also read early by index.html)
-  lang:         { type: 'text' },                       // interface language
+  lang:         { type: 'text', fallback: 'system' },   // interface language ('system': the browser's)
   lastDevice:   { type: 'json', fallback: {} },         // last device connected per kind: { treadmill: { driver, name } }
   intervalsKey: { type: 'text', secret: true },         // Intervals.icu API key
   loadRetry:    { type: 'text', store: 'session' },     // app file download retries (index.html)

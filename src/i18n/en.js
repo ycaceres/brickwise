@@ -276,6 +276,7 @@ export default {
   'config.theme.vivid': 'Vivid',
   'config.themeNote': 'Chart and training zone colors stay the same in every palette.',
   'config.language': 'Language',
+  'config.language.system': 'System ({name})',
 
   // debug
   'debug.devices': 'Devices',

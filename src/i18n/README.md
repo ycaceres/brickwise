@@ -9,6 +9,12 @@ English (`en.js`) is the source and the fallback: every key exists there. Other 
 3. Run `npm test`: it checks that every key exists in English, that each message keeps the same `{placeholders}` and that plural messages have the forms the language needs. Missing keys are only a warning: English shows for them.
 4. Look at every page in the language (desktop and mobile, the 5 palettes): longer words must not break the layout.
 
+## Choosing the language
+
+1. A language chosen in Configuration is saved (`brickwise.lang`) and always wins.
+2. The default choice, **System**, follows the browser (which usually follows the operating system): `detect.js` walks `navigator.languages` and takes the first supported language, exactly or by its base language (`es-MX` → `es`, `fr-CA` → `fr`); with none, English. It follows the browser again when its language changes (`languagechange`).
+3. Regional variants share their base dictionary.
+
 ## Keys and messages
 
 - Keys are grouped by area: `nav.*`, `config.*`, `home.*`, `library.*`, `workout.*`, `run.*`, `ride.*`, `profile.*`, `chart.*`, `devices.*`, `common.*`.

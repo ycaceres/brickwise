@@ -92,3 +92,16 @@ test('i18n: HTML messages only use simple markup', () => {
     assert.ok(!/\son\w+=|javascript:/i.test(msg), `${key}: no handlers or javascript: links`);
   }
 });
+
+test('i18n: the browser language picks a supported one', async () => {
+  const { pickLanguage } = await import('../src/i18n/detect.js');
+  assert.equal(pickLanguage(['es-MX', 'en'], ['en', 'es']), 'es');
+  assert.equal(pickLanguage(['de-DE', 'fr-CA'], ['en', 'fr']), 'fr');
+  assert.equal(pickLanguage(['de'], ['en']), 'en');
+  assert.equal(pickLanguage([], ['en', 'es']), 'en');
+  assert.equal(pickLanguage(['EN-gb'], ['en', 'es']), 'en');
+  assert.equal(pickLanguage(['pt-BR', 'pt', 'es'], ['en', 'es']), 'es');
+  assert.equal(pickLanguage(['fr-CA'], ['fr', 'fr-CA']), 'fr-CA');
+  const { SETTINGS } = await import('../src/lib/settings.js');
+  assert.equal(SETTINGS.lang.fallback, 'system');
+});

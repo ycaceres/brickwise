@@ -103,7 +103,7 @@ body {
   padding: 16px 16px 16px calc(var(--sidebar-w) + 16px);
 }
 /* Left-aligned next to the sidebar: the gap to it is the body padding, whatever the width */
-main { max-width: 1120px; margin: 0; display: grid; gap: 16px; }
+main { max-width: 1120px; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .footer { text-align: center; padding: 8px 0 16px; }
 h1 { font-size: 20px; font-weight: 650; }
 h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 12px; }
@@ -145,9 +145,10 @@ label.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 
 /* Session bar: values with icons and controls */
 .dash { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); padding: 0; }
-.dash-half { display: grid; gap: 12px; padding: var(--pad); align-content: space-between; min-width: 0; }
+.dash-half { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: var(--pad); align-content: space-between; min-width: 0; }
 .dash-half + .dash-half { border-left: 1px solid var(--border); }
-.dash-split { grid-template-columns: 1fr 1fr; }
+/* Incline and pace side by side, one above the other when there is no room */
+.dash-split { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .dash-vals { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; }
 .dv { display: inline-flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 .dv b { font-size: clamp(26px, 4vw, 38px); font-weight: 700; line-height: 1.1; }
@@ -163,12 +164,14 @@ label.field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 /* Components keep no box of their own: their content lays out as if inline */
 bw-icon { display: contents; }
 bw-user-card, bw-zone-table, bw-workout-list, bw-chart { display: block; }
+/* Zone tables scroll sideways inside their card on a narrow phone */
+bw-zone-table { overflow-x: auto; }
 .ico { width: 22px; height: 22px; align-self: center; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .ico .fill { fill: currentColor; stroke: none; }
 button .ico { stroke: currentColor; }
 .dash-ctl { display: grid; gap: 4px; grid-template-rows: auto auto 1fr; min-width: 0; }
 .dash-ctl .pm { align-self: end; margin-top: 8px; }
-.dash-btns, .pm { display: flex; gap: 8px; }
+.dash-btns, .pm { display: flex; flex-wrap: wrap; gap: 8px; }
 .dash-note { grid-column: 1 / -1; padding: var(--pad); border-top: 1px solid var(--border); }
 /* Icon buttons as tall as the other controls */
 button.icon, .pm button { min-width: 44px; min-height: 40px; padding: 0 10px; display: inline-grid; place-items: center; font-size: 20px; line-height: 1; }
@@ -268,7 +271,7 @@ tr.done td { color: var(--muted); }
 .zones b { color: var(--text); font-weight: 600; min-width: 42px; }
 .zones span { display: inline-flex; align-items: center; gap: 4px; }
 .zones i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
-.tab { display: grid; gap: 16px; }
+.tab { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .user-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
 .user-id { flex: 1; min-width: 160px; }
 .user-name { font-size: 20px; font-weight: 650; }
@@ -290,12 +293,16 @@ tr.done td { color: var(--muted); }
 .sidebar .ico { stroke: currentColor; }
 .sidebar button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); }
 .stack { display: grid; gap: 16px; }
-.wlist { display: grid; gap: 6px; margin-top: 10px; max-height: 70vh; overflow-y: auto; }
-.filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); gap: 8px; }
-.filters select { width: 100%; }
-/* Home: day and sport side by side, reload at the end; full width on a phone */
-.home-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: end; }
-.home-filters input, .home-filters select { width: 100%; }
+.wlist { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 10px; max-height: 70vh; overflow-y: auto; }
+/* Duration, type (twice as wide) and level on one row; they wrap when narrow, so every value stays readable */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters .field { flex: 1 1 110px; min-width: 0; }
+.filters .field:nth-child(2) { flex: 2 1 180px; }
+.filters select { width: 100%; min-width: 0; }
+/* Home: day and sport side by side, reload at the end; they wrap to two rows when narrow */
+.home-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.home-filters .field { flex: 1 1 150px; min-width: 0; }
+.home-filters input, .home-filters select { width: 100%; min-width: 0; }
 button.link { border: 0; background: none; padding: 0; min-height: 0; color: var(--accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .witem { display: flex; align-items: center; gap: 8px; text-align: left; font-weight: 400; padding: 8px 12px; background: var(--surface); }
 .witem strong { font-weight: 650; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

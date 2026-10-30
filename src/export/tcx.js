@@ -1,6 +1,8 @@
 /**
  * Builds an indoor running TCX from the session samples.
- * samples: [{ t: epoch ms, distance: m, speed: km/h, hr: bpm|null }]
+ * samples: [{ t: epoch ms, distance: m, speed: km/h, hr: bpm|null, incline?: % }]
+ * With the incline, each point carries the altitude climbed so far (distance ×
+ * incline), so Garmin and Intervals.icu show the ascent of a treadmill run.
  */
 export function buildTcx(samples, { name = 'Brickwise run' } = {}) {
   if (!samples.length) throw new Error('No samples to export');
@@ -14,11 +16,15 @@ export function buildTcx(samples, { name = 'Brickwise run' } = {}) {
   const maxHr = hrs.length ? Math.max(...hrs) : null;
   const esc = (s) => s.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c]);
 
+  const withIncline = samples.some((s) => s.incline != null);
+  let altitude = 0;
   const points = samples
-    .map((s) => {
+    .map((s, i) => {
       const hr = s.hr > 0 ? `<HeartRateBpm><Value>${Math.round(s.hr)}</Value></HeartRateBpm>` : '';
+      if (i) altitude += Math.max(0, s.distance - samples[i - 1].distance) * ((s.incline ?? 0) / 100);
+      const alt = withIncline ? `<AltitudeMeters>${altitude.toFixed(1)}</AltitudeMeters>` : '';
       return (
-        `<Trackpoint><Time>${iso(s.t)}</Time><DistanceMeters>${s.distance.toFixed(1)}</DistanceMeters>${hr}` +
+        `<Trackpoint><Time>${iso(s.t)}</Time>${alt}<DistanceMeters>${s.distance.toFixed(1)}</DistanceMeters>${hr}` +
         `<Extensions><ns3:TPX><ns3:Speed>${(s.speed / 3.6).toFixed(3)}</ns3:Speed></ns3:TPX></Extensions></Trackpoint>`
       );
     })

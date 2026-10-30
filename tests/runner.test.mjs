@@ -139,3 +139,27 @@ test('runner: a ride drives the trainer with the step watts and pauses when peda
   assert.equal(session.state, 'done');
   assert.equal(sent.at(-1), 'stop');
 });
+
+test('runner: one sample per whole second even when ticks arrive late (smooth pace from distance)', async () => {
+  const { session, start, tick, finish } = await import('../src/session/runner.js');
+  const { setDevice, setSelection } = await import('../src/state.js');
+  const { live } = await import('../src/session/live.js');
+  const device = { connected: true, state: { updatedAt: 0 }, limits: { speedMin: 0.8, speedMax: 16 }, setTarget() {}, pause() {} };
+  setDevice('treadmill', device);
+  const step = { label: 'A', duration: 600, hasTarget: true, speedStart: 9, speedEnd: 9, incline: 0, hr: null };
+  setSelection({ key: 'l:grid', event: { name: 'Grid' }, steps: [step], hrOn: false });
+  let now = 500_000;
+  const at = (t) => { device.state.updatedAt = t; live.speed = 9; tick(t); };
+  at(now); // primes the clock
+  start();
+  // Ticks 260 ms apart (late, like a busy browser) and one 1.7 s stall
+  for (let i = 0; i < 120; i++) at((now += i === 60 ? 1700 : 260));
+  const s = session.samples;
+  assert.ok(s.length >= 30);
+  s.forEach((x, i) => assert.equal(x.elapsed, i)); // no second skipped
+  for (let i = 1; i < s.length; i++) {
+    assert.equal(s[i].t - s[i - 1].t, 1000);
+    assert.ok(Math.abs(s[i].distance - s[i - 1].distance - 2.5) < 1e-6); // 9 km/h = 2.5 m/s every second
+  }
+  finish('test over');
+});

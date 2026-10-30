@@ -15,3 +15,17 @@ test('buildTcx', () => {
   assert.equal((tcx.match(/<Trackpoint>/g) || []).length, 61);
   assert.throws(() => buildTcx([]));
 });
+
+test('buildTcx: altitude from the incline, so the ascent shows on Garmin and Intervals.icu', () => {
+  const t0 = Date.UTC(2026, 9, 30, 19, 46, 0);
+  const samples = Array.from({ length: 101 }, (_, i) => ({ t: t0 + i * 1000, distance: i * 2, speed: 7.2, hr: 130, incline: 2 }));
+  const tcx = buildTcx(samples);
+  const alts = [...tcx.matchAll(/<AltitudeMeters>([\d.]+)<\/AltitudeMeters>/g)].map((m) => Number(m[1]));
+  assert.equal(alts.length, 101);
+  assert.equal(alts[0], 0);
+  assert.equal(alts.at(-1), 4); // 200 m at 2 %
+  // Schema order inside a Trackpoint: Time, AltitudeMeters, DistanceMeters
+  assert.match(tcx, /<Time>[^<]+<\/Time><AltitudeMeters>[\d.]+<\/AltitudeMeters><DistanceMeters>/);
+  // Without incline (a ride) no altitude is written
+  assert.doesNotMatch(buildTcx(samples.map(({ incline, ...s }) => s)), /AltitudeMeters/);
+});

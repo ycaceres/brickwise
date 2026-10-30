@@ -77,7 +77,7 @@ export const session = {
   target: null,       // km/h the page is requesting right now
   stopSince: null,
   samples: [],
-  lastSampleAt: 0,
+  nextSample: 0,      // session second of the next sample
   startedAt: null,
   event: null,
   lastBeep: null,
@@ -87,7 +87,7 @@ export const session = {
 export function resetSession() {
   Object.assign(session, {
     state: 'idle', steps: [], stepIdx: 0, stepElapsed: 0, stepDist: 0, totalElapsed: 0, totalDist: 0,
-    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrOn: false, hrLastAdjust: null, hrLastRise: null, inclineAdjust: 0, testStart: null, testEnd: null, testLowSince: null, testMarks: {}, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], lastSampleAt: 0, startedAt: null, event: null, lastBeep: null,
+    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrOn: false, hrLastAdjust: null, hrLastRise: null, inclineAdjust: 0, testStart: null, testEnd: null, testLowSince: null, testMarks: {}, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], nextSample: 0, startedAt: null, event: null, lastBeep: null,
     stepStarts: [], uploaded: false, policy: null, targetPower: null,
   });
 }
@@ -260,10 +260,16 @@ export function tick(now = Date.now()) {
     session.stepElapsed += dt;
     session.stepDist += meters;
 
-    if (now - session.lastSampleAt >= 1000) {
-      session.lastSampleAt = now;
+    // One sample per whole second of session time, on an exact grid: ticks
+    // arrive a little late, and sampling "1 s after the last one" drifted
+    // (~1.04 s apart, a second skipped every ~26 s), which made the pace
+    // computed from distance and time spike in Strava. The distance at that
+    // second is taken back from this tick at the current speed.
+    while (session.totalElapsed >= session.nextSample) {
+      const back = session.totalElapsed - session.nextSample; // s since that second
       const sample = {
-        t: now, elapsed: session.totalElapsed, distance: session.totalDist,
+        t: Math.round(now - back * 1000), elapsed: session.nextSample,
+        distance: Math.max(0, session.totalDist - (pol.speed() / 3.6) * back),
         ...pol.sample(), hr: live.hr, target: pol.kind === 'trainer' ? session.targetPower : session.target,
       };
       // α1 only with RR: null = no value yet or bad signal
@@ -273,6 +279,7 @@ export function tick(now = Date.now()) {
       }
       rrState.pending = [];
       session.samples.push(sample);
+      session.nextSample += 1;
     }
 
     const step = currentStep();

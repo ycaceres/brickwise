@@ -159,6 +159,7 @@ Results are kept in **Profile › Threshold tests** (last 20, in this browser). 
 | File | What it does |
 |---|---|
 | `index.html` | The shell: sidebar, header with the device pills, footer and the startup scripts |
+| `manifest.webmanifest`, `sw.js`, `icons/` | Installable app (PWA): name, colors and icons; the service worker serves the latest version from the network and the cached copy when offline. `tools/icons.sh` renders the PNG icons from the SVGs |
 | `pages/*.html` | One file per page (home, config, profile, workouts, workout, run, ride, debug) |
 | `src/main.js`, `src/lib/pages.js` | Startup: loads every page in parallel, then calls each UI module's `init…()` and loads the data |
 | `src/components/` | Reusable custom elements (light DOM, so `css/app.css` and the palettes apply): `bw-icon`, `bw-user-card` (Home and Profile), `bw-zone-table` (running and cycling), `bw-workout-list` (Home and library), `bw-chart` (workout page and Run). Data goes in through properties; actions come out as bubbling events (`bw-select`, `bw-refresh`, `bw-signout`) |

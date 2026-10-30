@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Brickwise</title>
+  <!-- Installable app (PWA): manifest, icons and the browser bar color; sw.js is registered by src/main.js -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161a20" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="css/app.css">
   <!-- Saved color palette before the first paint (setting "theme" in src/lib/settings.js; src/ui/config.js keeps it in sync) -->
   <script>try { const t = localStorage.getItem('brickwise.theme'); if (t && t !== 'system') document.documentElement.dataset.theme = t; } catch { /* optional */ }</script>

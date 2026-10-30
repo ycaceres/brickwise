@@ -60,4 +60,6 @@ try {
   updateControls();
   loadWorkouts();
   settings.remove('loadRetry');
+  // Installable and usable offline (sw.js); optional, so a failure is only logged
+  navigator.serviceWorker?.register('sw.js').catch((err) => log('warn', `Service worker: ${err.message}`));
 }

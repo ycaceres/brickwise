@@ -294,8 +294,17 @@ export class SessionChart {
     el('line', { x1: MARGIN.left, x2: right, y1: bottom, y2: bottom, class: 'viz-baseline' }, svg);
 
     if (!this.plan.length && !this.samples.length) {
-      const msg = el('text', { x: MARGIN.left + plotW / 2, y: top + this.plotH / 2, class: 'viz-empty', 'text-anchor': 'middle' }, svg);
-      msg.textContent = t('chart.noWorkout');
+      // Wrapped by words to the plot's width (≈ 7 px per character at 13 px)
+      const width = Math.max(10, Math.floor((plotW - 16) / 7));
+      const lines = [];
+      for (const word of t('chart.noWorkout').split(' ')) {
+        const last = lines.length - 1;
+        if (last >= 0 && `${lines[last]} ${word}`.length <= width) lines[last] += ` ${word}`;
+        else lines.push(word);
+      }
+      const x = MARGIN.left + plotW / 2;
+      const msg = el('text', { x, y: top + this.plotH / 2 - ((lines.length - 1) * 16) / 2, class: 'viz-empty', 'text-anchor': 'middle' }, svg);
+      lines.forEach((line, i) => { el('tspan', { x, dy: i ? 16 : 0 }, msg).textContent = line; });
     }
 
     // Progress

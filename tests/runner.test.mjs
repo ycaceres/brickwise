@@ -50,10 +50,16 @@ test('runner: a short workout runs from the belt start to the end', async () => 
   assert.equal(session.stepIdx, 1);
   assert.ok(sent.some(([k, v]) => k === 'speed' && v === 9));
 
-  // And at its end the session is done and the belt pauses
+  // At its end the session is done and the belt slows down to a walk before
+  // it pauses: never from running speed to 0 at once
   for (let i = 0; i < 4; i++) at((now += 1000));
   assert.equal(session.state, 'done');
+  assert.notDeepEqual(sent.at(-1), ['pause']);
+  for (let i = 0; i < 40; i++) at((now += 1000));
   assert.deepEqual(sent.at(-1), ['pause']);
+  const end = sent.slice(sent.findIndex(([k, v]) => k === 'incline' && v === 0));
+  const slow = end.filter(([k]) => k === 'speed').map(([, v]) => v);
+  assert.deepEqual(slow, [7.5, 7, 6.5, 6, 5.5, 5, 4.5, 4, 3.5, 3]); // from the belt's 8 km/h
   assert.deepEqual(seen.active, [true, false]);
   assert.match(seen.notes.at(-1), /Workout complete/);
   assert.ok(seen.change >= 4);

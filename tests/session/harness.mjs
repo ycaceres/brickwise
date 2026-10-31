@@ -24,6 +24,7 @@ export function startSession({ steps, sport = 'run', hrOn = false, zones = true 
     limits: { speedMin: 0.8, speedMax: 16, inclineMin: 0, inclineMax: 10, powerMin: 0, powerMax: 1500 },
     setTarget: (t) => sent.push({ ...t, at: runner.session.totalElapsed }),
     pause: () => sent.push({ pause: true, at: runner.session.totalElapsed }),
+    pauseNow: () => sent.push({ pauseNow: true, at: runner.session.totalElapsed }),
     stop: () => sent.push({ stop: true, at: runner.session.totalElapsed }),
   };
   app.setDevice(kind, device);

@@ -11,7 +11,7 @@ import { buildTcx } from '../export/tcx.js';
 import { samplesToCsv } from '../export/csv.js';
 import * as intervals from '../services/intervals.js';
 import { live, rrState, rrActive } from '../session/live.js';
-import { session, events as sessionEvents, isActive, currentStep, applyStep, pushTarget, start, finish, cancel, pauseOnClose } from '../session/runner.js';
+import { session, events as sessionEvents, isActive, currentStep, applyStep, pushTarget, start, endSession, cancel, pauseOnClose } from '../session/runner.js';
 import { wakeError, requestWakeLock, releaseWakeLock, initWakeLock } from '../session/wake-lock.js';
 import { beep } from '../lib/sound.js';
 import { highlightSteps } from './workout.js';
@@ -229,8 +229,7 @@ export function initRun() {
   };
   $('btnFinish').onclick = () => {
     if (session.state === 'armed') { cancel(); return; }
-    finish(t('run.note.ended'));
-    app.state.devices.treadmill?.pause();
+    endSession(t('run.note.ended')); // the belt slows down to a walk, then pauses
   };
 
   $('btnCsv').onclick = () => {

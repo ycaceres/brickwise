@@ -43,6 +43,14 @@ export const isActive = () => ACTIVE.includes(session.state);
 
 const AUTO_PAUSE_MS = 2000;  // belt (or pedals) stopped this long → pause
 
+// Ending a run: the belt never goes from running speed to 0 at once (a
+// runner can stumble and fall). It slows down step by step to a walk, holds
+// it a moment, then pauses. STOP on the console or the safety key stop it at once.
+const STOP_WALK_KMH = 3.0;   // walking speed the belt slows down to
+const STOP_STEP_KMH = 0.5;   // km/h per step down…
+const STOP_STEP_S = 2;       // …every this many seconds (8 km/h → 3 in 20 s)
+const STOP_HOLD_S = 5;       // at walking speed this long, then the belt pauses
+
 // Speed adjustment by HR (steps carry the HR range of their zones)
 const HR_GRACE_S = 45;       // at the start of a step HR takes a while to respond
 const HR_HOLD_S = 10;        // the same correction must be asked for this long in a row
@@ -127,8 +135,7 @@ export function applyStep(i) {
   if (step?.test) session.testStart ??= session.totalElapsed;
   else if (session.testStart != null) session.testEnd ??= session.totalElapsed;
   if (!step) {
-    finish(t(policy().words.done));
-    stopDevice();
+    endSession(t(policy().words.done));
     return;
   }
   log('info', `Step ${i + 1}/${session.steps.length}: ${step.label}`);
@@ -163,7 +170,42 @@ function sendStep(force = false) {
 function stopDevice() {
   const d = device();
   if (policy().kind === 'trainer') d?.stop?.();
-  else d?.pause();
+  else slowDownToStop(d);
+}
+
+/** Ends the session and stops the device (gently on a treadmill): the end of the workout and ■. */
+export function endSession(message) {
+  finish(message);
+  stopDevice();
+}
+
+let slowdown = null; // { device, speed, next: ms } while the belt slows down to a stop
+
+/** Starts slowing the belt down: incline to 0, then speed down to a walk (see STOP_*). */
+function slowDownToStop(d) {
+  if (!d) return;
+  const from = Math.round(live.speed * 10) / 10;
+  if (from <= STOP_WALK_KMH) { slowdown = null; d.pause(); return; }
+  slowdown = { device: d, speed: from, next: 0 };
+  d.setTarget({ incline: d.limits?.inclineMin ?? 0 });
+  log('info', `Slowing down from ${from.toFixed(1)} km/h to ${STOP_WALK_KMH.toFixed(1)} km/h, then the belt pauses`);
+}
+
+/** One step of the slow-down, every tick until the belt pauses. */
+function slowDownStep(now) {
+  const s = slowdown;
+  // Paused or stopped from the console, or the treadmill went away: nothing left to do
+  if (!s.device.connected || !POLICIES.run.moving()) { slowdown = null; return; }
+  if (now < s.next) return;
+  if (s.speed > STOP_WALK_KMH) {
+    s.speed = Math.max(STOP_WALK_KMH, Math.round((s.speed - STOP_STEP_KMH) * 10) / 10);
+    s.device.setTarget({ speed: s.speed });
+    s.next = now + (s.speed > STOP_WALK_KMH ? STOP_STEP_S : STOP_HOLD_S) * 1000;
+    return;
+  }
+  slowdown = null;
+  s.device.pause();
+  log('info', 'Walking speed reached: belt paused');
 }
 
 /** Sends the ride step's watts (ramps follow the progress) when they change. */
@@ -198,6 +240,7 @@ export function pushTarget(force = false) {
 }
 
 export function start() {
+  slowdown = null;
   resetSession();
   session.steps = app.state.selection ? app.state.selection.steps : [];
   session.event = app.state.selection ? app.state.selection.event : null;
@@ -234,6 +277,7 @@ export function finish(message) {
 
 export function tick(now = Date.now()) {
   updateAlpha();
+  if (slowdown) slowDownStep(now);
   // Up to 5 s: with the tab hidden ticks may spread out without losing distance
   const dt = Math.min(5, (now - (tick.last || now)) / 1000);
   tick.last = now;
@@ -493,7 +537,9 @@ function adjustForHr(step) {
 // START on the console resumes it.
 let unloadPausedAt = 0;
 export function pauseOnClose() {
-  if (!isActive() || !device()?.connected) return;
+  // Also while the belt slows down after the end: nobody will be there to pause it
+  if ((!isActive() && !slowdown) || !device()?.connected) return;
+  slowdown = null;
   if (Date.now() - unloadPausedAt < 1000) return;
   unloadPausedAt = Date.now();
   device().pauseNow();

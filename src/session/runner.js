@@ -12,7 +12,7 @@ import { createEmitter } from '../lib/events.js';
 import { targetSpeedAt } from '../workouts/steps.js';
 import { VT1, VT2 } from '../physiology/hrv.js';
 import { analyzeRamp } from '../physiology/thresholds.js';
-import { hrDecision, hrSlope, inclineStep, alphaGuardApplies, SLOPE_WINDOW_S, AEROBIC_AIM } from './hr-control.js';
+import { hrDecision, hrSlope, inclineStep, alphaVetoApplies, alphaDropApplies, SLOPE_WINDOW_S, AEROBIC_AIM } from './hr-control.js';
 import { live, rrState, rrActive, updateAlpha } from './live.js';
 import { addTest, testText } from './test-history.js';
 import { policyFor, isStale, powerAt, POLICIES } from './policies.js';
@@ -50,7 +50,10 @@ const HR_SPACING_S = 25;     // between one adjustment and the next
 const HR_RISE_SPACING_S = 60; // between two rises: HR answers a rise 1–2 min later (#10)
 const HR_MAX_DOWN = 2.0;     // at most this much below the target
 const HR_MAX_UP = 1.5;       // only on steps with an HR target
-const ALPHA_HOLD_S = 60;     // α1 below VT1 this long on an aerobic step → slow down
+const ALPHA_HOLD_S = 60;     // median α1 of this many seconds below VT1 → the α1 guard is on
+const ALPHA_RELEASE = 0.8;   // the guard turns off once the median α1 is above this…
+const ALPHA_RELEASE_S = 60;  // …over this many seconds (hysteresis: VT1 alone flipped it back and forth, #10)
+const ALPHA_DROP_SPACING_S = 90; // between α1 drops: the 2 min α1 window needs time to show a change (#10)
 const ALPHA_MIN_S = 120;     // into the session before α1 is trusted (full 2 min window)
 const WARMUP_HOLD_S = 5;     // HR at the top of Z1 this long ends a warm-up ramp
 const INCLINE_SPACING_S = 40; // between incline adjustments (the motor is slow and noisy)
@@ -72,7 +75,9 @@ export const session = {
   hrWantDir: 0,       // direction of that correction: -1, 0 or 1
   hrLastAdjust: null, // step s of the last HR adjustment
   hrLastRise: null,   // step s of the last HR adjustment that raised speed
-  alphaLowSince: null, // session s since α1 has been below VT1
+  alphaGuard: false,  // α1 guard on: no rises on aerobic steps, and drops (see hr-control.js)
+  alphaLastDrop: null, // session s of the last α1 drop
+  reason: null,       // why speed last changed, for the next sample (CSV)
   warmupHrSince: null, // step s since HR has been at the top of Z1 in a warm-up ramp
   target: null,       // km/h the page is requesting right now
   stopSince: null,
@@ -87,7 +92,7 @@ export const session = {
 export function resetSession() {
   Object.assign(session, {
     state: 'idle', steps: [], stepIdx: 0, stepElapsed: 0, stepDist: 0, totalElapsed: 0, totalDist: 0,
-    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrOn: false, hrLastAdjust: null, hrLastRise: null, inclineAdjust: 0, testStart: null, testEnd: null, testLowSince: null, testMarks: {}, alphaLowSince: null, warmupHrSince: null, target: null, stopSince: null, samples: [], nextSample: 0, startedAt: null, event: null, lastBeep: null,
+    adjust: 0, hrAdjust: 0, hrOutSince: null, hrWantDir: 0, hrOn: false, hrLastAdjust: null, hrLastRise: null, inclineAdjust: 0, testStart: null, testEnd: null, testLowSince: null, testMarks: {}, alphaGuard: false, alphaLastDrop: null, reason: null, warmupHrSince: null, target: null, stopSince: null, samples: [], nextSample: 0, startedAt: null, event: null, lastBeep: null,
     stepStarts: [], uploaded: false, policy: null, targetPower: null,
   });
 }
@@ -104,6 +109,7 @@ function stepProgress(step) {
 }
 
 export function applyStep(i) {
+  const before = session.target; // the speed the previous step ended at
   session.stepIdx = i;
   session.stepStarts[i] = session.totalElapsed;
   session.stepElapsed = 0;
@@ -127,8 +133,23 @@ export function applyStep(i) {
   }
   log('info', `Step ${i + 1}/${session.steps.length}: ${step.label}`);
   beep(i === 0 ? 660 : 880, 0.25);
+  coolDownFrom(step, before);
   sendStep(true);
   changed();
+}
+
+/**
+ * A cool-down starts no faster than the step before it ended: after HR
+ * brought the main step down to 7.1 km/h, a ramp from 7.6 sped the athlete
+ * up (2026-10-30, #10). The ramp keeps its shape from there.
+ */
+function coolDownFrom(step, before) {
+  if (!step.cooldown || !step.hasTarget || before == null || policy().kind !== 'treadmill') return;
+  const base = targetSpeedAt(step, 0);
+  if (before >= base) return;
+  session.hrAdjust = Math.max(-HR_MAX_DOWN, Math.round((before - base) * 10) / 10);
+  session.reason = `cool-down from ${before.toFixed(1)} km/h`;
+  log('info', `Cool-down starts at ${before.toFixed(1)} km/h, not ${base.toFixed(1)}: the previous step ended there`);
 }
 
 /** Sends the current step's targets: speed and incline on a treadmill, power on a trainer. */
@@ -271,6 +292,7 @@ export function tick(now = Date.now()) {
         t: Math.round(now - back * 1000), elapsed: session.nextSample,
         distance: Math.max(0, session.totalDist - (pol.speed() / 3.6) * back),
         ...pol.sample(), hr: live.hr, target: pol.kind === 'trainer' ? session.targetPower : session.target,
+        ...sampleControl(),
       };
       // α1 only with RR: null = no value yet or bad signal
       if (rrActive()) {
@@ -363,12 +385,43 @@ function saveTestResult() {
   events.emit('test', { result });
 }
 
-/** α1 has been below VT1 for ALPHA_HOLD_S with a clean signal (tracked every tick). */
-function alphaLow() {
+/**
+ * What the control was doing in a sample, so a CSV alone explains the
+ * session (#10): the step, the HR range it followed, the speed HR added or
+ * removed, and why speed changed (only on the second it did).
+ */
+function sampleControl() {
+  const step = currentStep();
+  const hr = session.hrOn && step?.hr && step.hr.mode !== 'info' ? step.hr : null;
+  const reason = session.reason;
+  session.reason = null;
+  return { step: step ? session.stepIdx + 1 : null, hrLo: hr?.lo ?? null, hrHi: hr?.hi ?? null, hrAdjust: session.hrAdjust, reason };
+}
+
+/**
+ * The α1 guard: on once the median α1 of the last ALPHA_HOLD_S seconds is
+ * below VT1, off again only once the median of the last ALPHA_RELEASE_S is
+ * above ALPHA_RELEASE. A median, not "every value below": α1 near VT1 has
+ * single readings above it (0.98, 0.89 among 0.6s on 2026-10-30), and each
+ * one restarted the count, so the guard came on 3 min late (#10). Without α1
+ * (no strap, bad signal) it is off.
+ */
+function alphaGuard() {
   const a = rrActive() ? rrState.alpha?.alpha1 : null;
-  if (a == null || a >= VT1 || session.totalElapsed < ALPHA_MIN_S) { session.alphaLowSince = null; return false; }
-  session.alphaLowSince ??= session.totalElapsed;
-  return session.totalElapsed - session.alphaLowSince >= ALPHA_HOLD_S;
+  const now = session.totalElapsed;
+  if (a == null || now < ALPHA_MIN_S) { session.alphaGuard = false; return false; }
+  const span = session.alphaGuard ? ALPHA_RELEASE_S : ALPHA_HOLD_S;
+  const recent = session.samples.filter((s) => s.elapsed > now - span && s.elapsed >= ALPHA_MIN_S && s.alpha1 != null).map((s) => s.alpha1);
+  if (recent.length < span * 0.75) return session.alphaGuard; // not enough of the window yet
+  const median = recent.sort((x, y) => x - y)[Math.floor(recent.length / 2)];
+  if (!session.alphaGuard && median < VT1) {
+    session.alphaGuard = true;
+    if (session.hrOn) log('info', `α1 ${median.toFixed(2)} (median of ${ALPHA_HOLD_S} s) below ${VT1}: no more speed on aerobic steps until it is above ${ALPHA_RELEASE}`);
+  } else if (session.alphaGuard && median > ALPHA_RELEASE) {
+    session.alphaGuard = false;
+    if (session.hrOn) log('info', `α1 ${median.toFixed(2)} (median of ${ALPHA_RELEASE_S} s) above ${ALPHA_RELEASE}: α1 guard off`);
+  }
+  return session.alphaGuard;
 }
 
 /**
@@ -378,22 +431,26 @@ function alphaLow() {
  *   the top of the matching zone; once HR is back below, it returns.
  * - Step with an HR target ('target'): speed moves to keep HR in the middle
  *   of the range (lower on aerobic steps).
- * - Aerobic steps (Z1–Z2, past the warm-up, HR above Z1): speed also drops
- *   while α1 stays below VT1.
+ * - Aerobic steps (Z1–Z2, not the warm-up nor the cool-down): while the α1
+ *   guard is on speed never rises, and with HR above Z1 it also drops, at
+ *   most every ALPHA_DROP_SPACING_S.
  * The same correction must be asked for HR_HOLD_S in a row, and at least
  * HR_SPACING_S pass between adjustments (HR_RISE_SPACING_S between rises),
  * because HR responds with a lag.
  */
 function adjustForHr(step) {
-  const low = alphaLow();
+  const guard = alphaGuard();
   if (!session.hrOn || !step.hr || step.hr.mode === 'info' || !step.hasTarget || !live.hr) return;
   const t = session.stepElapsed;
   if (t < (step.hr.settle ?? HR_GRACE_S)) return;
   const { lo, hi, mode } = step.hr;
   const recent = session.samples.filter((s) => s.elapsed > session.totalElapsed - SLOPE_WINDOW_S);
-  const { delta, reason } = hrDecision({
+  const where = { zone: step.zone, warmup: step.warmup, cooldown: step.cooldown, hr: live.hr, z1Top: app.state.zones?.hr[0]?.hi };
+  const veto = guard && alphaVetoApplies(where);
+  const spaced = session.alphaLastDrop == null || session.totalElapsed - session.alphaLastDrop >= ALPHA_DROP_SPACING_S;
+  const { delta, reason, alpha } = hrDecision({
     mode, lo, hi, hr: live.hr, slope: hrSlope(recent), hrAdjust: session.hrAdjust,
-    alphaLow: low && alphaGuardApplies({ zone: step.zone, warmup: step.warmup, hr: live.hr, z1Top: app.state.zones?.hr[0]?.hi }),
+    alphaVeto: veto, alphaDrop: veto && spaced && alphaDropApplies(where), giveBack: !step.cooldown,
     aim: mode === 'target' && step.zone != null && step.zone <= 2 ? AEROBIC_AIM : 0.5,
   });
   const dir = Math.sign(delta);
@@ -423,6 +480,8 @@ function adjustForHr(step) {
   }
   session.hrLastAdjust = t;
   if (dir > 0) session.hrLastRise = t;
+  if (alpha) session.alphaLastDrop = session.totalElapsed;
+  session.reason = reason;
   session.hrOutSince = null;
   session.hrWantDir = 0;
 }

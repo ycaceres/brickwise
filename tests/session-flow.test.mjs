@@ -157,6 +157,41 @@ test('csv (#10): step, HR range, HR adjustment and the reason of each change', (
   assert.match(changed[0], /,1,135,150,-0\.5,"?HR → \d+, aiming at 141"?$/);
 });
 
+test('flow: at the end the belt slows down to a walk, 0.5 km/h every 2 s, holds 5 s, then pauses', () => {
+  const h = startSession({ steps: [runStep({ duration: 30, speedStart: 6, speedEnd: 6 })] });
+  h.run(31, { speed: 6 });
+  assert.equal(h.session.state, 'done');
+  assert.ok(!h.sent.some((x) => x.pause), 'no pause from running speed');
+  assert.equal(h.sent.at(-1).speed, 5.5);
+  const t0 = h.sent.length;
+  h.run(30, { speed: 6 });                                // the speed reading lags: it does not matter
+  const after = h.sent.slice(t0 - 1);
+  assert.deepEqual(after.filter((x) => x.speed != null).map((x) => x.speed), [5.5, 5, 4.5, 4, 3.5, 3]);
+  assert.ok(after.at(-1).pause, 'then it pauses');
+  assert.equal(h.sent.filter((x) => x.pause).length, 1);
+
+  // A slow belt (a walk) pauses at once
+  const walk = startSession({ steps: [runStep({ duration: 20, speedStart: 3, speedEnd: 3 })] });
+  walk.run(21, { speed: 3 });
+  assert.ok(walk.sent.at(-1).pause);
+});
+
+test('flow: the slow-down stops if the belt is paused from the console, and the page closing pauses at once', () => {
+  const h = startSession({ steps: [runStep({ duration: 20 })] });
+  h.run(21, { speed: 9 });
+  h.run(3, { speed: 0 });                                 // PAUSE on the console
+  h.run(30, { speed: 0 });
+  assert.ok(!h.sent.some((x) => x.pause), 'nothing more is sent');
+
+  const c = startSession({ steps: [runStep({ duration: 20 })] });
+  c.run(23, { speed: 9 });
+  c.runner.pauseOnClose();
+  assert.ok(c.sent.at(-1).pauseNow, 'closing the page while slowing down pauses the belt');
+  const n = c.sent.length;
+  c.run(30, { speed: 9 });
+  assert.equal(c.sent.length, n, 'and the slow-down is over');
+});
+
 test('flow: the real treadmill simulator drives a session', async () => {
   const { getDriver } = await import('../src/devices/registry.js');
   const h = startSession({ steps: [runStep({ speedStart: 8, speedEnd: 8 })] });

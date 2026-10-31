@@ -53,13 +53,13 @@ test('flow: no rise while HR is still climbing', () => {
   assert.equal(h.speeds().length, 1);
 });
 
-test('flow: α1 guard slows an aerobic step after 120 s + 60 s of low α1, but not in the warm-up or under Z1', () => {
+test('flow: α1 guard slows an aerobic step once α1 is trusted (120 s) and low for most of a minute, but not in the warm-up or under Z1', () => {
   const aerobic = startSession({ steps: [runStep({ hr: Z2 })], hrOn: true });
-  aerobic.run(175, { hr: 141, alpha1: 0.6 });   // HR on the aim (40 % of Z2): only α1 can move it
+  aerobic.run(160, { hr: 141, alpha1: 0.6 });   // HR on the aim (40 % of Z2): only α1 can move it
   assert.equal(aerobic.speeds().length, 1);
-  aerobic.run(30, { hr: 141, alpha1: 0.6 });
+  aerobic.run(40, { hr: 141, alpha1: 0.6 });
   const drop = aerobic.speeds()[1];
-  assert.ok(drop && drop.at >= 180, 'drop after ALPHA_MIN_S + ALPHA_HOLD_S');
+  assert.ok(drop && drop.at >= 165, 'drop after ALPHA_MIN_S + 45 s of α1 (¾ of the minute) + the 10 s hold');
   assert.equal(drop.speed, 8.8);
 
   const warmup = startSession({ steps: [runStep({ hr: { ...Z2, mode: 'cap' }, warmup: true })], hrOn: true });
@@ -97,6 +97,66 @@ test('flow (#10): a short HR dip does not justify a rise; a long one does', () =
   }
 });
 
+test('flow (#10, 2026-10-30): HR at the Z1/Z2 boundary with low α1 no longer saws ±0.2', () => {
+  // HR swings 132 (Z1) ↔ 136 (Z2) every 40 s with α1 ≈ 0.5: the HR target rose in Z1, the α1 guard dropped in Z2
+  const h = startSession({ steps: [runStep({ hr: { lo: 135, hi: 148, mode: 'target' }, duration: 1500 })], hrOn: true });
+  h.run(1400, { hr: (t) => (Math.floor(t / 40) % 2 ? 136 : 132), alpha1: 0.5 });
+  // α1 counts from 120 s and the guard needs most of a minute of it: from then on, only drops
+  const all = h.speeds();
+  const sp = all.filter((x) => x.at >= 180);
+  const rises = sp.filter((x) => x.speed > all[all.indexOf(x) - 1].speed);
+  assert.equal(rises.length, 0, `no rise once α1 is low: ${JSON.stringify(all)}`);
+  assert.ok(sp.length >= 3, 'α1 still brings speed down');
+  assert.ok(gaps(sp).every((g) => g >= 90), `α1 drops at least 90 s apart: ${gaps(sp)}`);
+});
+
+test('flow (#10): the α1 guard turns off only once the median α1 of a minute is above 0.80', () => {
+  const h = startSession({ steps: [runStep({ hr: Z2, duration: 1500 })], hrOn: true });
+  h.run(200, { hr: 130, alpha1: 0.6 });                   // guard on from ~165 s (HR in Z1: no drop)
+  assert.equal(h.session.alphaGuard, true);
+  const before = h.speeds().length;                       // rises before α1 counted are allowed
+  h.run(300, { hr: 130, alpha1: 0.78 });                  // above VT1 but under the release
+  assert.equal(h.session.alphaGuard, true);
+  assert.equal(h.speeds().length, before, 'no rise while the guard is on');
+  h.run(20, { hr: 130, alpha1: 0.85 });                  // a third of the minute: the median is still low
+  assert.equal(h.session.alphaGuard, true);
+  h.run(90, { hr: 130, alpha1: 0.85 });
+  assert.equal(h.session.alphaGuard, false);
+  assert.ok(h.speeds().length > before, 'HR under the aim can rise again');
+});
+
+test('flow (#10): single α1 readings above VT1 do not keep the guard off', () => {
+  // 2026-10-30, 9–12 min: α1 0.55–0.7 with readings of 0.98, 0.89, 0.82 every half minute
+  const h = startSession({ steps: [runStep({ hr: Z2, duration: 1500 })], hrOn: true });
+  h.run(240, { hr: 130, alpha1: (t) => (t % 30 < 5 ? 0.95 : 0.6) });
+  assert.equal(h.session.alphaGuard, true);
+});
+
+test('flow (#10): the cool-down starts no faster than the main step ended, and gives nothing back', () => {
+  const h = startSession({ steps: [
+    runStep({ label: 'Z2', hr: Z2, duration: 300 }),
+    runStep({ label: 'Cool-down', cooldown: true, ramp: true, speedStart: 8.5, speedEnd: 7.5, duration: 300, hr: { ...Z2, mode: 'cap' } }),
+  ], hrOn: true });
+  h.run(300, { hr: 160 });                                // HR high: the main step comes down
+  const ended = h.session.samples.at(-1).target;
+  assert.ok(ended < 8.5, `main step ended at ${ended}`);
+  h.run(5, { hr: 130 });
+  assert.equal(h.session.stepIdx, 1);
+  assert.equal(h.session.target, ended, 'cool-down starts where the main step ended');
+  h.run(200, { hr: 120 });                                // HR well under the cap: no give-back in the cool-down
+  assert.ok(h.speeds().filter((x) => x.at > 300).every((x) => x.speed <= ended));
+});
+
+test('csv (#10): step, HR range, HR adjustment and the reason of each change', () => {
+  const h = startSession({ steps: [runStep({ hr: Z2 })], hrOn: true });
+  h.run(80, { hr: 160 });
+  const csv = samplesToCsv(h.session.samples).split('\n');
+  assert.match(csv[0], /,step,hr_lo,hr_hi,hr_adjust_kmh,reason$/);
+  const changed = csv.filter((l) => /aiming at/.test(l));
+  assert.equal(changed.length, 1);
+  assert.match(changed[0], /,1,135,150,-0\.5,"?HR → \d+, aiming at 141"?$/);
+});
+
 test('flow: the real treadmill simulator drives a session', async () => {
   const { getDriver } = await import('../src/devices/registry.js');
   const h = startSession({ steps: [runStep({ speedStart: 8, speedEnd: 8 })] });
@@ -117,5 +177,5 @@ test('flow: the real treadmill simulator drives a session', async () => {
 
 test('csv: ride samples (no incline) export', () => {
   const csv = samplesToCsv([{ elapsed: 1, distance: 8, speed: 30, power: 200, cadence: 90, hr: 120, target: 200 }]);
-  assert.match(csv.split('\n')[1], /^1,30\.00,2:00,200,,120,8\.0,,$/);
+  assert.match(csv.split('\n')[1], /^1,30\.00,2:00,200,,120,8\.0,,,,,,,$/);
 });

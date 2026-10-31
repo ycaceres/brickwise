@@ -12,9 +12,14 @@
  * - Steps that follow HR by incline use the same decision, turned into
  *   incline by inclineStep().
  * - α1 guard: on aerobic steps (Z1–Z2), a sustained α1 below VT1 means the
- *   effort is above the aerobic threshold even if HR is still in its zone,
- *   so speed drops and never rises. Not in the warm-up nor with HR in Z1,
- *   where α1 is not in steady state (#10).
+ *   effort is above the aerobic threshold even if HR is still in its zone.
+ *   It has two parts (#10, 2026-10-30):
+ *   - veto: speed never rises, even with HR in Z1. Without it the HR target
+ *     (aiming at ~40 % of Z2) and the guard fought at the Z1/Z2 boundary,
+ *     a ±0.2 km/h sawtooth for 27 min;
+ *   - drop: speed goes down, but not in the warm-up nor with HR in Z1, where
+ *     α1 is not in steady state.
+ *   Neither acts in the cool-down, which already slows down.
  */
 
 import { VT1 } from '../physiology/hrv.js';
@@ -55,13 +60,15 @@ export function hrSlope(samples) {
 /**
  * Speed change (km/h) the HR asks for right now; 0 = leave it.
  * @param {{mode: 'cap'|'target', lo: number, hi: number, hr: number, slope: number,
- *          hrAdjust: number, alphaLow: boolean, aim?: number}} p
+ *          hrAdjust: number, alphaVeto?: boolean, alphaDrop?: boolean, giveBack?: boolean, aim?: number}} p
  *   hrAdjust: km/h already removed (< 0) or added (> 0) in this step.
- *   alphaLow: α1 has been below VT1 long enough on an aerobic step.
+ *   alphaVeto: α1 is below VT1 on an aerobic step: no rise.
+ *   alphaDrop: and speed should come down for it (see alphaDropApplies).
+ *   giveBack: a capped step may return what HR took (not in the cool-down).
  *   aim: where in the range an HR target aims (0 = bottom, 0.5 = middle).
- * @returns {{delta: number, reason: string}}
+ * @returns {{delta: number, reason: string, alpha: boolean}} alpha: the change is the α1 drop.
  */
-export function hrDecision({ mode, lo, hi, hr, slope, hrAdjust, alphaLow, aim = 0.5 }) {
+export function hrDecision({ mode, lo, hi, hr, slope, hrAdjust, alphaVeto = false, alphaDrop = false, giveBack = true, aim = 0.5 }) {
   const projected = hr + Math.max(0, slope) * LEAD_S;
   const climbing = slope > RISING;
   let delta = 0;
@@ -73,7 +80,7 @@ export function hrDecision({ mode, lo, hi, hr, slope, hrAdjust, alphaLow, aim = 
     if (off > DEADBAND) {
       delta = -stepFor(off - DEADBAND);
       reason = `HR → ${Math.round(projected)}, aiming at ${Math.round(goal)}`;
-    } else if (off < -DEADBAND && !alphaLow && !climbing) {
+    } else if (off < -DEADBAND && !alphaVeto && !climbing) {
       delta = riseFor(-off - DEADBAND);
       reason = `HR → ${Math.round(projected)}, aiming at ${Math.round(goal)}`;
     }
@@ -81,27 +88,34 @@ export function hrDecision({ mode, lo, hi, hr, slope, hrAdjust, alphaLow, aim = 
     if (projected > hi) {
       delta = -stepFor(projected - hi);
       reason = `HR → ${Math.round(projected)}, cap ${hi}`;
-    } else if (hrAdjust < 0 && hr < hi - CAP_MARGIN && slope <= 0 && !alphaLow) {
+    } else if (giveBack && hrAdjust < 0 && hr < hi - CAP_MARGIN && slope <= 0 && !alphaVeto) {
       delta = Math.min(-hrAdjust, riseFor(hi - CAP_MARGIN - hr));
       reason = `HR ${hr} back under cap ${hi}`;
     }
   }
 
-  if (alphaLow && delta >= 0) {
+  let alpha = false;
+  if (alphaDrop && delta >= 0) {
     delta = -ALPHA_STEP;
     reason = `α1 below ${VT1} with HR ${hr}`;
+    alpha = true;
   }
-  return { delta: round1(delta), reason };
+  return { delta: round1(delta), reason, alpha };
+}
+
+/** Whether a low α1 blocks rises on a step: aerobic (Z1–Z2), not the warm-up nor the cool-down. */
+export function alphaVetoApplies({ zone, warmup, cooldown }) {
+  return zone != null && zone <= 2 && !warmup && !cooldown;
 }
 
 /**
- * Whether the α1 guard may act on a step: aerobic (Z1–Z2), not the warm-up,
- * and HR above Z1. Early in exercise and at easy effort α1 is not in steady
- * state and reads low (2026-10-28: 0.52–0.70 at 114–117 bpm, 0.83 later at
- * 142 bpm), which slowed a warm-up for nothing (#10).
+ * Whether a low α1 also brings speed down: as the veto, and HR above Z1.
+ * Early in exercise and at easy effort α1 is not in steady state and reads
+ * low (2026-10-28: 0.52–0.70 at 114–117 bpm, 0.83 later at 142 bpm), which
+ * slowed a warm-up for nothing (#10).
  */
-export function alphaGuardApplies({ zone, warmup, hr, z1Top }) {
-  return zone != null && zone <= 2 && !warmup && !(z1Top && hr <= z1Top);
+export function alphaDropApplies({ zone, warmup, cooldown, hr, z1Top }) {
+  return alphaVetoApplies({ zone, warmup, cooldown }) && !(z1Top && hr <= z1Top);
 }
 
 /**

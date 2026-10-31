@@ -108,6 +108,7 @@ With a chest strap that sends RR intervals (time between beats; nearly all do: P
 - **> 0.75:** below the aerobic threshold (aerobic). **0.5–0.75:** transition. **< 0.5:** above the anaerobic threshold.
 - It shows to the right of HR in the bar and as a **color ribbon under the chart**. Gray: computing (~90 beats needed) or a signal with more than 5 % artifacts (missed or double beats; common with a dry strap).
 - The CSV stores `alpha1` and each second's RRs (`rr_ms`, separated by `;`). TCX has no field for RRs, so they do not reach Intervals.icu yet.
+- It also says what the control did: `step`, the HR range followed (`hr_lo`, `hr_hi`), the km/h HR added or removed (`hr_adjust_kmh`), and the `reason` on the second speed changed. One row per second of session time.
 - With an optical sensor or no strap nothing shows. Simulation mode generates test RRs.
 
 ## Zones and HR adjustment
@@ -129,7 +130,8 @@ While HR climbs it is projected 30 s ahead with its slope over the last 30 s, so
 
 - **Steps with a pace target:** the HR cap is that of the HR zone in the same position (pace Z2 → HR Z2). If HR is heading above that cap, speed drops, up to 2 km/h in total. Once HR is 5 bpm below the cap and no longer rising, the removed speed returns, 0.2 km/h at a time.
 - **Steps with an HR target:** the starting speed comes from the matching pace zone. Then speed moves to keep HR in the **middle** of the range (±3 bpm), not at its top (at most +1.5 km/h and −2 km/h). In Z1–Z2 it aims lower, at 40 % of the range (Z2 135–150 → 141), because VT1 tends to sit near the middle of Z2. Speed never rises while HR is still climbing.
-- **α1 guard on aerobic steps (Z1–Z2, not the warm-up, HR above Z1):** with a chest strap, if α1 stays below 0.75 for 60 s, the effort is above the aerobic threshold even when HR is still in its zone, so speed drops 0.2 km/h and is never raised while it lasts. α1 is only trusted after the first 2 minutes and with a clean signal; early in exercise and at easy effort it is not in steady state and reads low.
+- **α1 guard on aerobic steps (Z1–Z2, not the warm-up nor the cool-down):** with a chest strap, once the median α1 of the last minute is below 0.75 the effort is above the aerobic threshold even when HR is still in its zone. While the guard is on, speed is **never raised** (even with HR in Z1), and with HR above Z1 it also **drops 0.2 km/h**, at most every 90 s (the 2-minute α1 window needs that long to show a change). It turns off only once the median α1 of a minute is above 0.80. α1 is only trusted after the first 2 minutes and with a clean signal; early in exercise and at easy effort it is not in steady state and reads low, which is why it does not slow down a warm-up or HR in Z1.
+- **Cool-down:** it starts no faster than the previous step ended (when HR had brought that step down) and keeps its ramp from there, without giving speed back.
 - **Warm-up ramps end early** when the next step is aerobic (Z1–Z2): once HR has been at or above the top of Z1 for 5 s, the warm-up is over. Before harder steps the whole warm-up is kept.
 - The same correction must be asked for 10 s in a row, and at least 25 s pass between adjustments (60 s between two rises). Nothing is adjusted in the first 45 s of each step (2.5 min on HR-zone steps from Z3 up), because HR takes time to respond. Every adjustment is logged with its reason.
 
